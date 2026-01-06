@@ -191,12 +191,14 @@ export class LaserAbility extends Ability {
         this.active = false;
         this.timer = 0;
         this.originalRotation = 0;
+        this.hitBuffer = new Set(); // Stores unique enemies hit between damage ticks
     }
 
     execute(fighter, context) {
         this.active = true;
         this.timer = this.duration;
         fighter.cooldowns.atk = this.cooldown;
+        this.hitBuffer.clear();
         
         // Boost rotation speed
         this.originalRotation = fighter.rotationSpeed;
@@ -209,30 +211,18 @@ export class LaserAbility extends Ability {
         if (this.active) {
             this.timer--;
             
-            // Fire beam tick (every 1 frame)
-            if (this.timer % 1 === 0) {
-                this.fireBeam(fighter, context);
+            // Scan every frame and buffer hits
+            this.scanBeam(fighter, context);
+
+            // Apply damage every 3 frames (0.05s) to anything in the buffer
+            if (this.timer % 3 === 0) {
+                this.applyBufferedDamage(fighter, context);
             }
-
-            // Continuous Visual
-            const endX = fighter.x + Math.cos(fighter.angle) * this.range;
-            const endY = fighter.y + Math.sin(fighter.angle) * this.range;
-            
-            // Draw straight beam (Solid, no trail)
-            // We re-calculate exact hit for visual so it doesn't clip through walls weirdly
-            // Performance note: doing raycast every frame for visual might be heavy but for one char it's fine
-            let visualDist = this.range;
-            const wallHit = Physics.rayBoxIntersect(fighter.x, fighter.y, Math.cos(fighter.angle), Math.sin(fighter.angle), context.game.width, context.game.height);
-            if (wallHit && wallHit.dist < visualDist) visualDist = wallHit.dist;
-
-            const visEndX = fighter.x + Math.cos(fighter.angle) * visualDist;
-            const visEndY = fighter.y + Math.sin(fighter.angle) * visualDist;
-
-            context.game.particles.spawnBeam(fighter.x, fighter.y, visEndX, visEndY, '#ffdd00');
 
             if (this.timer <= 0) {
                 this.active = false;
                 fighter.rotationSpeed = this.originalRotation; // Revert
+                this.hitBuffer.clear();
             }
         } else if (this.canUse(fighter, context)) {
             // Auto-fire
@@ -240,7 +230,7 @@ export class LaserAbility extends Ability {
         }
     }
 
-    fireBeam(fighter, context) {
+    scanBeam(fighter, context) {
         const { enemies, game } = context;
         let rayX = fighter.x;
         let rayY = fighter.y;
@@ -277,17 +267,38 @@ export class LaserAbility extends Ability {
         const hitX = rayX + dirX * closest.dist;
         const hitY = rayY + dirY * closest.dist;
 
-        // Apply effects
+        // Draw Beam
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffdd00');
+
+        // Buffer the hit
         if (closest.type === 'enemy') {
-            closest.data.takeDamage(this.damage);
-            closest.data.applyStatus('SLOW');
-            game.particles.spawn(hitX, hitY, '#ff4400', 3);
+            closest.data.applyStatus('SLOW'); // Apply Slow effect instantly
+            this.hitBuffer.add(closest.data);
+            this.lastHitPos = {x: hitX, y: hitY}; // Store for particle
         } else if (closest.type === 'shield') {
-            game.particles.spawnText(closest.data.enemy.x, closest.data.enemy.y, "BLOCK", "#ffffff");
-            game.particles.spawn(hitX, hitY, '#ffffff', 3);
-            audioEngine.playBlock();
+            this.hitBuffer.add({ type: 'shield', data: closest.data });
+            this.lastHitPos = {x: hitX, y: hitY};
         } else if (closest.type === 'wall') {
-            game.particles.spawn(hitX, hitY, '#ffff00', 2);
+            if (this.timer % 3 === 0) game.particles.spawn(hitX, hitY, '#ffff00', 2);
         }
+    }
+
+    applyBufferedDamage(fighter, context) {
+        if (this.hitBuffer.size === 0) return;
+
+        this.hitBuffer.forEach(target => {
+            if (target.type === 'shield') {
+                const enemy = target.data.enemy;
+                context.game.particles.spawnText(enemy.x, enemy.y, "BLOCK", "#ffffff");
+                if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ffffff', 3);
+                audioEngine.playBlock();
+            } else {
+                // Enemy
+                target.takeDamage(this.damage);
+                if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ff4400', 3);
+            }
+        });
+
+        this.hitBuffer.clear();
     }
 }

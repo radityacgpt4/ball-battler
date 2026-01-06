@@ -439,7 +439,7 @@ export class Fighter {
             if (this.status.slow <= 0) {
                 this.game.particles.spawnText(this.x, this.y, "SLOW", "#cccccc");
             }
-            this.status.slow = 10; // Short duration, refreshed by beam
+            this.status.slow = 30; // 0.5s linger duration
         }
     }
 

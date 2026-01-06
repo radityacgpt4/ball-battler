@@ -7,7 +7,6 @@ import { FIGHTER_TYPES } from '../data/fighters.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { ParticleSystem } from '../systems/Particles.js';
-import { BattleRecorder } from '../systems/BattleRecorder.js';
 import { Fighter } from '../entities/Fighter.js';
 import { Projectile } from '../entities/Projectile.js';
 
@@ -18,7 +17,6 @@ export class Game {
         this.entities = [];
         this.projectiles = [];
         this.particles = new ParticleSystem();
-        this.recorder = new BattleRecorder();
         this.running = false;
         this.p1Type = 'THUNDER_MAGE';
         this.p2Type = 'SHIELDBEARER';
@@ -26,8 +24,6 @@ export class Game {
         this.width = CONSTANTS.WIDTH;
         this.height = CONSTANTS.HEIGHT;
         this.arenaTimer = 0;
-
-        this.isRecording = false;
     }
 
     init() {
@@ -87,14 +83,6 @@ export class Game {
 
         this.createUI();
 
-        // Initialize recorder with canvas and audio
-        if (BattleRecorder.isSupported()) {
-            this.recorder.init(this.canvas, audioEngine.getStream());
-            this.recorder.start();
-            this.isRecording = true;
-            this.showRecordingIndicator(true);
-        }
-
         this.running = true;
         requestAnimationFrame(this.loop.bind(this));
     }
@@ -102,7 +90,7 @@ export class Game {
     updateCanvasSize() {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
-        document.documentElement.style.setProperty('--game-width', `${this.width}px`);
+        // Note: Do NOT update --game-width here to prevent UI from shrinking
     }
 
     handleArenaShrink() {
@@ -379,44 +367,11 @@ export class Game {
         }
     }
 
-    showRecordingIndicator(show) {
-        let indicator = document.getElementById('recording-indicator');
-        if (show) {
-            if (!indicator) {
-                indicator = document.createElement('div');
-                indicator.id = 'recording-indicator';
-                indicator.className = 'recording-indicator';
-                indicator.innerHTML = '<div class="recording-dot"></div><span class="recording-text">REC</span>';
-                document.getElementById('game-wrapper').appendChild(indicator);
-            }
-            indicator.style.display = 'flex';
-        } else if (indicator) {
-            indicator.style.display = 'none';
-        }
-    }
-
-    async checkWinCondition() {
+    checkWinCondition() {
         const alive = this.entities.filter(e => !e.isDead);
         if (alive.length <= 1) {
             if (this.running) audioEngine.playWin();
             this.running = false;
-
-            // Stop recording and offer download
-            if (this.isRecording) {
-                this.recorder.stop();
-                this.isRecording = false;
-                this.showRecordingIndicator(false);
-
-                // Wait a moment for recorder to finalize
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Auto-download the recording
-                try {
-                    await this.recorder.export();
-                } catch (err) {
-                    console.error('Failed to export recording:', err);
-                }
-            }
 
             const overlay = document.getElementById('end-screen');
             const msg = document.getElementById('win-msg');

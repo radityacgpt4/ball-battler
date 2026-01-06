@@ -7,7 +7,6 @@ export class AudioEngine {
         this.ctx = null;
         this.masterGain = null;
         this.enabled = true;
-        this.destination = null; // Exposed for recording
     }
 
     init() {
@@ -17,22 +16,10 @@ export class AudioEngine {
             this.masterGain = this.ctx.createGain();
             this.masterGain.gain.value = 0.3; // Master volume
             this.masterGain.connect(this.ctx.destination);
-
-            // Create a destination node for recording
-            this.destination = this.ctx.createMediaStreamDestination();
-            this.masterGain.connect(this.destination);
         }
         if (this.ctx.state === 'suspended') {
             this.ctx.resume();
         }
-    }
-
-    // Get the audio stream for recording
-    getStream() {
-        if (this.destination) {
-            return this.destination.stream;
-        }
-        return null;
     }
 
     // Helper: Create an oscillator tone

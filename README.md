@@ -17,8 +17,7 @@ ball-battler/
     ├── systems/
     │   ├── Physics.js      # Physics calculations (preserved logic)
     │   ├── Audio.js        # AudioEngine (procedural sound generation)
-    │   ├── Particles.js    # ParticleSystem for visual effects
-    │   └── BattleRecorder.js # MediaRecorder for battle recording
+    │   └── Particles.js    # ParticleSystem for visual effects
     │
     ├── entities/
     │   ├── Fighter.js      # Base Fighter class with ability system
@@ -43,7 +42,6 @@ ball-battler/
 - **Ability System**: Strategy pattern for modular skill implementation
 - **Physics Engine**: Preserved collision detection and resolution
 - **Procedural Audio**: All sounds generated via Web Audio API
-- **Battle Recording**: Captures gameplay as .webm with audio
 - **Arena Shrinking**: Dynamic arena size reduction during long battles
 
 ## Fighters
@@ -68,13 +66,6 @@ ball-battler/
 2. Open `http://localhost:8000` in your browser
 
 3. Select fighters for both players and click "FIGHT!"
-
-## Battle Recording
-
-The game automatically records battles using the MediaRecorder API:
-- Video is captured from the canvas at 30 FPS
-- Audio is captured from the AudioEngine
-- Recording exports as `.webm` when the match ends
 
 ## Adding New Fighters
 

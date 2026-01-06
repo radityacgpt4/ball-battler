@@ -126,56 +126,65 @@ export class ExecuteUltAbility extends Ability {
     }
 
     execute(fighter, context) {
-        fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = 30; // 0.5 second visual
-        
-        fighter.cooldowns.ult = this.cooldown;
-
         const { enemies, game } = context;
         const range = fighter.radius + 80; // Execution range
-        
-        // Find targets in range
-        let hit = false;
-        
+        const hasCombo = (fighter.axemanHits || 0) >= 2;
+
+        // Check if any enemy is in range first
+        let targetInRange = false;
+        enemies.forEach(enemy => {
+            if (enemy === fighter || enemy.isDead) return;
+            const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
+            if (dist <= range + enemy.radius) {
+                targetInRange = true;
+            }
+        });
+
+        // Only proceed if combo requirement met AND target in range
+        if (!hasCombo) {
+            // No combo - don't use ult, show feedback
+            game.particles.spawnText(fighter.x, fighter.y, "NEED 2 HITS!", "#888888");
+            return; // No cooldown triggered
+        }
+
+        if (!targetInRange) {
+            // Has combo but no target - don't waste it
+            game.particles.spawnText(fighter.x, fighter.y, "NO TARGET!", "#888888");
+            return; // No cooldown triggered
+        }
+
+        // Combo ready AND target in range - execute!
+        fighter.activeEffects.ultActive = true;
+        fighter.activeEffects.ultTimer = 30; // 0.5 second visual
+        fighter.cooldowns.ult = this.cooldown; // NOW apply cooldown
+
         game.particles.spawnText(fighter.x, fighter.y, "EXECUTE!", "#ff0000");
 
         enemies.forEach(enemy => {
             if (enemy === fighter || enemy.isDead) return;
             const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
             if (dist <= range + enemy.radius) {
-                hit = true;
-                
-                // Logic based on hits
-                if ((fighter.axemanHits || 0) >= 2) {
-                    if (enemy.hp <= 30) {
-                        // Instant Kill
-                        // Deal massive unblockable damage to ensure death
-                        logger.log(`${fighter.name} EXECUTED ${enemy.name}! FATALITY!`, 'error');
-                        enemy.takeDamage(enemy.maxHp + 999, true);
-                        game.particles.spawnText(enemy.x, enemy.y, "FATALITY!", "#880000");
-                        audioEngine.playHeavyImpact();
-                    } else {
-                        // Stun
-                        enemy.takeDamage(10);
-                        enemy.applyStatus('STUN', 120); // 2 sec
-                        game.particles.spawnText(enemy.x, enemy.y, "STUNNED", "#ffff00");
-                        audioEngine.playHeavyImpact();
-                        logger.log(`${fighter.name} Stunned ${enemy.name} with Execute!`, 'combat');
-                    }
-                } else {
-                    // Normal Ult Hit if combo not ready (fallback)
-                    enemy.takeDamage(15);
-                    game.particles.spawnText(enemy.x, enemy.y, "SMASH!", "#ffffff");
+                if (enemy.hp <= 30) {
+                    // Instant Kill - FATALITY
+                    logger.log(`${fighter.name} EXECUTED ${enemy.name}! FATALITY!`, 'error');
+                    enemy.takeDamage(enemy.maxHp + 999, true);
+                    game.particles.spawnText(enemy.x, enemy.y, "FATALITY!", "#880000");
                     audioEngine.playHeavyImpact();
-                    logger.log(`${fighter.name} Smashed ${enemy.name} with Execute (No Combo)!`, 'combat');
+                } else {
+                    // Stun
+                    enemy.takeDamage(10);
+                    enemy.applyStatus('STUN', 120); // 2 sec
+                    game.particles.spawnText(enemy.x, enemy.y, "STUNNED", "#ffff00");
+                    audioEngine.playHeavyImpact();
+                    logger.log(`${fighter.name} Stunned ${enemy.name} with Execute!`, 'combat');
                 }
-                
+
                 game.particles.spawnExplosion(enemy.x, enemy.y);
             }
         });
-        
-        if (!hit) {
-            audioEngine.playSwordSwing(); // Whiff sound
-        }
+
+        // Reset combo after successful execute
+        fighter.axemanHits = 0;
+        fighter.axemanComboTimer = 0;
     }
 }

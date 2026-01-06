@@ -125,9 +125,15 @@ export class ForceFieldAbility extends Ability {
         // Regen logic
         if (this.currentShield < this.maxShield && fighter.hp > 0) {
             this.regenTimer++;
-            if (this.regenTimer >= 60) { // 1 sec (assuming 60fps)
-                this.currentShield = Math.min(this.currentShield + this.regenRate, this.maxShield);
+            if (this.regenTimer >= 30) { // 0.5 sec (assuming 60fps)
+                this.currentShield = Math.min(this.currentShield + 1, this.maxShield);
                 this.regenTimer = 0;
+                
+                // Visual feedback (small +1)
+                if (Math.random() < 0.3) {
+                     context.game.particles.spawnText(fighter.x, fighter.y - 20, "+1", "#00ffff");
+                     audioEngine.playRegen();
+                }
             }
         }
     }

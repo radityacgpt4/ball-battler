@@ -541,6 +541,17 @@ export class Fighter {
             ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
             ctx.fill();
             ctx.restore();
+
+            // Sticky Shield HP UI
+            ctx.save();
+            ctx.fillStyle = "#00ffff";
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 2;
+            ctx.font = "bold 12px monospace";
+            ctx.textAlign = "center";
+            ctx.strokeText(`🛡️${Math.ceil(this.shieldHp)}`, 0, -this.radius - 15);
+            ctx.fillText(`🛡️${Math.ceil(this.shieldHp)}`, 0, -this.radius - 15);
+            ctx.restore();
         }
 
         ctx.fillStyle = this.color;

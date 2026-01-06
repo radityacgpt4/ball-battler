@@ -75,9 +75,9 @@ export const FIGHTER_TYPES = {
         hp: 75,
         mass: 1.4,
         speed: 4.5,
-        rotationSpeed: 0.12,
+        rotationSpeed: 0.06,
         skills: {
-            atk: { type: "LASER_BEAM", cooldown: 90, duration: 60, damage: 1, range: 450 },
+            atk: { type: "LASER_BEAM", cooldown: 120, duration: 60, damage: 1, range: 360 }, // 1s active, 1s cooldown
             def: { type: "FORCE_FIELD", maxShield: 75, regenRate: 0.033 }, // 2 HP/sec @ 60fps
             ult: { type: "MISSILE_BARRAGE", cooldown: 180, damage: 8 }
         }

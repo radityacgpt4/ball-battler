@@ -185,7 +185,7 @@ export class MissileBarrageAbility extends Ability {
             game.projectiles.push(p);
         }
 
-        audioEngine.playGunshot(); // Placeholder sound
+        audioEngine.playMissileLaunch();
         fighter.cooldowns.ult = this.cooldown;
         game.particles.spawnText(fighter.x, fighter.y, "BARRAGE!", "#ff4400");
     }

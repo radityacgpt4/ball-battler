@@ -10,8 +10,8 @@ import { logger } from '../systems/Logger.js';
 export class AxeAtkAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.range = 55;
-        this.damage = 8;
+        this.range = 65;
+        this.damage = 9;
         this.bleedDuration = 240; // 4 seconds
     }
 
@@ -158,7 +158,6 @@ export class ExecuteUltAbility extends Ability {
             if (dist <= range + enemy.radius) {
                 if (enemy.hp <= 30) {
                     // Instant Kill - FATALITY
-                    logger.log(`${fighter.name} EXECUTED ${enemy.name}! FATALITY!`, 'error');
                     enemy.takeDamage(enemy.maxHp + 999, true);
                     game.particles.spawnText(enemy.x, enemy.y, "FATALITY!", "#880000");
                     audioEngine.playHeavyImpact();
@@ -168,7 +167,6 @@ export class ExecuteUltAbility extends Ability {
                     enemy.applyStatus('STUN', 120); // 2 sec
                     game.particles.spawnText(enemy.x, enemy.y, "STUNNED", "#ffff00");
                     audioEngine.playHeavyImpact();
-                    logger.log(`${fighter.name} Stunned ${enemy.name} with Execute!`, 'combat');
                 }
 
                 game.particles.spawnExplosion(enemy.x, enemy.y);

@@ -141,16 +141,8 @@ export class ExecuteUltAbility extends Ability {
         });
 
         // Only proceed if combo requirement met AND target in range
-        if (!hasCombo) {
-            // No combo - don't use ult, show feedback
-            game.particles.spawnText(fighter.x, fighter.y, "NEED 2 HITS!", "#888888");
-            return; // No cooldown triggered
-        }
-
-        if (!targetInRange) {
-            // Has combo but no target - don't waste it
-            game.particles.spawnText(fighter.x, fighter.y, "NO TARGET!", "#888888");
-            return; // No cooldown triggered
+        if (!hasCombo || !targetInRange) {
+            return; // No cooldown triggered, silently skip
         }
 
         // Combo ready AND target in range - execute!

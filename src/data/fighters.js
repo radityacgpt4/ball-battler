@@ -94,5 +94,18 @@ export const FIGHTER_TYPES = {
             def: { type: "CLAYMORE", cooldown: 180, damage: 5, lifeTime: 360, slowDuration: 120 },
             ult: { type: "SNIPER_MODE", cooldown: 300 }
         }
+    },
+    AXEMAN: {
+        name: "Axeman",
+        color: "#800000",
+        hp: 100,
+        mass: 1.5,
+        speed: 4.2,
+        rotationSpeed: 0.13,
+        skills: {
+            atk: { type: "AXE_SWING" },
+            def: { type: "BERSERKER_RAGE" },
+            ult: { type: "EXECUTE", cooldown: 180 }
+        }
     }
 };

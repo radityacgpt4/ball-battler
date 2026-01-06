@@ -14,6 +14,7 @@ import { DashAssaultAbility, RetreatAbility, FlashBarrageAbility } from '../abil
 import { ParryPassiveAbility, EvasionAbility, StaticPassiveAbility, ShieldDeflectAbility, MomentumPassiveAbility, ForceFieldAbility } from '../abilities/PassiveAbility.js';
 import { WallSlamAbility } from '../abilities/SpecialAbility.js';
 import { SniperAtkAbility, ClaymoreAbility, SniperUltAbility } from '../abilities/SniperAbility.js';
+import { AxeAtkAbility, BerserkerDefAbility, ExecuteUltAbility } from '../abilities/AxeAbility.js';
 import { Projectile } from './Projectile.js';
 
 export class Fighter {
@@ -106,6 +107,9 @@ export class Fighter {
             case 'SNIPER_SHOT':
                 abilities.atk = new SniperAtkAbility(skills.atk, 'atk');
                 break;
+            case 'AXE_SWING':
+                abilities.atk = new AxeAtkAbility(skills.atk, 'atk');
+                break;
         }
 
         // Defense abilities
@@ -131,6 +135,9 @@ export class Fighter {
             case 'CLAYMORE':
                 abilities.def = new ClaymoreAbility(skills.def, 'def');
                 break;
+            case 'BERSERKER_RAGE':
+                abilities.def = new BerserkerDefAbility(skills.def, 'def');
+                break;
         }
 
         // Ultimate abilities
@@ -155,6 +162,9 @@ export class Fighter {
                 break;
             case 'SNIPER_MODE':
                 abilities.ult = new SniperUltAbility(skills.ult, 'ult');
+                break;
+            case 'EXECUTE':
+                abilities.ult = new ExecuteUltAbility(skills.ult, 'ult');
                 break;
         }
 
@@ -577,6 +587,30 @@ export class Fighter {
             ctx.beginPath();
             ctx.arc(this.radius, 0, 5, 0, Math.PI * 2); // Eye/Core
             ctx.fill();
+        } else if (this.typeKey === 'AXEMAN') {
+            // Axe Handle
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(this.radius - 5, -3, 35, 6);
+            
+            // Axe Head
+            ctx.fillStyle = '#B0BEC5';
+            ctx.beginPath();
+            ctx.moveTo(this.radius + 20, -15);
+            ctx.lineTo(this.radius + 35, -25);
+            ctx.quadraticCurveTo(this.radius + 40, 0, this.radius + 35, 25);
+            ctx.lineTo(this.radius + 20, 15);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Blood effect on axe if hits > 0
+            if (this.axemanHits > 0) {
+                ctx.fillStyle = '#ff0000';
+                ctx.globalAlpha = 0.7;
+                ctx.beginPath();
+                ctx.arc(this.radius + 35, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
         }
         ctx.restore();
 

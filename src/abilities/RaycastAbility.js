@@ -210,7 +210,7 @@ export class LaserAbility extends Ability {
             this.timer--;
             
             // Fire beam tick (every 3 frames = 0.05s)
-            if (this.timer % 3 === 0) {
+            if (this.timer % 1 === 0) {
                 this.fireBeam(fighter, context);
             }
 

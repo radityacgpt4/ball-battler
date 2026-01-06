@@ -12,7 +12,7 @@ export class AxeAtkAbility extends Ability {
         super(config, slot);
         this.range = 55;
         this.damage = 8;
-        this.bleedDuration = 180; // 3 seconds
+        this.bleedDuration = 240; // 4 seconds
     }
 
     update(fighter, context) {
@@ -45,7 +45,7 @@ export class AxeAtkAbility extends Ability {
 
                 if (fighter.cooldowns.atk <= 0) {
                     // Hit connect
-                    fighter.cooldowns.atk = 20; // Swing cooldown
+                    fighter.cooldowns.atk = 15; // Swing cooldown
                     
                     // Damage
                     enemy.takeDamage(this.damage);
@@ -92,7 +92,7 @@ export class BerserkerDefAbility extends Ability {
 
         if (stacks > 0) {
             const speedBonus = 1 + (stacks * 0.10);
-            const rotBonus = 1 + (stacks * 0.15);
+            const rotBonus = 1 + (stacks * 0.18);
 
             // We apply the multiplier to the ORIGINAL stats to avoid compounding infinite growth
             fighter.baseSpeed = fighter.originalBaseSpeed * speedBonus;

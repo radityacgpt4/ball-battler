@@ -29,10 +29,54 @@ export class Projectile {
         this.travelled = 0;
         this.hitList = []; // For piercing (ID tracking)
         this.isEmbedded = false;
+
+        // Missile props
+        this.isMissile = false;
+        this.target = null;
+        this.turnSpeed = 0.05; // Weak homing
     }
 
     update() {
         if (this.isEmbedded) return; // Stop moving if embedded
+
+        // Missile Homing Logic
+        if (this.isMissile && this.active) {
+            if (!this.target || this.target.isDead) {
+                // Find new target
+                const enemies = this.game.entities.filter(e => e !== this.owner && !e.isDead);
+                let closest = null;
+                let minDist = Infinity;
+                for (const e of enemies) {
+                    const d = Math.hypot(e.x - this.x, e.y - this.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        closest = e;
+                    }
+                }
+                this.target = closest;
+            }
+
+            if (this.target) {
+                const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+                let angleDiff = targetAngle - this.angle;
+                
+                // Normalize angle
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+                // Turn towards target
+                if (Math.abs(angleDiff) < this.turnSpeed) {
+                    this.angle = targetAngle;
+                } else {
+                    this.angle += Math.sign(angleDiff) * this.turnSpeed;
+                }
+
+                // Update velocity vector based on new angle
+                const speed = Math.hypot(this.dx, this.dy);
+                this.dx = Math.cos(this.angle) * speed;
+                this.dy = Math.sin(this.angle) * speed;
+            }
+        }
 
         this.x += this.dx;
         this.y += this.dy;
@@ -120,6 +164,28 @@ export class Projectile {
                 ctx.arc(this.x, this.y - this.z, 3, 0, Math.PI * 2);
                 ctx.fill();
             }
+        }
+        else if (this.isMissile) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+            
+            // Draw Missile
+            ctx.fillStyle = '#ff4400';
+            ctx.beginPath();
+            ctx.moveTo(6, 0);
+            ctx.lineTo(-4, 3);
+            ctx.lineTo(-4, -3);
+            ctx.fill();
+
+            // Thruster
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.moveTo(-4, 0);
+            ctx.lineTo(-8, 0);
+            ctx.stroke();
+
+            ctx.restore();
         }
         else {
             ctx.fillStyle = '#ffff00';

@@ -68,5 +68,18 @@ export const FIGHTER_TYPES = {
             def: { type: "EVASION", cooldown: 120, duration: 12 },
             ult: { type: "FLASH_BARRAGE", cooldown: 180 }
         }
+    },
+    CYBORG: {
+        name: "Genos",
+        color: "#c0c0c0",
+        hp: 75,
+        mass: 1.4,
+        speed: 4.5,
+        rotationSpeed: 0.12,
+        skills: {
+            atk: { type: "LASER_BEAM", cooldown: 150, duration: 60, damage: 1, range: 600 }, // 1.5s cd + 1s active = 2.5s cycle? Or 1.5s cd starts after? Assuming cd starts after use, or cd includes use. Let's set cd to 150 (2.5s total cycle) or just 90 if it overlaps? "Every 1.5 second fire" suggests frequency. Let's try cooldown 90 (1.5s).
+            def: { type: "FORCE_FIELD", maxShield: 75, regenRate: 0.033 }, // 2 HP/sec @ 60fps = 2/60 = 0.033
+            ult: { type: "MISSILE_BARRAGE", cooldown: 180, damage: 5 }
+        }
     }
 };

@@ -8,10 +8,10 @@ import { audioEngine } from '../systems/Audio.js';
 
 // Import ability classes
 import { MeleeAbility } from '../abilities/MeleeAbility.js';
-import { BurstFireAbility, KunaiAbility, GrenadeAbility } from '../abilities/ProjectileAbility.js';
-import { RaycastAbility, DoubleZapAbility } from '../abilities/RaycastAbility.js';
+import { BurstFireAbility, KunaiAbility, GrenadeAbility, MissileBarrageAbility } from '../abilities/ProjectileAbility.js';
+import { RaycastAbility, DoubleZapAbility, LaserAbility } from '../abilities/RaycastAbility.js';
 import { DashAssaultAbility, RetreatAbility, FlashBarrageAbility } from '../abilities/DashAbility.js';
-import { ParryPassiveAbility, EvasionAbility, StaticPassiveAbility, ShieldDeflectAbility, MomentumPassiveAbility } from '../abilities/PassiveAbility.js';
+import { ParryPassiveAbility, EvasionAbility, StaticPassiveAbility, ShieldDeflectAbility, MomentumPassiveAbility, ForceFieldAbility } from '../abilities/PassiveAbility.js';
 import { WallSlamAbility } from '../abilities/SpecialAbility.js';
 import { Projectile } from './Projectile.js';
 
@@ -99,6 +99,9 @@ export class Fighter {
             case 'MOMENTUM_PASSIVE':
                 abilities.atk = new MomentumPassiveAbility(skills.atk, 'atk');
                 break;
+            case 'LASER_BEAM':
+                abilities.atk = new LaserAbility(skills.atk, 'atk');
+                break;
         }
 
         // Defense abilities
@@ -118,6 +121,9 @@ export class Fighter {
             case 'EVASION':
                 abilities.def = new EvasionAbility(skills.def, 'def');
                 break;
+            case 'FORCE_FIELD':
+                abilities.def = new ForceFieldAbility(skills.def, 'def');
+                break;
         }
 
         // Ultimate abilities
@@ -136,6 +142,9 @@ export class Fighter {
                 break;
             case 'FLASH_BARRAGE':
                 abilities.ult = new FlashBarrageAbility(skills.ult, 'ult', skills.atk, Projectile);
+                break;
+            case 'MISSILE_BARRAGE':
+                abilities.ult = new MissileBarrageAbility(skills.ult, 'ult');
                 break;
         }
 
@@ -512,8 +521,27 @@ export class Fighter {
             ctx.fillStyle = '#ffd700';
             ctx.fillRect(-this.radius - 10, -5, 15, 4);
             ctx.fillRect(-this.radius - 10, 1, 15, 4);
+        } else if (this.typeKey === 'CYBORG') {
+            ctx.fillStyle = '#ffaa00';
+            ctx.beginPath();
+            ctx.arc(this.radius, 0, 5, 0, Math.PI * 2); // Eye/Core
+            ctx.fill();
         }
         ctx.restore();
+
+        // Force Field Visual
+        if (this.shieldHp > 0) {
+            ctx.save();
+            ctx.globalAlpha = 0.3 + (this.shieldHp / this.maxShield) * 0.3;
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
+            ctx.fill();
+            ctx.restore();
+        }
 
         ctx.fillStyle = this.color;
         if (this.activeEffects.ultActive) {

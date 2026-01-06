@@ -152,3 +152,41 @@ export class GrenadeAbility extends Ability {
         fighter.cooldowns.ult = this.cooldown;
     }
 }
+
+export class MissileBarrageAbility extends Ability {
+    constructor(config, slot) {
+        super(config, slot);
+        this.count = 5;
+        this.damage = config.damage;
+    }
+
+    execute(fighter, context) {
+        const { game } = context;
+        
+        for (let i = 0; i < this.count; i++) {
+            // Spread missiles in an arc
+            const spread = (i - (this.count - 1) / 2) * 0.5; // 0.5 rad spread
+            const angle = fighter.angle + spread;
+            
+            const p = new Projectile(
+                fighter,
+                fighter.x + Math.cos(angle) * 20,
+                fighter.y + Math.sin(angle) * 20,
+                angle,
+                6, // Initial speed
+                this.damage,
+                game
+            );
+
+            p.isMissile = true;
+            p.radius = 5;
+            p.turnSpeed = 0.08; // Weak homing
+            
+            game.projectiles.push(p);
+        }
+
+        audioEngine.playGunshot(); // Placeholder sound
+        fighter.cooldowns.ult = this.cooldown;
+        game.particles.spawnText(fighter.x, fighter.y, "BARRAGE!", "#ff4400");
+    }
+}

@@ -107,3 +107,45 @@ export class MomentumPassiveAbility extends Ability {
     // Momentum is handled in Fighter movement and collision
     // This stores the config values
 }
+
+export class ForceFieldAbility extends Ability {
+    constructor(config, slot) {
+        super(config, slot);
+        this.maxShield = config.maxShield || 75;
+        this.regenRate = config.regenRate || 2; // HP per sec
+        this.currentShield = this.maxShield;
+        this.regenTimer = 0;
+    }
+
+    update(fighter, context) {
+        // Expose shield HP to fighter for rendering/logic
+        fighter.shieldHp = this.currentShield;
+        fighter.maxShield = this.maxShield;
+
+        // Regen logic
+        if (this.currentShield < this.maxShield && fighter.hp > 0) {
+            this.regenTimer++;
+            if (this.regenTimer >= 60) { // 1 sec (assuming 60fps)
+                this.currentShield = Math.min(this.currentShield + this.regenRate, this.maxShield);
+                this.regenTimer = 0;
+            }
+        }
+    }
+
+    onDamage(fighter, damage, context) {
+        if (this.currentShield > 0) {
+            const absorbed = Math.min(this.currentShield, damage);
+            this.currentShield -= absorbed;
+            damage -= absorbed;
+            
+            context.game.particles.spawnText(fighter.x, fighter.y, "SHIELD", "#00ffff");
+            audioEngine.playBlock();
+            
+            // Visual feedback for shield hit
+            context.game.particles.spawn(fighter.x, fighter.y, '#00ffff', 5);
+
+            if (damage <= 0) return false; // Fully absorbed
+        }
+        return damage;
+    }
+}

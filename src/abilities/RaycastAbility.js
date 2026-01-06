@@ -181,3 +181,104 @@ export class DoubleZapAbility extends Ability {
         game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
     }
 }
+
+export class LaserAbility extends Ability {
+    constructor(config, slot) {
+        super(config, slot);
+        this.duration = config.duration || 60; // 1 second firing
+        this.damage = config.damage || 1;
+        this.range = config.range || 800;
+        this.active = false;
+        this.timer = 0;
+        this.originalRotation = 0;
+    }
+
+    execute(fighter, context) {
+        this.active = true;
+        this.timer = this.duration;
+        fighter.cooldowns.atk = this.cooldown;
+        
+        // Boost rotation speed
+        this.originalRotation = fighter.rotationSpeed;
+        fighter.rotationSpeed *= 1.5;
+        
+        audioEngine.playZap();
+    }
+
+    update(fighter, context) {
+        if (this.active) {
+            this.timer--;
+            
+            // Fire beam tick (every 6 frames = 0.1s)
+            if (this.timer % 6 === 0) {
+                this.fireBeam(fighter, context);
+            }
+
+            // Continuous Visual
+            const endX = fighter.x + Math.cos(fighter.angle) * this.range;
+            const endY = fighter.y + Math.sin(fighter.angle) * this.range;
+            
+            // Draw a temporary laser line (simple particle effect for now)
+            // Ideally we'd have a persistent beam visual, but particles work for "pulsing"
+            context.game.particles.spawnBolt([{x: fighter.x, y: fighter.y}, {x: endX, y: endY}], '#ffff00');
+
+            if (this.timer <= 0) {
+                this.active = false;
+                fighter.rotationSpeed = this.originalRotation; // Revert
+            }
+        } else if (this.canUse(fighter, context)) {
+            // Auto-fire
+            this.execute(fighter, context);
+        }
+    }
+
+    fireBeam(fighter, context) {
+        const { enemies, game } = context;
+        let rayX = fighter.x;
+        let rayY = fighter.y;
+        let dirX = Math.cos(fighter.angle);
+        let dirY = Math.sin(fighter.angle);
+
+        let closest = { dist: this.range, type: null, data: null };
+
+        // Check Wall
+        const wallHit = Physics.rayBoxIntersect(rayX, rayY, dirX, dirY, game.width, game.height);
+        if (wallHit && wallHit.dist < closest.dist) {
+            closest = { dist: wallHit.dist, type: 'wall', data: wallHit };
+        }
+
+        // Check Enemies
+        for (let enemy of enemies) {
+            if (enemy === fighter || enemy.isDead) continue;
+
+            // Shield check
+            const shieldHit = enemy.getShieldHit(rayX, rayY, dirX, dirY);
+            if (shieldHit && shieldHit.dist < closest.dist) {
+                closest = { dist: shieldHit.dist, type: 'shield', data: { enemy, ...shieldHit } };
+            }
+
+            // Body check
+            const bodyHit = Physics.rayCircleIntersect(rayX, rayY, dirX, dirY, enemy.x, enemy.y, enemy.radius);
+            if (bodyHit && bodyHit.dist < closest.dist) {
+                 if (!enemy.isBlockedByShield(rayX, rayY)) {
+                    closest = { dist: bodyHit.dist, type: 'enemy', data: enemy };
+                 }
+            }
+        }
+
+        const hitX = rayX + dirX * closest.dist;
+        const hitY = rayY + dirY * closest.dist;
+
+        // Apply effects
+        if (closest.type === 'enemy') {
+            closest.data.takeDamage(this.damage);
+            game.particles.spawn(hitX, hitY, '#ff4400', 3);
+        } else if (closest.type === 'shield') {
+            game.particles.spawnText(closest.data.enemy.x, closest.data.enemy.y, "BLOCK", "#ffffff");
+            game.particles.spawn(hitX, hitY, '#ffffff', 3);
+            audioEngine.playBlock();
+        } else if (closest.type === 'wall') {
+            game.particles.spawn(hitX, hitY, '#ffff00', 2);
+        }
+    }
+}

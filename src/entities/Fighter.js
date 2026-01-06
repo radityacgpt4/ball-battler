@@ -409,7 +409,6 @@ export class Fighter {
 
         // Check ultimate condition (HP < 50%)
         if (this.hp < this.maxHp * 0.5 && this.cooldowns.ult <= 0 && this.abilities.ult) {
-            logger.log(`${this.name} used Ultimate: ${this.skills.ult.type}`, 'combat');
             this.abilities.ult.execute(this, context);
         }
 

@@ -5,6 +5,7 @@
 import { CONSTANTS } from '../core/Constants.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 // Import ability classes
 import { MeleeAbility } from '../abilities/MeleeAbility.js';
@@ -408,6 +409,7 @@ export class Fighter {
 
         // Check ultimate condition (HP < 50%)
         if (this.hp < this.maxHp * 0.5 && this.cooldowns.ult <= 0 && this.abilities.ult) {
+            logger.log(`${this.name} used Ultimate: ${this.skills.ult.type}`, 'combat');
             this.abilities.ult.execute(this, context);
         }
 
@@ -454,10 +456,14 @@ export class Fighter {
         const dmg = Math.ceil(amount);
         this.game.particles.spawnText(this.x, this.y - this.radius, `-${dmg}`, '#ff4444');
         this.hp -= amount;
+        
+        logger.log(`${this.name} took ${dmg} dmg. HP: ${Math.ceil(this.hp)}/${this.maxHp}`, 'combat');
+
         if (this.hp <= 0) {
             this.hp = 0;
             if (!this.isDead) {
                 this.isDead = true;
+                logger.log(`${this.name} was KNOCKED OUT!`, 'error');
                 this.game.particles.spawnExplosion(this.x, this.y);
                 this.game.particles.spawnText(this.x, this.y, "KO!", "#ff0000");
                 audioEngine.playExplosion();
@@ -476,6 +482,7 @@ export class Fighter {
     }
 
     applyStatus(type, duration = null) {
+        logger.log(`${this.name} applied status: ${type}`, 'info');
         if (type === 'BLEED') this.status.bleed = duration || 180;
         if (type === 'STUN') this.status.stun = duration || 60;
         if (type === 'SLOW') {

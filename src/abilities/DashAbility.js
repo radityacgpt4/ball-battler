@@ -5,6 +5,7 @@
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class DashAssaultAbility extends Ability {
     constructor(config, slot) {
@@ -35,6 +36,7 @@ export class DashAssaultAbility extends Ability {
             target.takeDamage(this.damage);
             target.applyStatus('BLEED');
             audioEngine.playHit();
+            logger.log(`${fighter.name} Dash Assault HIT ${target.name}!`, 'combat');
         }
 
         fighter.x = Math.max(fighter.radius, Math.min(game.width - fighter.radius, destX));
@@ -78,6 +80,7 @@ export class RetreatAbility extends Ability {
         fighter.angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
 
         game.particles.spawnText(fighter.x, fighter.y, "RETREAT!", "#54a0ff");
+        logger.log(`${fighter.name} used Retreat!`, 'info');
         fighter.cooldowns.def = this.cooldown;
         audioEngine.playSwordSwing();
     }
@@ -136,5 +139,6 @@ export class FlashBarrageAbility extends Ability {
 
         game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
         game.particles.spawnText(fighter.x, fighter.y + 20, "BARRAGE!", "#ffd700");
+        logger.log(`${fighter.name} used Flash Barrage!`, 'combat');
     }
 }

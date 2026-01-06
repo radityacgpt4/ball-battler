@@ -5,6 +5,7 @@
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class MeleeAbility extends Ability {
     constructor(config, slot) {
@@ -31,6 +32,7 @@ export class MeleeAbility extends Ability {
                         const shieldY = enemy.y + Math.sin(enemy.angle) * (enemy.radius + 8);
                         game.particles.spawn(shieldX, shieldY, '#8b5cf6', 8);
                         audioEngine.playBlock();
+                        logger.log(`${enemy.name} blocked attack from ${fighter.name}`, 'combat');
                         fighter.cooldowns.atk = 20;
                     }
                     continue;
@@ -42,11 +44,13 @@ export class MeleeAbility extends Ability {
                     game.particles.spawn(tipX, tipY, '#fff', 5);
                     audioEngine.playSwordSwing();
                     audioEngine.playHit();
+                    logger.log(`${fighter.name} hit ${enemy.name} for ${this.damage} dmg`, 'combat');
                     fighter.cooldowns.atk = 20;
 
                     if (fighter.meleeHits % this.procRate === 0) {
                         enemy.applyStatus('BLEED');
                         game.particles.spawnText(enemy.x, enemy.y, "BLEED", "#ff0000");
+                        logger.log(`${enemy.name} is BLEEDING!`, 'status');
                     }
                 }
             }

@@ -5,6 +5,7 @@
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class AxeAtkAbility extends Ability {
     constructor(config, slot) {
@@ -63,10 +64,11 @@ export class AxeAtkAbility extends Ability {
 
                     // 3. Bleed condition (If 2 consecutive hits connected)
                     if (fighter.axemanHits >= 2) {
-                        enemy.applyStatus('BLEED', this.bleedDuration);
-                        game.particles.spawnText(enemy.x, enemy.y, "BLEED", "#ff0000");
-                    }
-                }
+                       enemy.applyStatus('BLEED', this.bleedDuration);
+                       game.particles.spawnText(enemy.x, enemy.y, "BLEED", "#ff0000");
+                       logger.log(`${enemy.name} is BLEEDING from Axeman combo!`, 'status');
+                   }
+               }
             }
         }
     }
@@ -138,7 +140,8 @@ export class ExecuteUltAbility extends Ability {
                     if (enemy.hp <= 30) {
                         // Instant Kill
                         // Deal massive unblockable damage to ensure death
-                        enemy.takeDamage(enemy.maxHp + 999, true); 
+                        logger.log(`${fighter.name} EXECUTED ${enemy.name}! FATALITY!`, 'error');
+                        enemy.takeDamage(enemy.maxHp + 999, true);
                         game.particles.spawnText(enemy.x, enemy.y, "FATALITY!", "#880000");
                         audioEngine.playHeavyImpact();
                     } else {
@@ -147,12 +150,14 @@ export class ExecuteUltAbility extends Ability {
                         enemy.applyStatus('STUN', 120); // 2 sec
                         game.particles.spawnText(enemy.x, enemy.y, "STUNNED", "#ffff00");
                         audioEngine.playHeavyImpact();
+                        logger.log(`${fighter.name} Stunned ${enemy.name} with Execute!`, 'combat');
                     }
                 } else {
                     // Normal Ult Hit if combo not ready (fallback)
                     enemy.takeDamage(15);
                     game.particles.spawnText(enemy.x, enemy.y, "SMASH!", "#ffffff");
                     audioEngine.playHeavyImpact();
+                    logger.log(`${fighter.name} Smashed ${enemy.name} with Execute (No Combo)!`, 'combat');
                 }
                 
                 game.particles.spawnExplosion(enemy.x, enemy.y);

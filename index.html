@@ -33,6 +33,14 @@
                 <button class="restart-btn" id="restart-btn">SETUP NEW FIGHT</button>
             </div>
         </div>
+
+        <!-- Debug Log Section -->
+        <div id="debug-section">
+            <button id="debug-toggle">Hide Debug Log</button>
+            <div id="debug-log-container">
+                <div id="debug-log-content"></div>
+            </div>
+        </div>
     </div>
 
     <script type="module">
@@ -43,7 +51,7 @@
 
         // Initialize the game
         game.init();
-
+        
         // Bind button events
         document.getElementById('start-btn').addEventListener('click', () => {
             game.startMatch();

@@ -5,6 +5,7 @@
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class RaycastAbility extends Ability {
     constructor(config, slot) {
@@ -99,6 +100,7 @@ export class RaycastAbility extends Ability {
                 closest.data.takeDamage(currentDamage);
                 game.particles.spawnExplosion(closest.x, closest.y);
                 audioEngine.playHit();
+                logger.log(`${rayOwner.name} Zap Hit ${closest.data.name} for ${currentDamage} dmg`, 'combat');
                 hitEntities.add(closest.data);
                 break; // Ray stops
 
@@ -119,6 +121,7 @@ export class RaycastAbility extends Ability {
                 game.particles.spawnText(enemy.x, enemy.y, "DEFLECT!", "#8b5cf6");
                 game.particles.spawn(closest.x, closest.y, '#ffffff', 15);
                 audioEngine.playBlock();
+                logger.log(`${enemy.name} DEFLECTED lightning from ${rayOwner.name}! Ownership transferred!`, 'warn');
 
                 // Big spark effect
                 for (let i = 0; i < 8; i++) {
@@ -180,6 +183,7 @@ export class DoubleZapAbility extends Ability {
         audioEngine.playThunder();
         fighter.cooldowns.ult = this.cooldown;
         game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
+        logger.log(`${fighter.name} cast DOUBLE ZAP!`, 'combat');
     }
 }
 
@@ -294,6 +298,8 @@ export class LaserAbility extends Ability {
                 context.game.particles.spawnText(enemy.x, enemy.y, "BLOCK", "#ffffff");
                 if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ffffff', 3);
                 audioEngine.playBlock();
+                // To avoid spamming logs every frame, only log periodically or on first hit
+                if (Math.random() < 0.1) logger.log(`${enemy.name} is blocking Laser`, 'info');
             } else {
                 // Enemy
                 target.takeDamage(this.damage);

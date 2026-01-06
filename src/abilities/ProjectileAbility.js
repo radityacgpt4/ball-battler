@@ -6,6 +6,7 @@ import { Ability } from './Ability.js';
 import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class BurstFireAbility extends Ability {
     constructor(config, slot) {
@@ -105,6 +106,7 @@ export class KunaiAbility extends Ability {
             audioEngine.playKunaiThrow();
         }
         game.particles.spawnText(fighter.x, fighter.y, isUlt ? "BARRAGE!" : "MARK!", "#ffd700");
+        logger.log(`${fighter.name} threw Kunai (${isUlt ? 'Barrage' : 'Mark'})`, 'combat');
     }
 
     update(fighter, context) {
@@ -148,6 +150,8 @@ export class GrenadeAbility extends Ability {
 
         game.projectiles.push(p);
         audioEngine.playGrenadeThrow();
+        
+        logger.log(`${fighter.name} threw a GRENADE!`, 'combat');
 
         fighter.cooldowns.ult = this.cooldown;
     }
@@ -188,5 +192,6 @@ export class MissileBarrageAbility extends Ability {
         audioEngine.playMissileLaunch();
         fighter.cooldowns.ult = this.cooldown;
         game.particles.spawnText(fighter.x, fighter.y, "BARRAGE!", "#ff4400");
+        logger.log(`${fighter.name} launched Missile Barrage!`, 'combat');
     }
 }

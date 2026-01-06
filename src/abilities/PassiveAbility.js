@@ -5,6 +5,7 @@
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class ParryPassiveAbility extends Ability {
     constructor(config, slot) {
@@ -16,6 +17,7 @@ export class ParryPassiveAbility extends Ability {
         if (Math.random() < this.chance) {
             context.game.particles.spawnText(fighter.x, fighter.y, "BLOCK", "#ffffff");
             audioEngine.playBlock();
+            logger.log(`${fighter.name} PARRIED incoming damage!`, 'info');
             return false; // Block the damage
         }
         return damage;
@@ -34,6 +36,7 @@ export class EvasionAbility extends Ability {
             fighter.cooldowns.def = this.cooldown;
             context.game.particles.spawnText(fighter.x, fighter.y, "DODGE", "#ffd700");
             audioEngine.playSwordSwing();
+            logger.log(`${fighter.name} DODGED incoming damage!`, 'info');
             return false; // Block the damage
         }
         return damage;
@@ -150,7 +153,12 @@ export class ForceFieldAbility extends Ability {
             // Visual feedback for shield hit
             context.game.particles.spawn(fighter.x, fighter.y, '#00ffff', 5);
 
-            if (damage <= 0) return false; // Fully absorbed
+            if (damage <= 0) {
+                logger.log(`${fighter.name} Force Field absorbed full damage (${absorbed})`, 'info');
+                return false; // Fully absorbed
+            } else {
+                logger.log(`${fighter.name} Force Field absorbed ${absorbed} damage`, 'info');
+            }
         }
         return damage;
     }

@@ -7,6 +7,7 @@ import { FIGHTER_TYPES } from '../data/fighters.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { ParticleSystem } from '../systems/Particles.js';
+import { logger } from '../systems/Logger.js';
 import { Fighter } from '../entities/Fighter.js';
 import { Projectile } from '../entities/Projectile.js';
 
@@ -38,6 +39,7 @@ export class Game {
     init() {
         this.canvas = document.getElementById('arena');
         this.ctx = this.canvas.getContext('2d');
+        logger.init();
         this.showSelect();
     }
 
@@ -76,6 +78,8 @@ export class Game {
 
     startMatch() {
         audioEngine.init();
+        logger.clear();
+        logger.log(`MATCH START: ${this.p1Type} vs ${this.p2Type}`, 'system');
 
         document.getElementById('char-select').style.display = 'none';
         this.width = CONSTANTS.WIDTH;
@@ -337,6 +341,7 @@ export class Game {
 
                         if (defender.isBlockedByShield(attacker.x, attacker.y)) {
                             this.particles.spawnText(defender.x, defender.y, "BLOCKED!", "#ffffff");
+                            logger.log(`${defender.name} blocked momentum slam from ${attacker.name}`, 'combat');
                             attacker.wallBounceSpeed = attacker.baseSpeed;
                             const reverseAngle = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
                             attacker.dx = Math.cos(reverseAngle) * 10;
@@ -358,6 +363,7 @@ export class Game {
 
                         defender.takeDamage(damage);
                         this.particles.spawnText(defender.x, defender.y, `SLAM ${damage}!`, "#8b5cf6");
+                        logger.log(`${attacker.name} SLAMMED ${defender.name} for ${damage} dmg (SpeedTier: ${speedTier})`, 'combat');
                         audioEngine.playHeavyImpact();
 
                         const massRatio = attacker.mass / defender.mass;
@@ -439,9 +445,11 @@ export class Game {
                 if (alive.length === 0) {
                     msg.innerText = "DRAW";
                     msg.style.color = "white";
+                    logger.log("MATCH END: DRAW", 'system');
                 } else {
                     msg.innerText = `${alive[0].name} WINS`;
                     msg.style.color = alive[0].color;
+                    logger.log(`MATCH END: ${alive[0].name} WINS!`, 'system');
                 }
             }
             return;

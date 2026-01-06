@@ -73,6 +73,9 @@ export class RetreatAbility extends Ability {
         const dashSpeed = 8;
         fighter.dx = Math.cos(angle) * dashSpeed;
         fighter.dy = Math.sin(angle) * dashSpeed;
+        
+        // Soldier Buff: Force aim to enemy (opposite of dash)
+        fighter.angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
 
         game.particles.spawnText(fighter.x, fighter.y, "RETREAT!", "#54a0ff");
         fighter.cooldowns.def = this.cooldown;
@@ -96,12 +99,16 @@ export class FlashBarrageAbility extends Ability {
     execute(fighter, context) {
         const { game } = context;
         const Projectile = this.ProjectileClass;
-        const count = 5;
+        const count = 4; // Explicitly set to 4 as requested
 
         fighter.cooldowns.ult = this.cooldown;
+        // Prevent normal attack from overriding the ult sequence
+        fighter.cooldowns.atk = Math.max(fighter.cooldowns.atk, this.kunaiConfig.delay + 10);
+        
         fighter.teleportDelayTimer = this.kunaiConfig.delay;
         fighter.kunaiPending = [];
 
+        // Ensure 360 coverage even with low count
         for (let i = 0; i < count; i++) {
             // ULT: 360 Degree Spread (Evenly spaced)
             const throwAngle = fighter.angle + ((Math.PI * 2) / count) * i;
@@ -109,8 +116,8 @@ export class FlashBarrageAbility extends Ability {
 
             const p = new Projectile(
                 fighter,
-                fighter.x + Math.cos(fighter.angle) * 20,
-                fighter.y + Math.sin(fighter.angle) * 20,
+                fighter.x + Math.cos(throwAngle) * 20,
+                fighter.y + Math.sin(throwAngle) * 20,
                 throwAngle,
                 speed,
                 this.kunaiConfig.damage,
@@ -120,8 +127,8 @@ export class FlashBarrageAbility extends Ability {
             // Kunai specific props
             p.isKunai = true;
             p.radius = 6;
-            p.maxDist = 220 + Math.random() * 50;
-
+            p.maxDist = 350; // Increased range to ensure it hits arena walls even when shrinking
+            
             game.projectiles.push(p);
             fighter.kunaiPending.push(p);
             audioEngine.playKunaiThrow();

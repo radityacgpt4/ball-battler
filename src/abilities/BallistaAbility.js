@@ -1,0 +1,122 @@
+/**
+ * Ballista Abilities
+ * Heavy hitter ranged fighter with knockback mechanics
+ */
+import { Ability } from './Ability.js';
+import { Projectile } from '../entities/Projectile.js';
+import { Physics } from '../systems/Physics.js';
+import { audioEngine } from '../systems/Audio.js';
+
+export class BallistaAtkAbility extends Ability {
+    constructor(config, slot) {
+        super(config, slot);
+        this.damage = config.damage || 15;
+        this.projectileSpeed = config.projectileSpeed || 12;
+    }
+
+    update(fighter, context) {
+        const { game } = context;
+
+        if (fighter.cooldowns.atk <= 0) {
+            fighter.cooldowns.atk = this.cooldown;
+
+            const p = new Projectile(
+                fighter,
+                fighter.x + Math.cos(fighter.angle) * 30,
+                fighter.y + Math.sin(fighter.angle) * 30,
+                fighter.angle,
+                this.projectileSpeed,
+                this.damage,
+                game
+            );
+
+            p.isBallistaBolt = true;
+            p.radius = 8;
+            p.dragTarget = null;
+            p.dragDuration = 20; // Frames to drag
+
+            game.projectiles.push(p);
+            game.particles.spawn(p.x, p.y, '#8B4513', 3);
+            audioEngine.playGunshot();
+        }
+    }
+}
+
+export class BallistaDefAbility extends Ability {
+    constructor(config, slot) {
+        super(config, slot);
+        this.maxStunDuration = 45; // 0.75 seconds at 60fps
+    }
+
+    onDamage(fighter, amount, context) {
+        const { game } = context;
+
+        // Dash back slightly on hit
+        const dashBackDist = 30;
+        const angle = fighter.angle + Math.PI; // Opposite direction
+
+        fighter.x += Math.cos(angle) * dashBackDist;
+        fighter.y += Math.sin(angle) * dashBackDist;
+
+        // Keep in bounds
+        const bounds = game.arenaBounds;
+        fighter.x = Math.max(bounds.x + fighter.radius, Math.min(bounds.x + bounds.width - fighter.radius, fighter.x));
+        fighter.y = Math.max(bounds.y + fighter.radius, Math.min(bounds.y + bounds.height - fighter.radius, fighter.y));
+
+        game.particles.spawn(fighter.x, fighter.y, '#8B4513', 4);
+
+        return amount; // Still take damage
+    }
+
+    update(fighter, context) {
+        // Reduce stun duration if > 0.75 seconds
+        if (fighter.status.stun > this.maxStunDuration) {
+            fighter.status.stun = this.maxStunDuration;
+            context.game.particles.spawnText(fighter.x, fighter.y, "RESIST!", "#8B4513");
+        }
+    }
+}
+
+export class BallistaUltAbility extends Ability {
+    constructor(config, slot) {
+        super(config, slot);
+        this.cooldown = config.cooldown || 150;
+        this.damage = config.damage || 15;
+    }
+
+    execute(fighter, context) {
+        const { game } = context;
+
+        fighter.cooldowns.ult = this.cooldown;
+        fighter.activeEffects.ultActive = true;
+        fighter.activeEffects.ultTimer = 30;
+
+        // Fire 2 bolts in cone pattern
+        const spreadAngle = 0.25; // ~15 degrees spread
+        const angles = [fighter.angle - spreadAngle, fighter.angle + spreadAngle];
+
+        angles.forEach((angle, index) => {
+            const p = new Projectile(
+                fighter,
+                fighter.x + Math.cos(angle) * 30,
+                fighter.y + Math.sin(angle) * 30,
+                angle,
+                14, // Slightly faster
+                this.damage,
+                game
+            );
+
+            p.isBallistaBolt = true;
+            p.isUltBolt = true;
+            p.radius = 10;
+            p.dragTarget = null;
+            p.dragDuration = 25;
+            p.boltIndex = index; // Track which bolt (for drag priority)
+
+            game.projectiles.push(p);
+        });
+
+        game.particles.spawnText(fighter.x, fighter.y, "DOUBLE SHOT!", "#8B4513");
+        audioEngine.playHeavyImpact();
+    }
+}

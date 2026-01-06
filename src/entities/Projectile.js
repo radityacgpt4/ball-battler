@@ -42,6 +42,13 @@ export class Projectile {
         this.lifeTime = 0;
         this.isSniperShot = false;
         this.isUnblockable = false;
+
+        // Ballista bolt props
+        this.isBallistaBolt = false;
+        this.isUltBolt = false;
+        this.dragTarget = null;
+        this.dragDuration = 0;
+        this.boltIndex = 0;
     }
 
     update(timeScale = 1.0) {
@@ -56,6 +63,50 @@ export class Projectile {
             // Claymore friction (stops sliding)
             this.dx *= 0.9;
             this.dy *= 0.9;
+        }
+
+        // Ballista Bolt Drag Logic
+        if (this.isBallistaBolt && this.dragTarget && !this.dragTarget.isDead) {
+            this.dragDuration -= 1 * timeScale;
+
+            // Drag the target along with the bolt
+            this.dragTarget.x = this.x;
+            this.dragTarget.y = this.y;
+
+            // Check if target hit wall while being dragged
+            const bounds = this.game.arenaBounds;
+            const hitWall = (
+                this.dragTarget.x <= bounds.x + this.dragTarget.radius ||
+                this.dragTarget.x >= bounds.x + bounds.width - this.dragTarget.radius ||
+                this.dragTarget.y <= bounds.y + this.dragTarget.radius ||
+                this.dragTarget.y >= bounds.y + bounds.height - this.dragTarget.radius
+            );
+
+            if (hitWall) {
+                // Clamp position
+                this.dragTarget.x = Math.max(bounds.x + this.dragTarget.radius, Math.min(bounds.x + bounds.width - this.dragTarget.radius, this.dragTarget.x));
+                this.dragTarget.y = Math.max(bounds.y + this.dragTarget.radius, Math.min(bounds.y + bounds.height - this.dragTarget.radius, this.dragTarget.y));
+
+                // Stun for 0.5 sec (30 frames)
+                this.dragTarget.applyStatus('STUN', 30);
+                this.game.particles.spawnText(this.dragTarget.x, this.dragTarget.y, "PINNED!", "#8B4513");
+                this.game.particles.spawnWallImpact(this.dragTarget.x, this.dragTarget.y);
+                audioEngine.playHeavyImpact();
+
+                // Release and deactivate
+                this.dragTarget.beingDragged = false;
+                this.dragTarget = null;
+                this.active = false;
+                return;
+            }
+
+            if (this.dragDuration <= 0) {
+                // Release target after drag duration
+                this.dragTarget.beingDragged = false;
+                this.dragTarget = null;
+                this.active = false;
+                return;
+            }
         }
 
         // Missile Homing Logic
@@ -266,6 +317,50 @@ export class Projectile {
             
             ctx.beginPath();
             ctx.fillRect(-10, -2, 20, 4); // Long bullet
+            ctx.restore();
+        }
+        else if (this.isBallistaBolt) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            // Arrow shaft
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(-20, -2, 35, 4);
+
+            // Arrow head (triangular)
+            ctx.fillStyle = this.isUltBolt ? '#FFD700' : '#4A4A4A';
+            ctx.beginPath();
+            ctx.moveTo(18, 0);
+            ctx.lineTo(8, -6);
+            ctx.lineTo(10, 0);
+            ctx.lineTo(8, 6);
+            ctx.closePath();
+            ctx.fill();
+
+            // Metallic edge
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(18, 0);
+            ctx.lineTo(8, -6);
+            ctx.moveTo(18, 0);
+            ctx.lineTo(8, 6);
+            ctx.stroke();
+
+            // Fletching (feathers)
+            ctx.fillStyle = this.isUltBolt ? '#8B0000' : '#2E7D32';
+            ctx.beginPath();
+            ctx.moveTo(-15, -2);
+            ctx.lineTo(-22, -8);
+            ctx.lineTo(-18, -2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(-15, 2);
+            ctx.lineTo(-22, 8);
+            ctx.lineTo(-18, 2);
+            ctx.fill();
+
             ctx.restore();
         }
         else {

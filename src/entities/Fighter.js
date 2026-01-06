@@ -16,6 +16,7 @@ import { ParryPassiveAbility, EvasionAbility, StaticPassiveAbility, ShieldDeflec
 import { WallSlamAbility } from '../abilities/SpecialAbility.js';
 import { SniperAtkAbility, ClaymoreAbility, SniperUltAbility } from '../abilities/SniperAbility.js';
 import { AxeAtkAbility, BerserkerDefAbility, ExecuteUltAbility } from '../abilities/AxeAbility.js';
+import { BallistaAtkAbility, BallistaDefAbility, BallistaUltAbility } from '../abilities/BallistaAbility.js';
 import { Projectile } from './Projectile.js';
 
 export class Fighter {
@@ -111,6 +112,9 @@ export class Fighter {
             case 'AXE_SWING':
                 abilities.atk = new AxeAtkAbility(skills.atk, 'atk');
                 break;
+            case 'BALLISTA_SHOT':
+                abilities.atk = new BallistaAtkAbility(skills.atk, 'atk');
+                break;
         }
 
         // Defense abilities
@@ -139,6 +143,9 @@ export class Fighter {
             case 'BERSERKER_RAGE':
                 abilities.def = new BerserkerDefAbility(skills.def, 'def');
                 break;
+            case 'HEAVY_ARMOR':
+                abilities.def = new BallistaDefAbility(skills.def, 'def');
+                break;
         }
 
         // Ultimate abilities
@@ -166,6 +173,9 @@ export class Fighter {
                 break;
             case 'EXECUTE':
                 abilities.ult = new ExecuteUltAbility(skills.ult, 'ult');
+                break;
+            case 'DOUBLE_BOLT':
+                abilities.ult = new BallistaUltAbility(skills.ult, 'ult');
                 break;
         }
 
@@ -705,6 +715,68 @@ export class Fighter {
                 }
                 ctx.globalAlpha = 1.0;
             }
+        } else if (this.typeKey === 'BALLISTA') {
+            // === BALLISTA CROSSBOW ===
+            const bowLength = 50;
+            const bowStart = this.radius - 5;
+
+            // Crossbow stock (wooden base)
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(bowStart, -4, 35, 8);
+
+            // Stock detail
+            ctx.fillStyle = '#4E342E';
+            ctx.fillRect(bowStart + 5, -3, 25, 6);
+
+            // Crossbow arms (bent bow shape)
+            ctx.strokeStyle = '#3E2723';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(bowStart + 30, 0);
+            ctx.quadraticCurveTo(bowStart + 35, -25, bowStart + 20, -30);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(bowStart + 30, 0);
+            ctx.quadraticCurveTo(bowStart + 35, 25, bowStart + 20, 30);
+            ctx.stroke();
+
+            // Bow arms inner (lighter wood)
+            ctx.strokeStyle = '#6D4C41';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(bowStart + 30, 0);
+            ctx.quadraticCurveTo(bowStart + 34, -22, bowStart + 22, -28);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(bowStart + 30, 0);
+            ctx.quadraticCurveTo(bowStart + 34, 22, bowStart + 22, 28);
+            ctx.stroke();
+
+            // Bowstring
+            ctx.strokeStyle = '#D7CCC8';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(bowStart + 20, -30);
+            ctx.lineTo(bowStart + 10, 0);
+            ctx.lineTo(bowStart + 20, 30);
+            ctx.stroke();
+
+            // Loaded bolt
+            ctx.fillStyle = '#4A4A4A';
+            ctx.fillRect(bowStart + 8, -2, 28, 4);
+
+            // Bolt head
+            ctx.fillStyle = '#757575';
+            ctx.beginPath();
+            ctx.moveTo(bowStart + 38, 0);
+            ctx.lineTo(bowStart + 32, -4);
+            ctx.lineTo(bowStart + 32, 4);
+            ctx.closePath();
+            ctx.fill();
+
+            // Metal reinforcement at center
+            ctx.fillStyle = '#616161';
+            ctx.fillRect(bowStart + 28, -6, 6, 12);
         }
         ctx.restore();
 

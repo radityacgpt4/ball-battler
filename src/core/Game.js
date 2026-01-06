@@ -288,15 +288,28 @@ export class Game {
                                     p.hitList.push(ent.id);
                                     this.particles.spawn(ent.x, ent.y, '#ffd700', 3);
                                     audioEngine.playHit();
-                                    logger.log(`${p.owner.name} Kunai HIT ${ent.name}`, 'combat');
+                                }
+                            } else if (p.isBallistaBolt) {
+                                // Ballista bolt - damage and drag
+                                ent.takeDamage(p.damage);
+                                this.particles.spawn(ent.x, ent.y, '#8B4513', 5);
+                                audioEngine.playHit();
+
+                                // Only drag if not already being dragged by another bolt
+                                if (!ent.beingDragged && !p.dragTarget) {
+                                    p.dragTarget = ent;
+                                    ent.beingDragged = true;
+                                    this.particles.spawnText(ent.x, ent.y, "DRAGGED!", "#8B4513");
+                                } else {
+                                    // Second bolt hits but doesn't drag - just damages
+                                    p.active = false;
                                 }
                             } else {
                                 ent.takeDamage(p.damage, p.isUnblockable);
                                 if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
-                                
+
                                 p.active = false;
                                 audioEngine.playHit();
-                                logger.log(`${p.owner.name} Projectile HIT ${ent.name}`, 'combat');
                             }
                         }
                         // Unblockable shots destroy shield logic (pierce through? or just ignore?)

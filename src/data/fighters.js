@@ -105,7 +105,7 @@ export const FIGHTER_TYPES = {
         skills: {
             atk: { type: "AXE_SWING" },
             def: { type: "BERSERKER_RAGE" },
-            ult: { type: "EXECUTE", cooldown: 180 }
+            ult: { type: "EXECUTE", cooldown: 60 }
         }
     }
 };

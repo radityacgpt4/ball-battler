@@ -595,35 +595,116 @@ export class Fighter {
             ctx.arc(this.radius, 0, 5, 0, Math.PI * 2); // Eye/Core
             ctx.fill();
         } else if (this.typeKey === 'AXEMAN') {
-            // Axe Handle
+            // === DOUBLE-SIDED BATTLEAXE ===
+            const handleLength = 40;
+            const handleStart = this.radius - 5;
+            const bladeCenter = handleStart + handleLength - 5;
+
+            // Handle shadow (depth)
+            ctx.fillStyle = '#3E2723';
+            ctx.fillRect(handleStart, -2, handleLength, 6);
+
+            // Main wooden handle
             ctx.fillStyle = '#5D4037';
-            ctx.fillRect(this.radius - 5, -3, 35, 6);
-            
-            // Axe Head - 2-Sided Fan Style
-            ctx.fillStyle = '#B0BEC5';
-            ctx.beginPath();
-            
-            // Connection point at handle
-            const hX = this.radius + 25;
-            
-            ctx.moveTo(hX, -5);
-            // Top Blade Flare
-            ctx.quadraticCurveTo(hX - 5, -25, hX + 10, -28);
-            // Blade Edge (Fan Curve)
-            ctx.quadraticCurveTo(hX + 25, 0, hX + 10, 28);
-            // Bottom Blade Flare
-            ctx.quadraticCurveTo(hX - 5, 25, hX, 5);
-            
-            ctx.closePath();
-            ctx.fill();
-            
-            // Blood effect on axe if hits > 0
-            if (this.axemanHits > 0) {
-                ctx.fillStyle = '#ff0000';
-                ctx.globalAlpha = 0.7;
+            ctx.fillRect(handleStart, -3, handleLength, 6);
+
+            // Handle grip wrapping
+            ctx.strokeStyle = '#4E342E';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 5; i++) {
+                const gx = handleStart + 8 + i * 6;
                 ctx.beginPath();
-                ctx.arc(hX + 15, 0, 10, 0, Math.PI * 2);
+                ctx.moveTo(gx, -3);
+                ctx.lineTo(gx + 2, 3);
+                ctx.stroke();
+            }
+
+            // Handle end cap (pommel)
+            ctx.fillStyle = '#757575';
+            ctx.beginPath();
+            ctx.arc(handleStart + 2, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#9E9E9E';
+            ctx.beginPath();
+            ctx.arc(handleStart + 2, -1, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Metal collar where blades attach
+            ctx.fillStyle = '#616161';
+            ctx.fillRect(bladeCenter - 4, -6, 8, 12);
+            ctx.fillStyle = '#9E9E9E';
+            ctx.fillRect(bladeCenter - 3, -5, 6, 10);
+
+            // === TOP BLADE ===
+            ctx.beginPath();
+            // Blade back (near handle)
+            ctx.moveTo(bladeCenter - 3, -6);
+            // Curve up to blade peak
+            ctx.quadraticCurveTo(bladeCenter - 8, -18, bladeCenter + 5, -26);
+            // Sharp cutting edge curving to tip
+            ctx.quadraticCurveTo(bladeCenter + 20, -20, bladeCenter + 18, -8);
+            // Blade beard (lower edge curves back)
+            ctx.quadraticCurveTo(bladeCenter + 12, -6, bladeCenter + 3, -6);
+            ctx.closePath();
+
+            // Blade gradient fill
+            const topGrad = ctx.createLinearGradient(bladeCenter, -26, bladeCenter + 18, -6);
+            topGrad.addColorStop(0, '#78909C');
+            topGrad.addColorStop(0.5, '#B0BEC5');
+            topGrad.addColorStop(1, '#ECEFF1');
+            ctx.fillStyle = topGrad;
+            ctx.fill();
+
+            // Blade edge highlight
+            ctx.strokeStyle = '#ECEFF1';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(bladeCenter + 5, -26);
+            ctx.quadraticCurveTo(bladeCenter + 20, -20, bladeCenter + 18, -8);
+            ctx.stroke();
+
+            // === BOTTOM BLADE (mirror) ===
+            ctx.beginPath();
+            ctx.moveTo(bladeCenter - 3, 6);
+            ctx.quadraticCurveTo(bladeCenter - 8, 18, bladeCenter + 5, 26);
+            ctx.quadraticCurveTo(bladeCenter + 20, 20, bladeCenter + 18, 8);
+            ctx.quadraticCurveTo(bladeCenter + 12, 6, bladeCenter + 3, 6);
+            ctx.closePath();
+
+            const botGrad = ctx.createLinearGradient(bladeCenter, 26, bladeCenter + 18, 6);
+            botGrad.addColorStop(0, '#78909C');
+            botGrad.addColorStop(0.5, '#B0BEC5');
+            botGrad.addColorStop(1, '#ECEFF1');
+            ctx.fillStyle = botGrad;
+            ctx.fill();
+
+            // Bottom blade edge highlight
+            ctx.strokeStyle = '#ECEFF1';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(bladeCenter + 5, 26);
+            ctx.quadraticCurveTo(bladeCenter + 20, 20, bladeCenter + 18, 8);
+            ctx.stroke();
+
+            // Blood effect on axe if combo hits > 0
+            if (this.axemanHits > 0) {
+                ctx.globalAlpha = 0.6 + (this.axemanHits * 0.1);
+                // Blood drips on top blade
+                ctx.fillStyle = '#8B0000';
+                ctx.beginPath();
+                ctx.ellipse(bladeCenter + 12, -15, 4, 6, 0.3, 0, Math.PI * 2);
                 ctx.fill();
+                // Blood drips on bottom blade
+                ctx.beginPath();
+                ctx.ellipse(bladeCenter + 10, 12, 3, 5, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                // Dripping effect
+                if (this.axemanHits >= 3) {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.ellipse(bladeCenter + 14, -22, 2, 4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 ctx.globalAlpha = 1.0;
             }
         }

@@ -39,7 +39,7 @@ export const FIGHTER_TYPES = {
         rotationSpeed: 0.12,
         skills: {
             atk: { type: "BURST_FIRE", cooldown: 100, count: 10, damage: 3 },
-            def: { type: "RETREAT", cooldown: 180, range: 150 },
+            def: { type: "RETREAT", cooldown: 120, range: 150 },
             ult: { type: "GRENADE", cooldown: 90, damage: 20 }
         }
     },
@@ -51,8 +51,8 @@ export const FIGHTER_TYPES = {
         speed: 4,
         rotationSpeed: 0.10,
         skills: {
-            atk: { type: "MOMENTUM_PASSIVE", maxSpeed: 8, speedGain: 1, damagePerTier: 5, knockback: 10 },
-            def: { type: "SHIELD_DEFLECT", arcAngle: Math.PI * 0.7 }, // 35% coverage (126 degrees)
+            atk: { type: "MOMENTUM_PASSIVE", maxSpeed: 8, speedGain: 1, damagePerTier: 5, knockback: 15 },
+            def: { type: "SHIELD_DEFLECT", arcAngle: Math.PI * 0.65 },
             ult: { type: "WALL_SLAM", cooldown: 120, damage: 10 }
         }
     },

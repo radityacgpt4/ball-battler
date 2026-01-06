@@ -49,10 +49,17 @@ export class BallistaDefAbility extends Ability {
     }
 
     onDamage(fighter, amount, context) {
-        const { game } = context;
+        const { game, isDoT } = context;
 
-        // Dash back slightly on hit
-        const dashBackDist = 30;
+        // Don't trigger dash-back for DoT damage (bleed, etc)
+        if (isDoT) {
+            return amount;
+        }
+
+        // Dash back slightly on direct hit
+        const dashBackDist = 35;
+        const oldX = fighter.x;
+        const oldY = fighter.y;
         const angle = fighter.angle + Math.PI; // Opposite direction
 
         fighter.x += Math.cos(angle) * dashBackDist;
@@ -63,7 +70,28 @@ export class BallistaDefAbility extends Ability {
         fighter.x = Math.max(bounds.x + fighter.radius, Math.min(bounds.x + bounds.width - fighter.radius, fighter.x));
         fighter.y = Math.max(bounds.y + fighter.radius, Math.min(bounds.y + bounds.height - fighter.radius, fighter.y));
 
-        game.particles.spawn(fighter.x, fighter.y, '#8B4513', 4);
+        // Particle trail effect for dash-back
+        for (let i = 0; i < 6; i++) {
+            const t = i / 6;
+            const px = oldX + (fighter.x - oldX) * t;
+            const py = oldY + (fighter.y - oldY) * t;
+            game.particles.particles.push({
+                x: px,
+                y: py,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                life: 0.6,
+                decay: 0.08,
+                size: 4 + Math.random() * 3,
+                color: '#8B4513',
+                type: 'dot'
+            });
+        }
+
+        // Dust cloud at landing spot
+        game.particles.spawn(fighter.x, fighter.y, '#D2691E', 5);
+        game.particles.spawnText(fighter.x, fighter.y - 20, "RECOIL", "#8B4513");
+        audioEngine.playBounce();
 
         return amount; // Still take damage
     }

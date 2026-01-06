@@ -201,7 +201,7 @@ export class Fighter {
             this.status.bleed = tick(this.status.bleed);
             this.status.bleedTick += 1 * timeScale;
             if (this.status.bleedTick >= 30) {
-                this.takeDamage(1);
+                this.takeDamage(1, false, true); // isDoT = true
                 this.game.particles.spawn(this.x, this.y, '#ff0000', 2);
                 this.status.bleedTick = 0;
             }
@@ -223,7 +223,10 @@ export class Fighter {
         // Evasion visual fade back
         if (this.activeEffects.evasionTimer > 0) this.activeEffects.evasionTimer = tick(this.activeEffects.evasionTimer);
 
-        if (this.isDashing) {
+        // Skip movement if being dragged by Ballista bolt
+        if (this.beingDragged) {
+            // Don't move - position controlled by projectile
+        } else if (this.isDashing) {
             this.handleDash(timeScale);
         } else if (canMove) {
             this.handleMovement(timeScale);
@@ -450,12 +453,12 @@ export class Fighter {
         }
     }
 
-    takeDamage(amount, isUnblockable = false) {
+    takeDamage(amount, isUnblockable = false, isDoT = false) {
         if (this.isDashing && !isUnblockable) return;
 
-        const context = { game: this.game };
+        const context = { game: this.game, isDoT };
 
-        // Check defensive abilities
+        // Check defensive abilities (skip for DoT unless ability handles it)
         if (this.abilities.def && !isUnblockable) {
             const result = this.abilities.def.onDamage(this, amount, context);
             if (result === false) return; // Damage was blocked

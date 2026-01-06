@@ -41,6 +41,20 @@ export class Projectile {
 
         // Missile Homing Logic
         if (this.isMissile && this.active) {
+            // Smoke Trail
+            if (Math.random() < 0.5) {
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 10,
+                    y: this.y - Math.sin(this.angle) * 10,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 0.8, decay: 0.05,
+                    size: Math.random() * 4 + 2,
+                    color: '#888888',
+                    type: 'dot'
+                });
+            }
+
             if (!this.target || this.target.isDead) {
                 // Find new target
                 const enemies = this.game.entities.filter(e => e !== this.owner && !e.isDead);
@@ -170,19 +184,29 @@ export class Projectile {
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
             
-            // Draw Missile
-            ctx.fillStyle = '#ff4400';
+            // Fins
+            ctx.fillStyle = '#555';
             ctx.beginPath();
-            ctx.moveTo(6, 0);
-            ctx.lineTo(-4, 3);
-            ctx.lineTo(-4, -3);
+            ctx.moveTo(-6, 0);
+            ctx.lineTo(-10, 8);
+            ctx.lineTo(-2, 0);
+            ctx.lineTo(-10, -8);
             ctx.fill();
 
-            // Thruster
+            // Draw Missile Body (Bigger)
+            ctx.fillStyle = '#ff4400';
+            ctx.beginPath();
+            ctx.moveTo(10, 0); // Longer nose
+            ctx.lineTo(-6, 5); // Wider body
+            ctx.lineTo(-6, -5);
+            ctx.fill();
+
+            // Thruster/Engine
             ctx.fillStyle = '#ffff00';
             ctx.beginPath();
-            ctx.moveTo(-4, 0);
-            ctx.lineTo(-8, 0);
+            ctx.moveTo(-6, 0);
+            ctx.lineTo(-14, 0); // Longer flame
+            ctx.lineWidth = 3;
             ctx.stroke();
 
             ctx.restore();

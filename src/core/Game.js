@@ -127,10 +127,21 @@ export class Game {
                     <div id="p${ent.id}-ult" class="skill-node skill-ult"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ULT</span></div></div>
                 </div>
             `;
+            
+            const shieldHTML = `
+                <div id="p${ent.id}-shield-bar" class="shield-bar-container" style="display:none; align-self: ${isRight ? 'flex-end' : 'flex-start'}">
+                    <div class="shield-icon">🛡️</div>
+                    <div class="shield-track">
+                        <div id="p${ent.id}-shield-fill" class="shield-fill"></div>
+                        <div id="p${ent.id}-shield-text" class="shield-text">0/0</div>
+                    </div>
+                </div>
+            `;
 
             div.innerHTML = `
                 <div class="hud-name" style="color:${ent.color}">${ent.name}</div>
                 ${skillsHTML}
+                ${shieldHTML}
             `;
             uiHeader.appendChild(div);
         });
@@ -163,6 +174,21 @@ export class Game {
             updateCircle('atk', ent.cooldowns.atk, ent.maxCooldowns.atk, ent.skills.atk.type.includes('PASSIVE'));
             updateCircle('def', ent.cooldowns.def, ent.maxCooldowns.def, ent.skills.def.type.includes('PASSIVE') || ent.skills.def.type === 'SHIELD_DEFLECT');
             updateCircle('ult', ent.cooldowns.ult, ent.maxCooldowns.ult, false);
+
+            // Update Shield UI
+            const shieldBar = document.getElementById(`p${ent.id}-shield-bar`);
+            if (shieldBar) {
+                if (ent.maxShield > 0) {
+                    shieldBar.style.display = 'flex';
+                    const fill = document.getElementById(`p${ent.id}-shield-fill`);
+                    const text = document.getElementById(`p${ent.id}-shield-text`);
+                    const pct = (ent.shieldHp / ent.maxShield) * 100;
+                    fill.style.width = `${pct}%`;
+                    text.innerText = `${Math.floor(ent.shieldHp)}`;
+                } else {
+                    shieldBar.style.display = 'none';
+                }
+            }
         });
     }
 

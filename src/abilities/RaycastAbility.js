@@ -218,9 +218,17 @@ export class LaserAbility extends Ability {
             const endX = fighter.x + Math.cos(fighter.angle) * this.range;
             const endY = fighter.y + Math.sin(fighter.angle) * this.range;
             
-            // Draw a temporary laser line (simple particle effect for now)
-            // Ideally we'd have a persistent beam visual, but particles work for "pulsing"
-            context.game.particles.spawnBolt([{x: fighter.x, y: fighter.y}, {x: endX, y: endY}], '#ffff00');
+            // Draw straight beam (Solid, no trail)
+            // We re-calculate exact hit for visual so it doesn't clip through walls weirdly
+            // Performance note: doing raycast every frame for visual might be heavy but for one char it's fine
+            let visualDist = this.range;
+            const wallHit = Physics.rayBoxIntersect(fighter.x, fighter.y, Math.cos(fighter.angle), Math.sin(fighter.angle), context.game.width, context.game.height);
+            if (wallHit && wallHit.dist < visualDist) visualDist = wallHit.dist;
+
+            const visEndX = fighter.x + Math.cos(fighter.angle) * visualDist;
+            const visEndY = fighter.y + Math.sin(fighter.angle) * visualDist;
+
+            context.game.particles.spawnBeam(fighter.x, fighter.y, visEndX, visEndY, '#ffdd00');
 
             if (this.timer <= 0) {
                 this.active = false;

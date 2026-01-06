@@ -34,10 +34,29 @@ export class Projectile {
         this.isMissile = false;
         this.target = null;
         this.turnSpeed = 0.05; // Weak homing
+
+        // Sniper/Claymore props
+        this.isClaymore = false;
+        this.stunDuration = 0;
+        this.slowDuration = 0;
+        this.lifeTime = 0;
+        this.isSniperShot = false;
+        this.isUnblockable = false;
     }
 
     update(timeScale = 1.0) {
         if (this.isEmbedded) return; // Stop moving if embedded
+
+        if (this.isClaymore) {
+            this.lifeTime -= 1 * timeScale;
+            if (this.lifeTime <= 0) {
+                this.active = false;
+                return;
+            }
+            // Claymore friction (stops sliding)
+            this.dx *= 0.9;
+            this.dy *= 0.9;
+        }
 
         // Missile Homing Logic
         if (this.isMissile && this.active) {
@@ -213,6 +232,40 @@ export class Projectile {
             ctx.lineWidth = 3;
             ctx.stroke();
 
+            ctx.restore();
+        }
+        else if (this.isClaymore) {
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Blink light
+            if (Math.floor(Date.now() / 200) % 2 === 0) {
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Range indicator (faint)
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        else if (this.isSniperShot) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+            
+            ctx.fillStyle = this.isUnblockable ? '#00ff00' : '#ff0000';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = ctx.fillStyle;
+            
+            ctx.beginPath();
+            ctx.fillRect(-10, -2, 20, 4); // Long bullet
             ctx.restore();
         }
         else {

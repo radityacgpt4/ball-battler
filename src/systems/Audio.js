@@ -139,6 +139,11 @@ export class AudioEngine {
         this.playTone(600, 'sine', 0.1, 0.1, 800); // Subtle rising bloop
     }
 
+    playPowerUp() {
+        this.playTone(400, 'square', 0.2, 0.4, 800);
+        this.playTone(600, 'sine', 0.2, 0.4, 1200);
+    }
+
     playWin() {
         setTimeout(() => this.playTone(440, 'triangle', 0.2, 0.5), 0);
         setTimeout(() => this.playTone(554, 'triangle', 0.2, 0.5), 150);

@@ -13,6 +13,7 @@ import { RaycastAbility, DoubleZapAbility, LaserAbility } from '../abilities/Ray
 import { DashAssaultAbility, RetreatAbility, FlashBarrageAbility } from '../abilities/DashAbility.js';
 import { ParryPassiveAbility, EvasionAbility, StaticPassiveAbility, ShieldDeflectAbility, MomentumPassiveAbility, ForceFieldAbility } from '../abilities/PassiveAbility.js';
 import { WallSlamAbility } from '../abilities/SpecialAbility.js';
+import { SniperAtkAbility, ClaymoreAbility, SniperUltAbility } from '../abilities/SniperAbility.js';
 import { Projectile } from './Projectile.js';
 
 export class Fighter {
@@ -102,6 +103,9 @@ export class Fighter {
             case 'LASER_BEAM':
                 abilities.atk = new LaserAbility(skills.atk, 'atk');
                 break;
+            case 'SNIPER_SHOT':
+                abilities.atk = new SniperAtkAbility(skills.atk, 'atk');
+                break;
         }
 
         // Defense abilities
@@ -124,6 +128,9 @@ export class Fighter {
             case 'FORCE_FIELD':
                 abilities.def = new ForceFieldAbility(skills.def, 'def');
                 break;
+            case 'CLAYMORE':
+                abilities.def = new ClaymoreAbility(skills.def, 'def');
+                break;
         }
 
         // Ultimate abilities
@@ -145,6 +152,9 @@ export class Fighter {
                 break;
             case 'MISSILE_BARRAGE':
                 abilities.ult = new MissileBarrageAbility(skills.ult, 'ult');
+                break;
+            case 'SNIPER_MODE':
+                abilities.ult = new SniperUltAbility(skills.ult, 'ult');
                 break;
         }
 
@@ -419,13 +429,13 @@ export class Fighter {
         }
     }
 
-    takeDamage(amount) {
-        if (this.isDashing) return;
+    takeDamage(amount, isUnblockable = false) {
+        if (this.isDashing && !isUnblockable) return;
 
         const context = { game: this.game };
 
         // Check defensive abilities
-        if (this.abilities.def) {
+        if (this.abilities.def && !isUnblockable) {
             const result = this.abilities.def.onDamage(this, amount, context);
             if (result === false) return; // Damage was blocked
             amount = result;
@@ -455,14 +465,14 @@ export class Fighter {
         }
     }
 
-    applyStatus(type) {
-        if (type === 'BLEED') this.status.bleed = 180;
-        if (type === 'STUN') this.status.stun = 60;
+    applyStatus(type, duration = null) {
+        if (type === 'BLEED') this.status.bleed = duration || 180;
+        if (type === 'STUN') this.status.stun = duration || 60;
         if (type === 'SLOW') {
             if (this.status.slow <= 0) {
                 this.game.particles.spawnText(this.x, this.y, "SLOW", "#cccccc");
             }
-            this.status.slow = 30; // 0.5s linger duration
+            this.status.slow = duration || 30;
         }
     }
 

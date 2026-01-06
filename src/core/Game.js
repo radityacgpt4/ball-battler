@@ -233,13 +233,32 @@ export class Game {
                 continue;
             }
 
+            if (p.isClaymore) {
+                for (let ent of this.entities) {
+                    if (ent === p.owner || ent.isDead) continue;
+                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius + 5) {
+                        // Trigger Claymore
+                        ent.takeDamage(p.damage);
+                        if (p.slowDuration > 0) ent.applyStatus('SLOW', p.slowDuration);
+                        
+                        this.particles.spawnExplosion(p.x, p.y);
+                        this.particles.spawnText(ent.x, ent.y, "TRAPPED!", "#ff0000");
+                        audioEngine.playExplosion();
+                        
+                        p.active = false;
+                        break;
+                    }
+                }
+                continue;
+            }
+
             if (!p.isGrenade) {
                 for (let ent of this.entities) {
                     if (ent === p.owner || ent.isDead) continue;
                     if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
 
                         // Check if projectile is blocked by shield
-                        if (ent.isBlockedByShield(p.x, p.y)) {
+                        if (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y)) {
                             p.owner = ent;
                             p.hitList = [];
                             p.travelled = 0;
@@ -264,12 +283,18 @@ export class Game {
                                     audioEngine.playHit();
                                 }
                             } else {
-                                ent.takeDamage(p.damage);
+                                ent.takeDamage(p.damage, p.isUnblockable);
+                                if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
+                                
                                 p.active = false;
                                 audioEngine.playHit();
                             }
                         }
-                        if (!p.isKunai || ent.isBlockedByShield(p.x, p.y)) break;
+                        // Unblockable shots destroy shield logic (pierce through? or just ignore?)
+                        // Current logic: if unblockable, we skipped the shield block block.
+                        // So we are here.
+                        
+                        if (!p.isKunai || (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y))) break;
                     }
                 }
             }

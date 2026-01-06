@@ -81,5 +81,18 @@ export const FIGHTER_TYPES = {
             def: { type: "FORCE_FIELD", maxShield: 75, regenRate: 0.033 }, // 2 HP/sec @ 60fps
             ult: { type: "MISSILE_BARRAGE", cooldown: 120, damage: 9 }
         }
+    },
+    SNIPER: {
+        name: "Sniper",
+        color: "#556b2f",
+        hp: 100,
+        mass: 1.1,
+        speed: 4.2,
+        rotationSpeed: 0.08,
+        skills: {
+            atk: { type: "SNIPER_SHOT", cooldown: 90, damage: 12, stun: 60, projectileSpeed: 25 },
+            def: { type: "CLAYMORE", cooldown: 180, damage: 5, lifeTime: 360, slowDuration: 120 },
+            ult: { type: "SNIPER_MODE", cooldown: 300 }
+        }
     }
 };

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1v1 Fighter Ball - Auto Battler Engine v3 (With Sound)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="ui-header"></div>
+
+        <div id="game-wrapper">
+            <canvas id="arena" width="500" height="500"></canvas>
+
+            <div id="char-select" class="screen-overlay">
+                <h2 style="margin-top:0">BATTLE SETUP</h2>
+                <div class="select-row">
+                    <div class="player-col" id="p1-col">
+                        <div class="p-title">PLAYER 1</div>
+                    </div>
+                    <div class="player-col" id="p2-col">
+                        <div class="p-title">PLAYER 2</div>
+                    </div>
+                </div>
+                <button id="start-btn">FIGHT!</button>
+                <div class="sound-toggle">Sound enabled by starting</div>
+            </div>
+
+            <div id="end-screen" class="screen-overlay">
+                <h1 id="win-msg">WINNER</h1>
+                <button class="restart-btn" id="restart-btn">SETUP NEW FIGHT</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Game } from './src/core/Game.js';
+
+        // Create global game instance
+        const game = new Game();
+
+        // Initialize the game
+        game.init();
+
+        // Bind button events
+        document.getElementById('start-btn').addEventListener('click', () => {
+            game.startMatch();
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            game.showSelect();
+        });
+
+        // Expose game instance for debugging (optional)
+        window.game = game;
+    </script>
+</body>
+</html>

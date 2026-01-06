@@ -46,7 +46,7 @@ export class Fighter {
             ult: stats.skills.ult.cooldown || 0
         };
 
-        this.status = { stun: 0, bleed: 0, bleedTick: 0 };
+        this.status = { stun: 0, bleed: 0, bleedTick: 0, slow: 0 };
         this.isDashing = false;
         this.dashTimer = 0;
         this.activeEffects = {
@@ -161,6 +161,8 @@ export class Fighter {
 
         let canMove = true;
         if (this.status.stun > 0) { this.status.stun--; canMove = false; }
+        if (this.status.slow > 0) this.status.slow--;
+
         if (this.status.bleed > 0) {
             this.status.bleed--;
             this.status.bleedTick++;
@@ -258,6 +260,8 @@ export class Fighter {
         const speed = Math.hypot(this.dx, this.dy);
         if (speed > 0) {
             let mod = (this.activeEffects.ultActive && this.typeKey === 'SOLDIER') ? 1.5 : 1.0;
+            if (this.status.slow > 0) mod *= 0.75; // 25% slow
+
             let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
             this.dx = (this.dx / speed) * targetSpeed * mod;
             this.dy = (this.dy / speed) * targetSpeed * mod;
@@ -431,6 +435,7 @@ export class Fighter {
     applyStatus(type) {
         if (type === 'BLEED') this.status.bleed = 180;
         if (type === 'STUN') this.status.stun = 60;
+        if (type === 'SLOW') this.status.slow = 10; // Short duration, refreshed by beam
     }
 
     draw(ctx) {
@@ -449,6 +454,14 @@ export class Fighter {
             ctx.beginPath();
             ctx.arc(0, 0, this.radius + 5, 0, Math.PI * 2);
             ctx.stroke();
+        }
+
+        // Slow effect visual
+        if (this.status.slow > 0) {
+            ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         // Wall slam knockback indicator

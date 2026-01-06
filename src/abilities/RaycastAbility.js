@@ -209,8 +209,8 @@ export class LaserAbility extends Ability {
         if (this.active) {
             this.timer--;
             
-            // Fire beam tick (every 6 frames = 0.1s)
-            if (this.timer % 6 === 0) {
+            // Fire beam tick (every 3 frames = 0.05s)
+            if (this.timer % 3 === 0) {
                 this.fireBeam(fighter, context);
             }
 
@@ -280,6 +280,7 @@ export class LaserAbility extends Ability {
         // Apply effects
         if (closest.type === 'enemy') {
             closest.data.takeDamage(this.damage);
+            closest.data.applyStatus('SLOW'); // Apply Slow effect
             game.particles.spawn(hitX, hitY, '#ff4400', 3);
         } else if (closest.type === 'shield') {
             game.particles.spawnText(closest.data.enemy.x, closest.data.enemy.y, "BLOCK", "#ffffff");

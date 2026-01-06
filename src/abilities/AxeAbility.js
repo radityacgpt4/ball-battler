@@ -11,7 +11,7 @@ export class AxeAtkAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
         this.range = 55;
-        this.damage = 7;
+        this.damage = 8;
         this.bleedDuration = 180; // 3 seconds
     }
 
@@ -58,7 +58,7 @@ export class AxeAtkAbility extends Ability {
                     
                     // 2. Track consecutive hits
                     fighter.axemanHits = (fighter.axemanHits || 0) + 1;
-                    fighter.axemanComboTimer = 60; // 1 second to land next hit (Strict window)
+                    fighter.axemanComboTimer = 90; // 1.5 second to land next hit
                     
                     game.particles.spawnText(fighter.x, fighter.y - 30, `${fighter.axemanHits} HIT!`, "#ff6b6b");
 

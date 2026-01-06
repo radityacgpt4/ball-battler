@@ -174,7 +174,7 @@ export class Fighter {
             case 'EXECUTE':
                 abilities.ult = new ExecuteUltAbility(skills.ult, 'ult');
                 break;
-            case 'DOUBLE_BOLT':
+            case 'TRIPLE_BOLT':
                 abilities.ult = new BallistaUltAbility(skills.ult, 'ult');
                 break;
         }
@@ -223,10 +223,7 @@ export class Fighter {
         // Evasion visual fade back
         if (this.activeEffects.evasionTimer > 0) this.activeEffects.evasionTimer = tick(this.activeEffects.evasionTimer);
 
-        // Skip movement if being dragged by Ballista bolt
-        if (this.beingDragged) {
-            // Don't move - position controlled by projectile
-        } else if (this.isDashing) {
+        if (this.isDashing) {
             this.handleDash(timeScale);
         } else if (canMove) {
             this.handleMovement(timeScale);
@@ -282,6 +279,24 @@ export class Fighter {
             }
 
             this.pendingWallSlam = null;
+        }
+
+        // BALLISTA PIN Logic (when knocked into wall by bolt)
+        if (bounced && this.pendingBallistaPinned) {
+            // Stun for 0.5 sec (30 frames)
+            this.status.stun = 30;
+
+            audioEngine.playHeavyImpact();
+
+            this.game.particles.spawnText(this.x, this.y - 30, "PINNED!", "#8B4513");
+            this.game.particles.spawnWallImpact(this.x, this.y);
+
+            // Reset to normal speed
+            const vAngle = Math.atan2(this.dy, this.dx);
+            this.dx = Math.cos(vAngle) * this.baseSpeed;
+            this.dy = Math.sin(vAngle) * this.baseSpeed;
+
+            this.pendingBallistaPinned = null;
         }
 
         // SHIELDBEARER: Momentum on wall bounce

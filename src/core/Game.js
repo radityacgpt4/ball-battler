@@ -290,18 +290,40 @@ export class Game {
                                     audioEngine.playHit();
                                 }
                             } else if (p.isBallistaBolt) {
-                                // Ballista bolt - damage and drag
+                                // Ballista bolt - damage and knockback
                                 ent.takeDamage(p.damage);
                                 this.particles.spawn(ent.x, ent.y, '#8B4513', 5);
                                 audioEngine.playHit();
 
-                                // Only drag if not already being dragged by another bolt
-                                if (!ent.beingDragged && !p.dragTarget) {
+                                // Only knockback if not already being knocked back
+                                if (!ent.pendingBallistaPinned && !p.dragTarget) {
+                                    // Apply knockback velocity in bolt direction
+                                    const knockbackSpeed = 12;
+                                    ent.dx = Math.cos(p.angle) * knockbackSpeed;
+                                    ent.dy = Math.sin(p.angle) * knockbackSpeed;
+
+                                    // Set pending pin for wall collision
+                                    ent.pendingBallistaPinned = { owner: p.owner };
                                     p.dragTarget = ent;
-                                    ent.beingDragged = true;
-                                    this.particles.spawnText(ent.x, ent.y, "DRAGGED!", "#8B4513");
+
+                                    this.particles.spawnText(ent.x, ent.y, "KNOCKED!", "#8B4513");
+
+                                    // Spawn knockback trail particles
+                                    for (let i = 0; i < 8; i++) {
+                                        this.particles.particles.push({
+                                            x: ent.x,
+                                            y: ent.y,
+                                            vx: -Math.cos(p.angle) * (2 + Math.random() * 2),
+                                            vy: -Math.sin(p.angle) * (2 + Math.random() * 2),
+                                            life: 0.6,
+                                            decay: 0.05,
+                                            size: 4 + Math.random() * 3,
+                                            color: '#8B4513',
+                                            type: 'dot'
+                                        });
+                                    }
                                 } else {
-                                    // Second bolt hits but doesn't drag - just damages
+                                    // Already being knocked - just damage, deactivate bolt
                                     p.active = false;
                                 }
                             } else {

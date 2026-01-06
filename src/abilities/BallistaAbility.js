@@ -11,7 +11,7 @@ export class BallistaAtkAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
         this.damage = config.damage || 15;
-        this.projectileSpeed = config.projectileSpeed || 12;
+        this.projectileSpeed = config.projectileSpeed || 16;
     }
 
     update(fighter, context) {
@@ -20,23 +20,30 @@ export class BallistaAtkAbility extends Ability {
         if (fighter.cooldowns.atk <= 0) {
             fighter.cooldowns.atk = this.cooldown;
 
-            const p = new Projectile(
-                fighter,
-                fighter.x + Math.cos(fighter.angle) * 30,
-                fighter.y + Math.sin(fighter.angle) * 30,
-                fighter.angle,
-                this.projectileSpeed,
-                this.damage,
-                game
-            );
+            // Fire 2 bolts in small cone pattern
+            const spreadAngle = 0.12; // ~7 degrees spread
+            const angles = [fighter.angle - spreadAngle, fighter.angle + spreadAngle];
 
-            p.isBallistaBolt = true;
-            p.radius = 8;
-            p.dragTarget = null;
-            p.dragDuration = 20; // Frames to drag
+            angles.forEach((angle) => {
+                const p = new Projectile(
+                    fighter,
+                    fighter.x + Math.cos(angle) * 30,
+                    fighter.y + Math.sin(angle) * 30,
+                    angle,
+                    this.projectileSpeed,
+                    this.damage,
+                    game
+                );
 
-            game.projectiles.push(p);
-            game.particles.spawn(p.x, p.y, '#8B4513', 3);
+                p.isBallistaBolt = true;
+                p.radius = 8;
+                p.dragTarget = null;
+                p.dragDuration = 25;
+
+                game.projectiles.push(p);
+            });
+
+            game.particles.spawn(fighter.x + Math.cos(fighter.angle) * 30, fighter.y + Math.sin(fighter.angle) * 30, '#8B4513', 4);
             audioEngine.playGunshot();
         }
     }
@@ -119,9 +126,13 @@ export class BallistaUltAbility extends Ability {
         fighter.activeEffects.ultActive = true;
         fighter.activeEffects.ultTimer = 30;
 
-        // Fire 2 bolts in cone pattern
-        const spreadAngle = 0.25; // ~15 degrees spread
-        const angles = [fighter.angle - spreadAngle, fighter.angle + spreadAngle];
+        // Fire 3 bolts in wider cone pattern
+        const spreadAngle = 0.2; // ~12 degrees spread
+        const angles = [
+            fighter.angle - spreadAngle,
+            fighter.angle,
+            fighter.angle + spreadAngle
+        ];
 
         angles.forEach((angle, index) => {
             const p = new Projectile(
@@ -129,7 +140,7 @@ export class BallistaUltAbility extends Ability {
                 fighter.x + Math.cos(angle) * 30,
                 fighter.y + Math.sin(angle) * 30,
                 angle,
-                14, // Slightly faster
+                18, // Faster ult bolts
                 this.damage,
                 game
             );
@@ -138,13 +149,13 @@ export class BallistaUltAbility extends Ability {
             p.isUltBolt = true;
             p.radius = 10;
             p.dragTarget = null;
-            p.dragDuration = 25;
-            p.boltIndex = index; // Track which bolt (for drag priority)
+            p.dragDuration = 30;
+            p.boltIndex = index;
 
             game.projectiles.push(p);
         });
 
-        game.particles.spawnText(fighter.x, fighter.y, "DOUBLE SHOT!", "#8B4513");
+        game.particles.spawnText(fighter.x, fighter.y, "TRIPLE SHOT!", "#8B4513");
         audioEngine.playHeavyImpact();
     }
 }

@@ -116,9 +116,9 @@ export const FIGHTER_TYPES = {
         speed: 3.5,
         rotationSpeed: 0.09,
         skills: {
-            atk: { type: "BALLISTA_SHOT", cooldown: 120, damage: 15, projectileSpeed: 14 },
+            atk: { type: "BALLISTA_SHOT", cooldown: 120, damage: 15, projectileSpeed: 16 },
             def: { type: "HEAVY_ARMOR" },
-            ult: { type: "DOUBLE_BOLT", cooldown: 120, damage: 15 }
+            ult: { type: "TRIPLE_BOLT", cooldown: 120, damage: 15 }
         }
     }
 };

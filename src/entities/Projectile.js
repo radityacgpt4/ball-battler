@@ -67,42 +67,14 @@ export class Projectile {
 
         // Ballista Bolt Drag Logic
         if (this.isBallistaBolt && this.dragTarget && !this.dragTarget.isDead) {
+            // Bolt follows and pushes the target
+            this.x = this.dragTarget.x + Math.cos(this.angle) * 10;
+            this.y = this.dragTarget.y + Math.sin(this.angle) * 10;
+
             this.dragDuration -= 1 * timeScale;
 
-            // Drag the target along with the bolt
-            this.dragTarget.x = this.x;
-            this.dragTarget.y = this.y;
-
-            // Check if target hit wall while being dragged
-            const bounds = this.game.arenaBounds;
-            const hitWall = (
-                this.dragTarget.x <= bounds.x + this.dragTarget.radius ||
-                this.dragTarget.x >= bounds.x + bounds.width - this.dragTarget.radius ||
-                this.dragTarget.y <= bounds.y + this.dragTarget.radius ||
-                this.dragTarget.y >= bounds.y + bounds.height - this.dragTarget.radius
-            );
-
-            if (hitWall) {
-                // Clamp position
-                this.dragTarget.x = Math.max(bounds.x + this.dragTarget.radius, Math.min(bounds.x + bounds.width - this.dragTarget.radius, this.dragTarget.x));
-                this.dragTarget.y = Math.max(bounds.y + this.dragTarget.radius, Math.min(bounds.y + bounds.height - this.dragTarget.radius, this.dragTarget.y));
-
-                // Stun for 0.5 sec (30 frames)
-                this.dragTarget.applyStatus('STUN', 30);
-                this.game.particles.spawnText(this.dragTarget.x, this.dragTarget.y, "PINNED!", "#8B4513");
-                this.game.particles.spawnWallImpact(this.dragTarget.x, this.dragTarget.y);
-                audioEngine.playHeavyImpact();
-
-                // Release and deactivate
-                this.dragTarget.beingDragged = false;
-                this.dragTarget = null;
-                this.active = false;
-                return;
-            }
-
             if (this.dragDuration <= 0) {
-                // Release target after drag duration
-                this.dragTarget.beingDragged = false;
+                // Release after duration
                 this.dragTarget = null;
                 this.active = false;
                 return;

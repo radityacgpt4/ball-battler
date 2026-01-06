@@ -435,7 +435,12 @@ export class Fighter {
     applyStatus(type) {
         if (type === 'BLEED') this.status.bleed = 180;
         if (type === 'STUN') this.status.stun = 60;
-        if (type === 'SLOW') this.status.slow = 10; // Short duration, refreshed by beam
+        if (type === 'SLOW') {
+            if (this.status.slow <= 0) {
+                this.game.particles.spawnText(this.x, this.y, "SLOW", "#cccccc");
+            }
+            this.status.slow = 10; // Short duration, refreshed by beam
+        }
     }
 
     draw(ctx) {

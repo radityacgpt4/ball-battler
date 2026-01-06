@@ -280,7 +280,7 @@ export class LaserAbility extends Ability {
         // Apply effects
         if (closest.type === 'enemy') {
             closest.data.takeDamage(this.damage);
-            closest.data.applyStatus('SLOW'); // Apply Slow effect
+            closest.data.applyStatus('SLOW');
             game.particles.spawn(hitX, hitY, '#ff4400', 3);
         } else if (closest.type === 'shield') {
             game.particles.spawnText(closest.data.enemy.x, closest.data.enemy.y, "BLOCK", "#ffffff");

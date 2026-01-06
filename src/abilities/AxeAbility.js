@@ -57,7 +57,7 @@ export class AxeAtkAbility extends Ability {
                     
                     // 2. Track consecutive hits
                     fighter.axemanHits = (fighter.axemanHits || 0) + 1;
-                    fighter.axemanComboTimer = 120; // 2 seconds to land next hit
+                    fighter.axemanComboTimer = 60; // 1 second to land next hit (Strict window)
                     
                     game.particles.spawnText(fighter.x, fighter.y - 30, `${fighter.axemanHits} HIT!`, "#ff6b6b");
 
@@ -128,7 +128,7 @@ export class ExecuteUltAbility extends Ability {
         game.particles.spawnText(fighter.x, fighter.y, "EXECUTE!", "#ff0000");
 
         enemies.forEach(enemy => {
-            if (enemy.isDead) return;
+            if (enemy === fighter || enemy.isDead) return;
             const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
             if (dist <= range + enemy.radius) {
                 hit = true;

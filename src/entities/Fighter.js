@@ -592,13 +592,21 @@ export class Fighter {
             ctx.fillStyle = '#5D4037';
             ctx.fillRect(this.radius - 5, -3, 35, 6);
             
-            // Axe Head
+            // Axe Head - 2-Sided Fan Style
             ctx.fillStyle = '#B0BEC5';
             ctx.beginPath();
-            ctx.moveTo(this.radius + 20, -15);
-            ctx.lineTo(this.radius + 35, -25);
-            ctx.quadraticCurveTo(this.radius + 40, 0, this.radius + 35, 25);
-            ctx.lineTo(this.radius + 20, 15);
+            
+            // Connection point at handle
+            const hX = this.radius + 25;
+            
+            ctx.moveTo(hX, -5);
+            // Top Blade Flare
+            ctx.quadraticCurveTo(hX - 5, -25, hX + 10, -28);
+            // Blade Edge (Fan Curve)
+            ctx.quadraticCurveTo(hX + 25, 0, hX + 10, 28);
+            // Bottom Blade Flare
+            ctx.quadraticCurveTo(hX - 5, 25, hX, 5);
+            
             ctx.closePath();
             ctx.fill();
             
@@ -607,7 +615,7 @@ export class Fighter {
                 ctx.fillStyle = '#ff0000';
                 ctx.globalAlpha = 0.7;
                 ctx.beginPath();
-                ctx.arc(this.radius + 35, 0, 8, 0, Math.PI * 2);
+                ctx.arc(hX + 15, 0, 10, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.globalAlpha = 1.0;
             }

@@ -111,14 +111,14 @@ export const FIGHTER_TYPES = {
     BALLISTA: {
         name: "Ballista",
         color: "#8B4513",
-        hp: 110,
-        mass: 1.6,
+        hp: 100,
+        mass: 2,
         speed: 3.5,
-        rotationSpeed: 0.06,
+        rotationSpeed: 0.09,
         skills: {
-            atk: { type: "BALLISTA_SHOT", cooldown: 120, damage: 15, projectileSpeed: 12 },
+            atk: { type: "BALLISTA_SHOT", cooldown: 120, damage: 15, projectileSpeed: 14 },
             def: { type: "HEAVY_ARMOR" },
-            ult: { type: "DOUBLE_BOLT", cooldown: 150, damage: 15 }
+            ult: { type: "DOUBLE_BOLT", cooldown: 120, damage: 15 }
         }
     }
 };

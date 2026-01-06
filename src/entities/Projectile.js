@@ -36,13 +36,13 @@ export class Projectile {
         this.turnSpeed = 0.05; // Weak homing
     }
 
-    update() {
+    update(timeScale = 1.0) {
         if (this.isEmbedded) return; // Stop moving if embedded
 
         // Missile Homing Logic
         if (this.isMissile && this.active) {
             // Smoke Trail
-            if (Math.random() < 0.5) {
+            if (Math.random() < 0.5 * timeScale) {
                 this.game.particles.particles.push({
                     x: this.x - Math.cos(this.angle) * 10,
                     y: this.y - Math.sin(this.angle) * 10,
@@ -79,10 +79,11 @@ export class Projectile {
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
                 // Turn towards target
-                if (Math.abs(angleDiff) < this.turnSpeed) {
+                const turn = this.turnSpeed * timeScale;
+                if (Math.abs(angleDiff) < turn) {
                     this.angle = targetAngle;
                 } else {
-                    this.angle += Math.sign(angleDiff) * this.turnSpeed;
+                    this.angle += Math.sign(angleDiff) * turn;
                 }
 
                 // Update velocity vector based on new angle
@@ -92,8 +93,8 @@ export class Projectile {
             }
         }
 
-        this.x += this.dx;
-        this.y += this.dy;
+        this.x += this.dx * timeScale;
+        this.y += this.dy * timeScale;
 
         if (this.isKunai) {
             this.travelled += Math.hypot(this.dx, this.dy);
@@ -111,8 +112,8 @@ export class Projectile {
             }
         }
         else if (this.isGrenade) {
-            this.z += this.vz;
-            this.vz -= 0.5;
+            this.z += this.vz * timeScale;
+            this.vz -= 0.5 * timeScale;
             const bounds = this.game.arenaBounds;
             if (this.x < bounds.x || this.x > bounds.x + bounds.width) {
                 this.x = Math.max(bounds.x, Math.min(bounds.x + bounds.width, this.x));

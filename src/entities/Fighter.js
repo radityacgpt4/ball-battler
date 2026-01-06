@@ -151,21 +151,24 @@ export class Fighter {
         return abilities;
     }
 
-    update(allEntities) {
+    update(allEntities, timeScale = 1.0) {
         if (this.isDead) return;
 
-        if (this.collisionImmunity > 0) this.collisionImmunity--;
-        if (this.cooldowns.atk > 0) this.cooldowns.atk--;
-        if (this.cooldowns.def > 0) this.cooldowns.def--;
-        if (this.cooldowns.ult > 0) this.cooldowns.ult--;
+        // Apply timescale to timers (rounding for integer timers)
+        const tick = (val) => Math.max(0, val - 1 * timeScale);
+        
+        if (this.collisionImmunity > 0) this.collisionImmunity = tick(this.collisionImmunity);
+        if (this.cooldowns.atk > 0) this.cooldowns.atk = tick(this.cooldowns.atk);
+        if (this.cooldowns.def > 0) this.cooldowns.def = tick(this.cooldowns.def);
+        if (this.cooldowns.ult > 0) this.cooldowns.ult = tick(this.cooldowns.ult);
 
         let canMove = true;
-        if (this.status.stun > 0) { this.status.stun--; canMove = false; }
-        if (this.status.slow > 0) this.status.slow--;
+        if (this.status.stun > 0) { this.status.stun = tick(this.status.stun); canMove = false; }
+        if (this.status.slow > 0) this.status.slow = tick(this.status.slow);
 
         if (this.status.bleed > 0) {
-            this.status.bleed--;
-            this.status.bleedTick++;
+            this.status.bleed = tick(this.status.bleed);
+            this.status.bleedTick += 1 * timeScale;
             if (this.status.bleedTick >= 30) {
                 this.takeDamage(1);
                 this.game.particles.spawn(this.x, this.y, '#ff0000', 2);
@@ -175,7 +178,7 @@ export class Fighter {
 
         // Ninja Teleport Trigger
         if (this.teleportDelayTimer > 0) {
-            this.teleportDelayTimer--;
+            this.teleportDelayTimer = tick(this.teleportDelayTimer);
             if (this.teleportDelayTimer <= 0 && this.kunaiPending.length > 0) {
                 this.chainDashQueue = [{x: this.x, y: this.y}];
                 this.kunaiPending.forEach(p => this.chainDashQueue.push({x: p.x, y: p.y}));
@@ -187,28 +190,28 @@ export class Fighter {
         }
 
         // Evasion visual fade back
-        if (this.activeEffects.evasionTimer > 0) this.activeEffects.evasionTimer--;
+        if (this.activeEffects.evasionTimer > 0) this.activeEffects.evasionTimer = tick(this.activeEffects.evasionTimer);
 
         if (this.isDashing) {
-            this.handleDash();
+            this.handleDash(timeScale);
         } else if (canMove) {
-            this.handleMovement();
+            this.handleMovement(timeScale);
         }
 
         if (this.status.stun <= 0 && !this.isDashing) {
-            let rot = this.rotationSpeed;
+            let rot = this.rotationSpeed * timeScale;
             if (this.typeKey === 'SOLDIER' && this.activeEffects.burstCount > 0) {
                 rot *= 0.2;
             }
             this.angle += rot;
         }
 
-        this.updateSkills(allEntities);
+        this.updateSkills(allEntities, timeScale);
     }
 
-    handleMovement() {
-        this.x += this.dx;
-        this.y += this.dy;
+    handleMovement(timeScale) {
+        this.x += this.dx * timeScale;
+        this.y += this.dy * timeScale;
 
         let bounced = false;
 
@@ -269,8 +272,8 @@ export class Fighter {
         }
     }
 
-    handleDash() {
-        this.dashTimer--;
+    handleDash(timeScale) {
+        this.dashTimer -= 1 * timeScale;
 
         if (this.typeKey === 'NINJA' && this.chainDashQueue.length > 1) {
             if (this.dashTimer % 4 === 0) {
@@ -368,10 +371,10 @@ export class Fighter {
         return false;
     }
 
-    updateSkills(enemies) {
+    updateSkills(enemies, timeScale) {
         if (this.status.stun > 0) return;
 
-        const context = { enemies, game: this.game };
+        const context = { enemies, game: this.game, timeScale };
 
         // Update attack ability
         if (this.abilities.atk && this.abilities.atk.update) {
@@ -431,7 +434,25 @@ export class Fighter {
         const dmg = Math.ceil(amount);
         this.game.particles.spawnText(this.x, this.y - this.radius, `-${dmg}`, '#ff4444');
         this.hp -= amount;
-        if (this.hp <= 0) { this.hp = 0; this.isDead = true; }
+        if (this.hp <= 0) {
+            this.hp = 0;
+            if (!this.isDead) {
+                this.isDead = true;
+                this.game.particles.spawnExplosion(this.x, this.y);
+                this.game.particles.spawnText(this.x, this.y, "KO!", "#ff0000");
+                audioEngine.playExplosion();
+                
+                // Ghost effect
+                this.game.particles.particles.push({
+                    x: this.x, y: this.y,
+                    vx: 0, vy: -1,
+                    life: 2.0, decay: 0.02,
+                    size: this.radius, color: '#ffffff',
+                    type: 'dot',
+                    alpha: 0.5
+                });
+            }
+        }
     }
 
     applyStatus(type) {

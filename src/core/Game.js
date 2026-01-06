@@ -30,6 +30,9 @@ export class Game {
             height: CONSTANTS.HEIGHT
         };
         this.arenaTimer = 0;
+        this.timeScale = 1.0;
+        this.finishTimer = 0;
+        this.isMatchOver = false;
     }
 
     init() {
@@ -87,6 +90,9 @@ export class Game {
         };
 
         this.arenaTimer = 0;
+        this.timeScale = 1.0;
+        this.finishTimer = 0;
+        this.isMatchOver = false;
         this.updateCanvasSize();
 
         this.entities = [];
@@ -193,10 +199,10 @@ export class Game {
     }
 
     resolveCollisions() {
-        // Projectiles
+        // Projectiles Collision Logic (Moved update to loop for timescale control)
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             let p = this.projectiles[i];
-            p.update();
+            // p.update(); // Removed, called in loop with timeScale
 
             if (p.isGrenade && p.hasExploded) {
                 this.particles.spawnExplosion(p.x, p.y);
@@ -394,27 +400,44 @@ export class Game {
     }
 
     checkWinCondition() {
+        if (this.isMatchOver) {
+            this.finishTimer++;
+            // Wait 120 frames (approx 2s at 60fps, but effectively longer due to timescale)
+            // We want real-time waiting, so if timescale is 0.2, we need fewer ticks or check real time
+            // Let's just count frames, at 0.2 scale it looks cool.
+            if (this.finishTimer > 150) {
+                this.running = false;
+                const alive = this.entities.filter(e => !e.isDead);
+                const overlay = document.getElementById('end-screen');
+                const msg = document.getElementById('win-msg');
+                overlay.style.display = 'flex';
+                if (alive.length === 0) {
+                    msg.innerText = "DRAW";
+                    msg.style.color = "white";
+                } else {
+                    msg.innerText = `${alive[0].name} WINS`;
+                    msg.style.color = alive[0].color;
+                }
+            }
+            return;
+        }
+
         const alive = this.entities.filter(e => !e.isDead);
         if (alive.length <= 1) {
-            if (this.running) audioEngine.playWin();
-            this.running = false;
-
-            const overlay = document.getElementById('end-screen');
-            const msg = document.getElementById('win-msg');
-            overlay.style.display = 'flex';
-            if (alive.length === 0) {
-                msg.innerText = "DRAW";
-                msg.style.color = "white";
-            } else {
-                msg.innerText = `${alive[0].name} WINS`;
-                msg.style.color = alive[0].color;
-            }
+            this.isMatchOver = true;
+            this.timeScale = 0.2; // SLOW MOTION
+            audioEngine.playWin();
         }
     }
 
     loop() {
         if (!this.running) return;
-        this.handleArenaShrink();
+        
+        // Only shrink arena if match is not over
+        if (!this.isMatchOver) {
+            this.handleArenaShrink();
+        }
+
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         // Draw Arena Bounds
@@ -422,7 +445,7 @@ export class Game {
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(this.arenaBounds.x, this.arenaBounds.y, this.arenaBounds.width, this.arenaBounds.height);
 
-        // Draw Danger Zone (Optional Visual)
+        // Draw Danger Zone
         if (this.arenaBounds.width < this.width) {
             this.ctx.fillStyle = 'rgba(255, 0, 0, 0.05)';
             this.ctx.fillRect(0, 0, this.width, this.arenaBounds.y); // Top
@@ -431,11 +454,12 @@ export class Game {
             this.ctx.fillRect(this.arenaBounds.x + this.arenaBounds.width, this.arenaBounds.y, this.width - (this.arenaBounds.x + this.arenaBounds.width), this.arenaBounds.height); // Right
         }
 
-        this.entities.forEach(ent => ent.update(this.entities));
-        this.resolveCollisions();
+        this.entities.forEach(ent => ent.update(this.entities, this.timeScale));
+        this.resolveCollisions(); // Physics resolution is usually instantaneous position fix, so timeScale optional depending on implementation
         this.updateUI();
 
         this.entities.forEach(ent => ent.draw(this.ctx));
+        this.projectiles.forEach(p => p.update(this.timeScale)); // Update projectiles first
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.particles.updateAndDraw(this.ctx);
 

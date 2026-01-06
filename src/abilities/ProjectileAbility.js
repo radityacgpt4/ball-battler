@@ -15,7 +15,7 @@ export class BurstFireAbility extends Ability {
     }
 
     update(fighter, context) {
-        const { game } = context;
+        const { game, timeScale } = context;
 
         if (fighter.cooldowns.atk <= 0 && fighter.activeEffects.burstCount === 0) {
             fighter.activeEffects.burstCount = this.count;
@@ -25,7 +25,7 @@ export class BurstFireAbility extends Ability {
 
         if (fighter.activeEffects.burstCount > 0) {
             if (fighter.activeEffects.burstTimer > 0) {
-                fighter.activeEffects.burstTimer--;
+                fighter.activeEffects.burstTimer -= 1 * timeScale;
             } else {
                 const spread = (Math.random() - 0.5) * 0.1;
                 const p = new Projectile(

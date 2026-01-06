@@ -212,6 +212,7 @@ export class Game {
                 this.particles.spawnExplosion(p.x, p.y);
                 this.particles.spawnText(p.x, p.y, "BOOM!", "#ffaa00");
                 audioEngine.playExplosion();
+                logger.log(`${p.owner.name}'s Grenade EXPLODED!`, 'combat');
                 const blastRadius = 60;
 
                 this.entities.forEach(ent => {
@@ -248,6 +249,7 @@ export class Game {
                         this.particles.spawnExplosion(p.x, p.y);
                         this.particles.spawnText(ent.x, ent.y, "TRAPPED!", "#ff0000");
                         audioEngine.playExplosion();
+                        logger.log(`${ent.name} triggered ${p.owner.name}'s CLAYMORE!`, 'combat');
                         
                         p.active = false;
                         break;
@@ -278,6 +280,7 @@ export class Game {
                             this.particles.spawnText(ent.x, ent.y, "DEFLECT!", "#8b5cf6");
                             this.particles.spawn(p.x, p.y, '#ffffff', 10);
                             audioEngine.playBlock();
+                            logger.log(`${ent.name} DEFLECTED projectile from ${p.owner.name}`, 'warn');
                         } else {
                             if (p.isKunai) {
                                 if (!p.hitList.includes(ent.id)) {
@@ -285,6 +288,7 @@ export class Game {
                                     p.hitList.push(ent.id);
                                     this.particles.spawn(ent.x, ent.y, '#ffd700', 3);
                                     audioEngine.playHit();
+                                    logger.log(`${p.owner.name} Kunai HIT ${ent.name}`, 'combat');
                                 }
                             } else {
                                 ent.takeDamage(p.damage, p.isUnblockable);
@@ -292,6 +296,7 @@ export class Game {
                                 
                                 p.active = false;
                                 audioEngine.playHit();
+                                logger.log(`${p.owner.name} Projectile HIT ${ent.name}`, 'combat');
                             }
                         }
                         // Unblockable shots destroy shield logic (pierce through? or just ignore?)
@@ -321,11 +326,13 @@ export class Game {
                         e2.applyStatus('STUN');
                         this.particles.spawnText(e2.x, e2.y, "ZAP!", "#00FFFF");
                         audioEngine.playZap();
+                        logger.log(`${e1.name} STATIC PASSIVE stunned ${e2.name}!`, 'combat');
                     }
                     if (e2.skills.def.type === 'STATIC_PASSIVE' && e1.status.stun <= 0) {
                         e1.applyStatus('STUN');
                         this.particles.spawnText(e1.x, e1.y, "ZAP!", "#00FFFF");
                         audioEngine.playZap();
+                        logger.log(`${e2.name} STATIC PASSIVE stunned ${e1.name}!`, 'combat');
                     }
 
                     // SHIELDBEARER: Momentum Collision

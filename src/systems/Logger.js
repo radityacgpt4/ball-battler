@@ -28,20 +28,64 @@ export class Logger {
             this.copyBtn.addEventListener('click', () => {
                 if (!this.content) return;
                 const text = this.content.innerText;
-                navigator.clipboard.writeText(text).then(() => {
-                    const originalText = this.copyBtn.textContent;
-                    this.copyBtn.textContent = 'Copied!';
-                    setTimeout(() => {
-                        this.copyBtn.textContent = originalText;
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy logs:', err);
-                    this.log('System: Failed to copy logs to clipboard', 'error');
-                });
+                
+                // Try Clipboard API first
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.showCopyFeedback();
+                    }).catch(err => {
+                        console.warn('Clipboard API failed, trying fallback', err);
+                        this.fallbackCopyText(text);
+                    });
+                } else {
+                    this.fallbackCopyText(text);
+                }
             });
         }
         
         this.log("Logger initialized. Battle interactions will appear here.");
+    }
+
+    fallbackCopyText(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // Ensure it's not visible but part of DOM
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                this.showCopyFeedback();
+            } else {
+                this.log('System: Copy failed (browser not supported)', 'error');
+            }
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+            this.log('System: Copy failed', 'error');
+        }
+        
+        document.body.removeChild(textArea);
+    }
+
+    showCopyFeedback() {
+        if (!this.copyBtn) return;
+        const originalText = this.copyBtn.textContent;
+        this.copyBtn.textContent = 'Copied!';
+        this.copyBtn.style.borderColor = '#4ecdc4';
+        this.copyBtn.style.color = '#4ecdc4';
+        
+        setTimeout(() => {
+            this.copyBtn.textContent = originalText;
+            this.copyBtn.style.borderColor = '';
+            this.copyBtn.style.color = '';
+        }, 2000);
     }
 
     log(message, type = 'info') {

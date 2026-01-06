@@ -100,7 +100,17 @@ export class BerserkerDefAbility extends Ability {
             // For rotation, we need to respect the current direction (sign)
             const currentDir = Math.sign(fighter.rotationSpeed) || 1;
             fighter.rotationSpeed = fighter.originalRotationSpeed * rotBonus * currentDir;
+
+            // Log Berserker state change (throttle to avoid spam)
+            if (fighter.lastBerserkerStacks !== stacks) {
+                logger.log(`${fighter.name} BERSERKER RAGE! Stacks: ${stacks} (Speed: x${speedBonus.toFixed(2)}, Rot: x${rotBonus.toFixed(2)})`, 'info');
+                fighter.lastBerserkerStacks = stacks;
+            }
         } else {
+            if (fighter.lastBerserkerStacks && fighter.lastBerserkerStacks > 0) {
+                logger.log(`${fighter.name} Berserker Rage subsided.`, 'info');
+                fighter.lastBerserkerStacks = 0;
+            }
             // Reset to base
             const currentDir = Math.sign(fighter.rotationSpeed) || 1;
             fighter.baseSpeed = fighter.originalBaseSpeed;

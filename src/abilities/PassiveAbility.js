@@ -137,6 +137,11 @@ export class ForceFieldAbility extends Ability {
                      context.game.particles.spawnText(fighter.x, fighter.y - 20, "+1", "#00ffff");
                      audioEngine.playRegen();
                 }
+                
+                // Log regen periodically to avoid spam
+                if (this.currentShield % 10 === 0 && this.currentShield < this.maxShield) {
+                    logger.log(`${fighter.name} Force Field regenerating... (${Math.floor(this.currentShield)}/${this.maxShield})`, 'info');
+                }
             }
         }
     }

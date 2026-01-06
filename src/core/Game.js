@@ -23,6 +23,12 @@ export class Game {
 
         this.width = CONSTANTS.WIDTH;
         this.height = CONSTANTS.HEIGHT;
+        this.arenaBounds = {
+            x: 0,
+            y: 0,
+            width: CONSTANTS.WIDTH,
+            height: CONSTANTS.HEIGHT
+        };
         this.arenaTimer = 0;
     }
 
@@ -71,6 +77,15 @@ export class Game {
         document.getElementById('char-select').style.display = 'none';
         this.width = CONSTANTS.WIDTH;
         this.height = CONSTANTS.HEIGHT;
+        
+        // Reset Arena Bounds
+        this.arenaBounds = {
+            x: 0,
+            y: 0,
+            width: CONSTANTS.WIDTH,
+            height: CONSTANTS.HEIGHT
+        };
+
         this.arenaTimer = 0;
         this.updateCanvasSize();
 
@@ -97,15 +112,26 @@ export class Game {
         this.arenaTimer++;
         if (this.arenaTimer >= 900) {
             this.arenaTimer = 0;
-            this.width = Math.floor(this.width * 0.85);
-            this.height = Math.floor(this.height * 0.85);
-            this.updateCanvasSize();
+            
+            // Shrink bounds towards center
+            const shrinkFactor = 0.85;
+            const newW = Math.floor(this.arenaBounds.width * shrinkFactor);
+            const newH = Math.floor(this.arenaBounds.height * shrinkFactor);
+            const dW = (this.arenaBounds.width - newW) / 2;
+            const dH = (this.arenaBounds.height - newH) / 2;
+
+            this.arenaBounds.x += dW;
+            this.arenaBounds.y += dH;
+            this.arenaBounds.width = newW;
+            this.arenaBounds.height = newH;
+
             this.particles.spawnText(this.width / 2, this.height / 2, "ARENA SHRINK!", "#ff0000");
             audioEngine.playHeavyImpact();
 
+            // Push entities inside
             this.entities.forEach(e => {
-                e.x = Math.min(e.x, this.width - e.radius);
-                e.y = Math.min(e.y, this.height - e.radius);
+                e.x = Math.max(this.arenaBounds.x + e.radius, Math.min(e.x, this.arenaBounds.x + this.arenaBounds.width - e.radius));
+                e.y = Math.max(this.arenaBounds.y + e.radius, Math.min(e.y, this.arenaBounds.y + this.arenaBounds.height - e.radius));
             });
         }
     }
@@ -390,6 +416,20 @@ export class Game {
         if (!this.running) return;
         this.handleArenaShrink();
         this.ctx.clearRect(0, 0, this.width, this.height);
+
+        // Draw Arena Bounds
+        this.ctx.strokeStyle = '#333';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(this.arenaBounds.x, this.arenaBounds.y, this.arenaBounds.width, this.arenaBounds.height);
+
+        // Draw Danger Zone (Optional Visual)
+        if (this.arenaBounds.width < this.width) {
+            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.05)';
+            this.ctx.fillRect(0, 0, this.width, this.arenaBounds.y); // Top
+            this.ctx.fillRect(0, this.arenaBounds.y + this.arenaBounds.height, this.width, this.height - (this.arenaBounds.y + this.arenaBounds.height)); // Bottom
+            this.ctx.fillRect(0, this.arenaBounds.y, this.arenaBounds.x, this.arenaBounds.height); // Left
+            this.ctx.fillRect(this.arenaBounds.x + this.arenaBounds.width, this.arenaBounds.y, this.width - (this.arenaBounds.x + this.arenaBounds.width), this.arenaBounds.height); // Right
+        }
 
         this.entities.forEach(ent => ent.update(this.entities));
         this.resolveCollisions();

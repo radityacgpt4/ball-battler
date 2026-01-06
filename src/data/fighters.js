@@ -10,7 +10,7 @@ export const FIGHTER_TYPES = {
         hp: 100,
         mass: 1.0,
         speed: 4.5,
-        rotationSpeed: 0.12,
+        rotationSpeed: 0.15,
         skills: {
             atk: { type: "MELEE_PASSIVE", range: 50, damage: 5, procRate: 3 },
             def: { type: "PARRY_PASSIVE", chance: 0.15 },
@@ -38,7 +38,7 @@ export const FIGHTER_TYPES = {
         speed: 4,
         rotationSpeed: 0.12,
         skills: {
-            atk: { type: "BURST_FIRE", cooldown: 100, count: 10, damage: 2 },
+            atk: { type: "BURST_FIRE", cooldown: 100, count: 10, damage: 3 },
             def: { type: "RETREAT", cooldown: 180, range: 150 },
             ult: { type: "GRENADE", cooldown: 90, damage: 20 }
         }

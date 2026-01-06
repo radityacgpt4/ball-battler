@@ -212,10 +212,11 @@ export class Fighter {
 
         let bounced = false;
 
-        if (this.x < this.radius) { this.x = this.radius; this.dx = Math.abs(this.dx); bounced = true; }
-        if (this.x > this.game.width - this.radius) { this.x = this.game.width - this.radius; this.dx = -Math.abs(this.dx); bounced = true; }
-        if (this.y < this.radius) { this.y = this.radius; this.dy = Math.abs(this.dy); bounced = true; }
-        if (this.y > this.game.height - this.radius) { this.y = this.game.height - this.radius; this.dy = -Math.abs(this.dy); bounced = true; }
+        const bounds = this.game.arenaBounds;
+        if (this.x < bounds.x + this.radius) { this.x = bounds.x + this.radius; this.dx = Math.abs(this.dx); bounced = true; }
+        if (this.x > bounds.x + bounds.width - this.radius) { this.x = bounds.x + bounds.width - this.radius; this.dx = -Math.abs(this.dx); bounced = true; }
+        if (this.y < bounds.y + this.radius) { this.y = bounds.y + this.radius; this.dy = Math.abs(this.dy); bounced = true; }
+        if (this.y > bounds.y + bounds.height - this.radius) { this.y = bounds.y + bounds.height - this.radius; this.dy = -Math.abs(this.dy); bounced = true; }
 
         if (bounced) audioEngine.playBounce();
 
@@ -313,8 +314,9 @@ export class Fighter {
             }
         }
 
-        this.x = Math.max(this.radius, Math.min(this.game.width - this.radius, this.x));
-        this.y = Math.max(this.radius, Math.min(this.game.height - this.radius, this.y));
+        const bounds = this.game.arenaBounds;
+        this.x = Math.max(bounds.x + this.radius, Math.min(bounds.x + bounds.width - this.radius, this.x));
+        this.y = Math.max(bounds.y + this.radius, Math.min(bounds.y + bounds.height - this.radius, this.y));
     }
 
     spawnSonicBoom() {

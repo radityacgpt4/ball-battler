@@ -46,7 +46,8 @@ export class RaycastAbility extends Ability {
             let closest = { dist: Infinity, type: null, data: null, x: 0, y: 0 };
 
             // Check wall
-            const wallHit = Physics.rayBoxIntersect(rayX, rayY, dirX, dirY, game.width, game.height);
+            const bounds = game.arenaBounds;
+            const wallHit = Physics.rayBoxIntersect(rayX, rayY, dirX, dirY, bounds.x, bounds.y, bounds.width, bounds.height);
             if (wallHit && wallHit.dist < closest.dist) {
                 closest = { dist: wallHit.dist, type: 'wall', data: wallHit, x: wallHit.x, y: wallHit.y };
             }
@@ -240,7 +241,8 @@ export class LaserAbility extends Ability {
         let closest = { dist: this.range, type: null, data: null };
 
         // Check Wall
-        const wallHit = Physics.rayBoxIntersect(rayX, rayY, dirX, dirY, game.width, game.height);
+        const bounds = game.arenaBounds;
+        const wallHit = Physics.rayBoxIntersect(rayX, rayY, dirX, dirY, bounds.x, bounds.y, bounds.width, bounds.height);
         if (wallHit && wallHit.dist < closest.dist) {
             closest = { dist: wallHit.dist, type: 'wall', data: wallHit };
         }

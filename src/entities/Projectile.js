@@ -99,25 +99,27 @@ export class Projectile {
             this.travelled += Math.hypot(this.dx, this.dy);
 
             // Stop if hit wall
-            if (this.x < 0 || this.x > this.game.width || this.y < 0 || this.y > this.game.height || this.travelled >= this.maxDist) {
+            const bounds = this.game.arenaBounds;
+            if (this.x < bounds.x || this.x > bounds.x + bounds.width || this.y < bounds.y || this.y > bounds.y + bounds.height || this.travelled >= this.maxDist) {
                 this.dx = 0;
                 this.dy = 0;
                 this.isEmbedded = true;
                 // Clamp to screen
-                this.x = Math.max(5, Math.min(this.game.width - 5, this.x));
-                this.y = Math.max(5, Math.min(this.game.height - 5, this.y));
+                this.x = Math.max(bounds.x + 5, Math.min(bounds.x + bounds.width - 5, this.x));
+                this.y = Math.max(bounds.y + 5, Math.min(bounds.y + bounds.height - 5, this.y));
                 if (this.travelled < this.maxDist) audioEngine.playHit(); // Wall tick
             }
         }
         else if (this.isGrenade) {
             this.z += this.vz;
             this.vz -= 0.5;
-            if (this.x < 0 || this.x > this.game.width) {
-                this.x = Math.max(0, Math.min(this.game.width, this.x));
+            const bounds = this.game.arenaBounds;
+            if (this.x < bounds.x || this.x > bounds.x + bounds.width) {
+                this.x = Math.max(bounds.x, Math.min(bounds.x + bounds.width, this.x));
                 this.dx *= -0.5;
             }
-            if (this.y < 0 || this.y > this.game.height) {
-                this.y = Math.max(0, Math.min(this.game.height, this.y));
+            if (this.y < bounds.y || this.y > bounds.y + bounds.height) {
+                this.y = Math.max(bounds.y, Math.min(bounds.y + bounds.height, this.y));
                 this.dy *= -0.5;
             }
             if (this.z <= 0) {
@@ -128,7 +130,8 @@ export class Projectile {
         }
         else {
             // Standard Bullet
-            if (this.x < 0 || this.x > this.game.width || this.y < 0 || this.y > this.game.height) {
+            const bounds = this.game.arenaBounds;
+            if (this.x < bounds.x || this.x > bounds.x + bounds.width || this.y < bounds.y || this.y > bounds.y + bounds.height) {
                 this.active = false;
             }
         }

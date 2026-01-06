@@ -184,7 +184,13 @@ h1 { font-size: 3rem; margin: 0 0 20px 0; text-transform: uppercase; letter-spac
     flex-direction: column;
 }
 
-#debug-toggle {
+.debug-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+#debug-toggle, #debug-copy {
     align-self: flex-start;
     background: #333;
     color: #888;
@@ -193,10 +199,11 @@ h1 { font-size: 3rem; margin: 0 0 20px 0; text-transform: uppercase; letter-spac
     cursor: pointer;
     font-family: monospace;
     font-size: 0.8rem;
-    margin-bottom: 5px;
-    transition: color 0.2s;
+    transition: all 0.2s;
 }
-#debug-toggle:hover { color: #fff; }
+
+#debug-toggle:hover, #debug-copy:hover { color: #fff; border-color: #666; }
+#debug-copy:active { transform: translateY(1px); }
 
 #debug-log-container {
     width: 100%;

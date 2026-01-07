@@ -24,8 +24,8 @@ export class MeleeAbility extends Ability {
         for (let enemy of enemies) {
             if (enemy === fighter || enemy.isDead) continue;
             if (Physics.lineCircleIntersect(fighter.x, fighter.y, tipX, tipY, enemy.x, enemy.y, enemy.radius + 5)) {
-                // Check if blocked by shield - use sword tip position
-                if (enemy.isBlockedByShield(tipX, tipY, this.damage)) {
+                // Check if blocked by shield - use attacker position (not tip, as tip may extend past enemy)
+                if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                     if (fighter.cooldowns.atk <= 0) {
                         const shieldX = enemy.x + Math.cos(enemy.angle) * (enemy.radius + 8);
                         const shieldY = enemy.y + Math.sin(enemy.angle) * (enemy.radius + 8);

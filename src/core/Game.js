@@ -451,7 +451,15 @@ export class Game {
 
                     // Normal elastic collision (only if no special hit happened)
                     if (!hit1 && !hit2) {
-                        let nx = (e2.x - e1.x) / dist, ny = (e2.y - e1.y) / dist;
+                        let nx, ny;
+                        if (dist < 0.001) {
+                            // Handle overlap/NaN prevention
+                            nx = 1; ny = 0;
+                        } else {
+                            nx = (e2.x - e1.x) / dist;
+                            ny = (e2.y - e1.y) / dist;
+                        }
+
                         let p = 2 * (e1.dx * nx + e1.dy * ny - e2.dx * nx - e2.dy * ny) / (m1 + m2);
                         e1.dx -= p * m2 * nx;
                         e1.dy -= p * m2 * ny;

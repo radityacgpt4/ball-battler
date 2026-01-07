@@ -377,8 +377,12 @@ export class Fighter {
                 if (hitTarget) {
                     if (this.pendingRasengan) {
                         // === TRIGGER RASENGAN HIT ===
-                        this.x = hitTarget.x;
-                        this.y = hitTarget.y;
+                        // Move to impact point (not center, to avoid physics NaN issues)
+                        const impactAngle = Math.atan2(hitTarget.y - current.y, hitTarget.x - current.x);
+                        const stopDist = hitTarget.radius + this.radius + 1;
+                        this.x = hitTarget.x - Math.cos(impactAngle) * stopDist;
+                        this.y = hitTarget.y - Math.sin(impactAngle) * stopDist;
+                        
                         this.triggerRasengan(hitTarget);
                         
                         // Stop Dash Immediately

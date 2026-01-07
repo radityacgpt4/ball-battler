@@ -37,8 +37,10 @@ export class AxeAtkAbility extends Ability {
                 // FIX: Use attacker position, not weapon tip (tip may extend past enemy, bypassing shield)
                 if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                     if (fighter.cooldowns.atk <= 0) {
+                        game.combatText.blocked(enemy.x, enemy.y - enemy.radius);
                         game.particles.spawn(enemy.x, enemy.y, '#ffffff', 5);
                         audioEngine.playBlock();
+                        logger.log(`${enemy.name} blocked axe attack from ${fighter.name}`, 'combat');
                         fighter.cooldowns.atk = 20;
                     }
                     continue;
@@ -61,9 +63,14 @@ export class AxeAtkAbility extends Ability {
                     fighter.axemanHits = (fighter.axemanHits || 0) + 1;
                     fighter.axemanComboTimer = 90; // 1.5 second to land next hit
 
+                    // Show combo hit text
+                    game.combatText.combo(fighter.x, fighter.y - 30, fighter.axemanHits);
+                    logger.log(`${fighter.name} combo: ${fighter.axemanHits} HIT!`, 'combat');
+
                     // 3. Bleed condition (If 2 consecutive hits connected)
                     if (fighter.axemanHits >= 2) {
                        enemy.applyStatus('BLEED', this.bleedDuration);
+                       game.combatText.bleed(enemy.x, enemy.y - enemy.radius);
                        game.particles.spawn(enemy.x, enemy.y, '#ff0000', 5);
                        logger.log(`${enemy.name} is BLEEDING from Axeman combo!`, 'status');
                    }
@@ -149,7 +156,9 @@ export class ExecuteUltAbility extends Ability {
         fighter.activeEffects.ultTimer = 30; // 0.5 second visual
         fighter.cooldowns.ult = this.cooldown; // NOW apply cooldown
 
+        game.combatText.execute(fighter.x, fighter.y);
         game.particles.spawn(fighter.x, fighter.y, '#ff0000', 10);
+        logger.log(`${fighter.name} uses EXECUTE!`, 'combat');
 
         enemies.forEach(enemy => {
             if (enemy === fighter || enemy.isDead) return;
@@ -157,10 +166,13 @@ export class ExecuteUltAbility extends Ability {
             if (dist <= range + enemy.radius) {
                 if (enemy.hp <= 30) {
                     // Instant Kill - FATALITY
+                    game.combatText.fatality(enemy.x, enemy.y - enemy.radius);
                     enemy.takeDamage(enemy.maxHp + 999, true, false, fighter);
                     audioEngine.playHeavyImpact();
+                    logger.log(`${fighter.name} FATALITY on ${enemy.name}!`, 'error');
                 } else {
                     // Stun
+                    game.combatText.stunned(enemy.x, enemy.y - enemy.radius);
                     enemy.takeDamage(10, false, false, fighter);
                     enemy.applyStatus('STUN', 120); // 2 sec
                     audioEngine.playHeavyImpact();

@@ -29,6 +29,7 @@ export class MeleeAbility extends Ability {
                     if (fighter.cooldowns.atk <= 0) {
                         const shieldX = enemy.x + Math.cos(enemy.angle) * (enemy.radius + 8);
                         const shieldY = enemy.y + Math.sin(enemy.angle) * (enemy.radius + 8);
+                        game.combatText.blocked(enemy.x, enemy.y - enemy.radius);
                         game.particles.spawn(shieldX, shieldY, '#8b5cf6', 8);
                         audioEngine.playBlock();
                         logger.log(`${enemy.name} blocked attack from ${fighter.name}`, 'combat');
@@ -48,6 +49,7 @@ export class MeleeAbility extends Ability {
 
                     if (fighter.meleeHits % this.procRate === 0) {
                         enemy.applyStatus('BLEED');
+                        game.combatText.bleed(enemy.x, enemy.y - enemy.radius);
                         game.particles.spawn(enemy.x, enemy.y, '#ff0000', 5);
                         logger.log(`${enemy.name} is BLEEDING!`, 'status');
                     }

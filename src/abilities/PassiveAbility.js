@@ -15,6 +15,7 @@ export class ParryPassiveAbility extends Ability {
 
     onDamage(fighter, damage, context) {
         if (Math.random() < this.chance) {
+            context.game.combatText.parried(fighter.x, fighter.y - fighter.radius);
             context.game.particles.spawn(fighter.x, fighter.y, '#ffffff', 5);
             audioEngine.playBlock();
             logger.log(`${fighter.name} PARRIED incoming damage!`, 'info');
@@ -34,6 +35,7 @@ export class EvasionAbility extends Ability {
         if (fighter.cooldowns.def <= 0) {
             fighter.activeEffects.evasionTimer = this.duration; // 0.2s visual
             fighter.cooldowns.def = this.cooldown;
+            context.game.combatText.dodged(fighter.x, fighter.y - fighter.radius);
             context.game.particles.spawn(fighter.x, fighter.y, '#ffd700', 5);
             audioEngine.playSwordSwing();
             logger.log(`${fighter.name} DODGED incoming damage!`, 'info');

@@ -138,7 +138,8 @@ export class BallistaDefAbility extends Ability {
         if (barrier.hp <= 0 && !barrier.destroyed) {
             barrier.destroyed = true;
             barrier.hp = 0;
-            
+
+            game.combatText.shieldBreak(effectX, effectY, this.getSideName(barrier.angle));
             game.particles.spawnExplosion(effectX, effectY);
             audioEngine.playExplosion();
             logger.log(`${fighter.name} Barrier (${this.getSideName(barrier.angle)}) BROKEN!`, 'error');

@@ -8,6 +8,7 @@ import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { ParticleSystem } from '../systems/Particles.js';
 import { logger } from '../systems/Logger.js';
+import { CombatTextHelper } from '../systems/CombatText.js';
 import { Fighter } from '../entities/Fighter.js';
 import { Projectile } from '../entities/Projectile.js';
 
@@ -18,6 +19,7 @@ export class Game {
         this.entities = [];
         this.projectiles = [];
         this.particles = new ParticleSystem();
+        this.combatText = new CombatTextHelper(this.particles);
         this.running = false;
         this.p1Type = 'THUNDER_MAGE';
         this.p2Type = 'SHIELDBEARER';
@@ -135,6 +137,9 @@ export class Game {
             this.arenaBounds.width = newW;
             this.arenaBounds.height = newH;
 
+            // Log and visual feedback for arena shrink
+            logger.log(`ARENA SHRINKING! New size: ${newW}x${newH}`, 'error');
+            this.combatText.arenaShrink(this.width / 2, this.height / 2);
             this.particles.spawnExplosion(this.width / 2, this.height / 2);
             audioEngine.playHeavyImpact();
 

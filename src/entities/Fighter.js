@@ -274,7 +274,9 @@ export class Fighter {
 
             this.status.stun = 30;
 
+            this.game.combatText.wallSlam(this.x, this.y - 30);
             this.game.particles.spawnWallImpact(this.x, this.y);
+            logger.log(`${this.name} hit the WALL SLAM!`, 'combat');
 
             const vAngle = Math.atan2(this.dy, this.dx);
             this.dx = Math.cos(vAngle) * this.baseSpeed;
@@ -311,9 +313,11 @@ export class Fighter {
             const config = this.skills.atk;
             if (this.wallBounceSpeed < config.maxSpeed) {
                 this.wallBounceSpeed = Math.min(this.wallBounceSpeed + config.speedGain, config.maxSpeed);
+                this.game.combatText.speedUp(this.x, this.y);
                 this.game.particles.spawn(this.x, this.y, '#8b5cf6', 5);
                 audioEngine.playSpeedUp();
                 this.spawnSonicBoom();
+                logger.log(`${this.name} SPEED UP! (${this.wallBounceSpeed.toFixed(1)}/${config.maxSpeed})`, 'info');
             }
         }
 
@@ -394,6 +398,7 @@ export class Fighter {
                         return;
                     } else {
                         // Normal dash damage
+                        this.game.combatText.flash(hitTarget.x, hitTarget.y - hitTarget.radius);
                         hitTarget.takeDamage(8);
                         this.game.particles.spawn(hitTarget.x, hitTarget.y, '#ffd700', 5);
                     }
@@ -606,15 +611,16 @@ export class Fighter {
         }
 
         const dmg = Math.ceil(amount);
-        this.game.particles.spawnText(this.x, this.y - this.radius, `-${dmg}`, '#ff4444');
+        this.game.combatText.damage(this.x, this.y - this.radius, dmg);
         this.hp -= amount;
-        
+
         logger.log(`${this.name} took ${dmg} dmg. HP: ${Math.ceil(this.hp)}/${this.maxHp}`, 'combat');
 
         if (this.hp <= 0) {
             this.hp = 0;
             if (!this.isDead) {
                 this.isDead = true;
+                this.game.combatText.knockout(this.x, this.y - this.radius, this.name);
                 logger.log(`${this.name} was KNOCKED OUT!`, 'error');
                 this.game.particles.spawnExplosion(this.x, this.y);
                 audioEngine.playExplosion();

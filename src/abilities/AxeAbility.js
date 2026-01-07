@@ -34,7 +34,8 @@ export class AxeAtkAbility extends Ability {
             if (enemy === fighter || enemy.isDead) continue;
             
             if (Physics.lineCircleIntersect(fighter.x, fighter.y, tipX, tipY, enemy.x, enemy.y, enemy.radius + 5)) {
-                 if (enemy.isBlockedByShield(tipX, tipY)) {
+                // FIX: Use attacker position, not weapon tip (tip may extend past enemy, bypassing shield)
+                if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                     if (fighter.cooldowns.atk <= 0) {
                         game.particles.spawn(enemy.x, enemy.y, '#ffffff', 5);
                         audioEngine.playBlock();

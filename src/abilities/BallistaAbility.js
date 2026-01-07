@@ -123,9 +123,10 @@ export class BallistaDefAbility extends Ability {
 
             // Barrier faces world direction = fighter.angle + barrier.angle
             const barrierWorldAngle = fighter.angle + barrier.angle;
-            let angleDiff = Math.abs(barrierWorldAngle - attackAngle);
-            // Normalize angle difference
-            if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+            
+            // Calculate shortest angular distance
+            let angleDiff = Math.atan2(Math.sin(barrierWorldAngle - attackAngle), Math.cos(barrierWorldAngle - attackAngle));
+            angleDiff = Math.abs(angleDiff);
 
             // Check if within barrier arc (72 degrees visual = ~PI/2.5 total width)
             // So we need +/- PI/5 from center (36 degrees)

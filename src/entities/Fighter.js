@@ -855,7 +855,7 @@ export class Fighter {
             ctx.save();
             // ctx.translate(this.x, this.y); // Removed double translation
 
-            const barrierDist = this.radius + 8;
+            const barrierDist = this.radius + 8; // Same distance as Shieldbearer shield
             const arcAngle = Math.PI / 4; // 45 degree arc per barrier
 
             for (const barrier of this.ballistaBarriers) {

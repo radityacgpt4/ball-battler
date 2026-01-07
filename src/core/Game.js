@@ -294,8 +294,8 @@ export class Game {
 
                                 // Only knockback if not already being knocked back
                                 if (!ent.pendingBallistaPinned && !p.dragTarget) {
-                                    // Apply knockback velocity in bolt direction
-                                    const knockbackSpeed = 12;
+                                    // Apply knockback velocity in bolt direction (fixed speed)
+                                    const knockbackSpeed = 8;
                                     ent.dx = Math.cos(p.angle) * knockbackSpeed;
                                     ent.dy = Math.sin(p.angle) * knockbackSpeed;
 
@@ -410,9 +410,9 @@ export class Game {
                         if (attacker.ultWallSlamActive) {
                             const angle = Math.atan2(defender.y - attacker.y, defender.x - attacker.x);
 
-                            const superSpeed = 18;
-                            defender.dx = Math.cos(angle) * superSpeed;
-                            defender.dy = Math.sin(angle) * superSpeed;
+                            const knockbackSpeed = 8; // Fixed knockback speed
+                            defender.dx = Math.cos(angle) * knockbackSpeed;
+                            defender.dy = Math.sin(angle) * knockbackSpeed;
 
                             defender.pendingWallSlam = { owner: attacker };
 

@@ -20,13 +20,26 @@ export class BallistaAtkAbility extends Ability {
         if (fighter.cooldowns.atk <= 0) {
             fighter.cooldowns.atk = this.cooldown;
 
-            // Fire 3 bolts in cone pattern
+            // Check if ULT is active - fire 3 bolts, otherwise 2
+            const isUltActive = fighter.ballistaUltShots > 0;
             const spreadAngle = 0.15; // ~9 degrees spread
-            const angles = [
-                fighter.angle - spreadAngle,
-                fighter.angle,
-                fighter.angle + spreadAngle
-            ];
+
+            let angles;
+            if (isUltActive) {
+                // ULT: 3 bolts in cone
+                angles = [
+                    fighter.angle - spreadAngle,
+                    fighter.angle,
+                    fighter.angle + spreadAngle
+                ];
+                fighter.ballistaUltShots--;
+            } else {
+                // Normal: 2 bolts
+                angles = [
+                    fighter.angle - spreadAngle / 2,
+                    fighter.angle + spreadAngle / 2
+                ];
+            }
 
             angles.forEach((angle) => {
                 const p = new Projectile(
@@ -40,6 +53,7 @@ export class BallistaAtkAbility extends Ability {
                 );
 
                 p.isBallistaBolt = true;
+                p.isUltBolt = isUltActive;
                 p.radius = 8;
                 p.dragTarget = null;
                 p.dragDuration = 25;

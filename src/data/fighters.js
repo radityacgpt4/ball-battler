@@ -1,7 +1,5 @@
 /**
  * Fighter Configuration Data
- * CRITICAL: Do not change any values - HP, Mass, Speed, Colors, and Skill parameters
- * must match the original code exactly
  */
 export const FIGHTER_TYPES = {
     SWORD_MASTER: {
@@ -13,8 +11,8 @@ export const FIGHTER_TYPES = {
         rotationSpeed: 0.15,
         skills: {
             atk: { type: "MELEE_PASSIVE", range: 50, damage: 5, procRate: 3 },
-            def: { type: "PARRY_PASSIVE", chance: 0.15 },
-            ult: { type: "DASH_ASSAULT", cooldown: 180, damage: 5 }
+            def: { type: "PARRY_PASSIVE", chance: 0.17 },
+            ult: { type: "DASH_ASSAULT", cooldown: 150, damage: 7 }
         }
     },
     THUNDER_MAGE: {

@@ -262,7 +262,7 @@ export class Game {
                     if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
 
                         // Check if projectile is blocked by shield
-                        if (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y)) {
+                        if (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage)) {
                             p.owner = ent;
                             p.hitList = [];
                             p.travelled = 0;
@@ -333,7 +333,7 @@ export class Game {
                         // Current logic: if unblockable, we skipped the shield block block.
                         // So we are here.
                         
-                        if (!p.isKunai || (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y))) break;
+                        if (!p.isKunai || (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage))) break;
                     }
                 }
             }
@@ -376,7 +376,11 @@ export class Game {
 
                         if (speedTier <= 0 && !attacker.ultWallSlamActive) return false;
 
-                        if (defender.isBlockedByShield(attacker.x, attacker.y)) {
+                        // Calculate potential damage for shield check
+                        let damage = speedTier * config.damagePerTier;
+                        if (attacker.ultWallSlamActive) damage = Math.max(damage, 10);
+
+                        if (defender.isBlockedByShield(attacker.x, attacker.y, damage)) {
                             logger.log(`${defender.name} blocked momentum slam from ${attacker.name}`, 'combat');
                             attacker.wallBounceSpeed = attacker.baseSpeed;
                             const reverseAngle = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
@@ -391,12 +395,7 @@ export class Game {
                             return true;
                         }
 
-                        let damage = speedTier * config.damagePerTier;
-
-                        if (attacker.ultWallSlamActive) {
-                            damage = Math.max(damage, 10);
-                        }
-
+                        // Damage already calculated above
                         defender.takeDamage(damage, false, false, attacker);
                         this.particles.spawn(defender.x, defender.y, '#8b5cf6', 8);
                         logger.log(`${attacker.name} SLAMMED ${defender.name} for ${damage} dmg (SpeedTier: ${speedTier})`, 'combat');

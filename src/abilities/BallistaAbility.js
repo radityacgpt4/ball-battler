@@ -71,14 +71,15 @@ export class BallistaAtkAbility extends Ability {
 export class BallistaDefAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.barrierMaxHp = 30;
-        this.barrierCount = 4;
+        this.barrierMaxHp = config.barrierMaxHp || 30;
+        this.barrierCount = config.barrierCount || 4;
         this.initialized = false;
+        // Visual arc is ~1.22 rad (~70 degrees).
+        // We use this to determine hit detection to match visual gaps.
+        this.arcAngle = config.arcAngle || 1.22;
     }
 
     update(fighter, context) {
-        const { game } = context;
-
         // Initialize barriers on first update
         if (!this.initialized) {
             fighter.ballistaBarriers = [];
@@ -94,74 +95,149 @@ export class BallistaDefAbility extends Ability {
         }
     }
 
-    onDamage(fighter, amount, context) {
-        const { game, isDoT } = context;
-
-        // DoT bypasses barriers
-        if (isDoT) {
-            return amount;
-        }
-
-        // Check if any barrier can block
-        if (!fighter.ballistaBarriers) return amount;
-
-        // Use context.attacker if available, otherwise fallback to fighter's back
-        const attacker = context.attacker;
-        let attackAngle;
+    /**
+     * Helper to find which barrier (if any) is hit by an angle relative to fighter
+     */
+    getBarrierIndex(localAngle) {
+        if (!this.initialized) return -1;
         
-        if (attacker) {
-            attackAngle = Math.atan2(attacker.y - fighter.y, attacker.x - fighter.x);
-        } else {
-            attackAngle = fighter.angle + Math.PI; // Opposite of facing direction
-        }
-
-        let closestBarrier = null;
-        let closestAngleDiff = Infinity;
-
-        for (const barrier of fighter.ballistaBarriers) {
-            if (barrier.destroyed) continue;
-
-            // Barrier faces world direction = fighter.angle + barrier.angle
-            const barrierWorldAngle = fighter.angle + barrier.angle;
-            
-            // Calculate shortest angular distance
-            let angleDiff = Math.atan2(Math.sin(barrierWorldAngle - attackAngle), Math.cos(barrierWorldAngle - attackAngle));
-            angleDiff = Math.abs(angleDiff);
-
-            // Check if within barrier arc (72 degrees visual = ~PI/2.5 total width)
-            // So we need +/- PI/5 from center (36 degrees)
-            if (angleDiff < Math.PI / 5 && angleDiff < closestAngleDiff) {
-                closestAngleDiff = angleDiff;
-                closestBarrier = barrier;
+        // Normalize angle to -PI to PI
+        localAngle = Physics.normalizeAngle(localAngle);
+        
+        // Check each barrier
+        // Barriers are at 0, PI/2 (1.57), PI (3.14), -PI/2 (-1.57)
+        // We check if angle is within arcAngle/2 of barrier angle
+        
+        const halfArc = this.arcAngle / 2;
+        const barrierAngles = [0, Math.PI/2, Math.PI, -Math.PI/2];
+        
+        for (let i = 0; i < 4; i++) {
+            const diff = Physics.normalizeAngle(localAngle - barrierAngles[i]);
+            if (Math.abs(diff) < halfArc) {
+                return i;
             }
         }
+        
+        return -1;
+    }
+    
+    damageBarrier(fighter, barrier, amount) {
+        barrier.hp -= amount;
+        
+        // Log sparingly? Or always for feedback
+        // logger.log(`${fighter.name} Shield took ${Math.ceil(amount)} dmg.`, 'combat');
+        
+        const game = fighter.game;
+        const barrierWorldAngle = fighter.angle + barrier.angle;
+        const effectX = fighter.x + Math.cos(barrierWorldAngle) * (fighter.radius + 15);
+        const effectY = fighter.y + Math.sin(barrierWorldAngle) * (fighter.radius + 15);
+        
+        // Block Effect
+        game.particles.spawn(effectX, effectY, '#D2691E', 4);
+        
+        if (barrier.hp <= 0 && !barrier.destroyed) {
+            barrier.destroyed = true;
+            barrier.hp = 0;
+            
+            game.particles.spawnExplosion(effectX, effectY);
+            audioEngine.playExplosion();
+            logger.log(`${fighter.name} Barrier (${this.getSideName(barrier.angle)}) BROKEN!`, 'error');
+        }
+    }
+    
+    getSideName(angle) {
+        // approx check
+        angle = Physics.normalizeAngle(angle);
+        if (Math.abs(angle) < 0.1) return "FRONT";
+        if (Math.abs(angle - Math.PI/2) < 0.1) return "RIGHT";
+        if (Math.abs(angle + Math.PI/2) < 0.1) return "LEFT";
+        return "BACK";
+    }
 
-        if (closestBarrier) {
-            // Barrier absorbs damage
-            const absorbed = Math.min(closestBarrier.hp, amount);
-            closestBarrier.hp -= absorbed;
-            amount -= absorbed;
+    /**
+     * Raycast Hit Detection (for Thundermage etc)
+     */
+    getShieldHit(fighter, rayX, rayY, dirX, dirY) {
+        if (!fighter.ballistaBarriers) return null;
 
-            // Logging
-            const sides = ["FRONT", "RIGHT", "BACK", "LEFT"];
-            const sideName = sides[fighter.ballistaBarriers.indexOf(closestBarrier)];
-            logger.log(`${fighter.name} Barrier (${sideName}) absorbed ${Math.ceil(absorbed)} dmg. Remaining: ${Math.ceil(closestBarrier.hp)}`, 'combat');
+        const shieldRadius = fighter.radius + 8;
+        const hit = Physics.rayCircleIntersect(rayX, rayY, dirX, dirY, fighter.x, fighter.y, shieldRadius);
+        if (!hit) return null;
 
-            // Spawn particles at shield surface (radius + 15 to match visual/Shieldbearer feel)
-            // Use attackAngle (angle from fighter to attacker)
-            // Note: attackAngle was calculated relative to attacker, so we point TOWARDS attacker
-            const hitDist = fighter.radius + 15;
-            // attackAngle is atan2(attacker - fighter), so it points to attacker
-            const hitX = fighter.x + Math.cos(attackAngle) * hitDist;
-            const hitY = fighter.y + Math.sin(attackAngle) * hitDist;
+        const hitAngle = Math.atan2(hit.y - fighter.y, hit.x - fighter.x);
+        const localAngle = Physics.normalizeAngle(hitAngle - fighter.angle);
 
-            game.particles.spawn(hitX, hitY, '#D2691E', 8);
-            audioEngine.playBlock();
+        const index = this.getBarrierIndex(localAngle);
+        if (index !== -1) {
+            const barrier = fighter.ballistaBarriers[index];
+            if (!barrier.destroyed) {
+                return {
+                    x: hit.x,
+                    y: hit.y,
+                    dist: hit.dist,
+                    nx: Math.cos(hitAngle),
+                    ny: Math.sin(hitAngle)
+                };
+            }
+        }
+        return null;
+    }
 
-            if (closestBarrier.hp <= 0) {
-                closestBarrier.destroyed = true;
-                game.particles.spawnExplosion(fighter.x, fighter.y);
-                audioEngine.playExplosion();
+    /**
+     * Projectile/Melee Block Detection
+     */
+    isBlocked(fighter, attackerX, attackerY, damage = 0) {
+        if (!fighter.ballistaBarriers) return false;
+
+        const angleToAttacker = Math.atan2(attackerY - fighter.y, attackerX - fighter.x);
+        const localAngle = Physics.normalizeAngle(angleToAttacker - fighter.angle);
+
+        const index = this.getBarrierIndex(localAngle);
+        if (index !== -1) {
+            const barrier = fighter.ballistaBarriers[index];
+            if (!barrier.destroyed) {
+                // Apply damage to shield
+                if (damage > 0) {
+                    this.damageBarrier(fighter, barrier, damage);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Fallback Damage Handler (Explosions, AoE)
+     */
+    onDamage(fighter, amount, context) {
+        const { isDoT, attacker } = context;
+
+        // DoT bypasses barriers
+        if (isDoT) return amount;
+        
+        // If we don't know where damage came from, can't block directionally
+        if (!attacker) return amount;
+        
+        // If barriers not init
+        if (!fighter.ballistaBarriers) return amount;
+
+        const angleToAttacker = Math.atan2(attacker.y - fighter.y, attacker.x - fighter.x);
+        const localAngle = Physics.normalizeAngle(angleToAttacker - fighter.angle);
+        
+        const index = this.getBarrierIndex(localAngle);
+        
+        if (index !== -1) {
+            const barrier = fighter.ballistaBarriers[index];
+            if (!barrier.destroyed) {
+                // Absorb damage
+                const absorbed = Math.min(barrier.hp, amount);
+                this.damageBarrier(fighter, barrier, absorbed);
+                
+                amount -= absorbed;
+                
+                logger.log(`${fighter.name} Barrier absorbed ${Math.ceil(absorbed)} dmg (Remaining: ${Math.ceil(amount)})`, 'combat');
+                
+                if (amount <= 0) return false; // Fully blocked
             }
         }
 

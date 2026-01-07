@@ -115,7 +115,7 @@ export const FIGHTER_TYPES = {
         rotationSpeed: 0.09,
         skills: {
             atk: { type: "BALLISTA_SHOT", cooldown: 90, damage: 15, projectileSpeed: 16 },
-            def: { type: "BARRIER_SHIELD" },
+            def: { type: "BARRIER_SHIELD", barrierMaxHp: 30, barrierCount: 4, arcAngle: 1.22 },
             ult: { type: "SIEGE_MODE", cooldown: 120, damage: 15 }
         }
     }

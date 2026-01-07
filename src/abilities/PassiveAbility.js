@@ -89,7 +89,7 @@ export class ShieldDeflectAbility extends Ability {
     /**
      * Check if attacker position is blocked by shield
      */
-    isBlocked(fighter, attackerX, attackerY) {
+    isBlocked(fighter, attackerX, attackerY, damage = 0) {
         const angleToAttacker = Math.atan2(attackerY - fighter.y, attackerX - fighter.x);
         const angleDiff = Physics.normalizeAngle(angleToAttacker - fighter.angle);
         const halfArc = this.arcAngle / 2;

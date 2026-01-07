@@ -525,7 +525,7 @@ export class Fighter {
      * SHIELD SYSTEM - Check if a ray hits the shield arc
      */
     getShieldHit(rayX, rayY, dirX, dirY) {
-        if (this.abilities.def && this.abilities.def instanceof ShieldDeflectAbility) {
+        if (this.abilities.def && typeof this.abilities.def.getShieldHit === 'function') {
             return this.abilities.def.getShieldHit(this, rayX, rayY, dirX, dirY);
         }
         return null;
@@ -534,9 +534,9 @@ export class Fighter {
     /**
      * Check if attacker position is blocked by shield
      */
-    isBlockedByShield(attackerX, attackerY) {
-        if (this.abilities.def && this.abilities.def instanceof ShieldDeflectAbility) {
-            return this.abilities.def.isBlocked(this, attackerX, attackerY);
+    isBlockedByShield(attackerX, attackerY, damage = 0) {
+        if (this.abilities.def && typeof this.abilities.def.isBlocked === 'function') {
+            return this.abilities.def.isBlocked(this, attackerX, attackerY, damage);
         }
         return false;
     }

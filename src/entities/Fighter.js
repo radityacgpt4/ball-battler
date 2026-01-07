@@ -6,17 +6,7 @@ import { CONSTANTS } from '../core/Constants.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-
-// Import ability classes
-import { MeleeAbility } from '../abilities/MeleeAbility.js';
-import { BurstFireAbility, KunaiAbility, GrenadeAbility, MissileBarrageAbility } from '../abilities/ProjectileAbility.js';
-import { RaycastAbility, DoubleZapAbility, LaserAbility } from '../abilities/RaycastAbility.js';
-import { DashAssaultAbility, RetreatAbility, FlashBarrageAbility } from '../abilities/DashAbility.js';
-import { ParryPassiveAbility, EvasionAbility, StaticPassiveAbility, ShieldDeflectAbility, MomentumPassiveAbility, ForceFieldAbility } from '../abilities/PassiveAbility.js';
-import { WallSlamAbility } from '../abilities/SpecialAbility.js';
-import { SniperAtkAbility, ClaymoreAbility, SniperUltAbility } from '../abilities/SniperAbility.js';
-import { AxeAtkAbility, BerserkerDefAbility, ExecuteUltAbility } from '../abilities/AxeAbility.js';
-import { BallistaAtkAbility, BallistaDefAbility, BallistaUltAbility } from '../abilities/BallistaAbility.js';
+import { AbilityRegistry } from '../core/AbilityRegistry.js';
 import { Projectile } from './Projectile.js';
 
 export class Fighter {
@@ -86,98 +76,13 @@ export class Fighter {
     createAbilities(skills) {
         const abilities = { atk: null, def: null, ult: null };
 
-        // Attack abilities
-        switch (skills.atk.type) {
-            case 'MELEE_PASSIVE':
-                abilities.atk = new MeleeAbility(skills.atk, 'atk');
-                break;
-            case 'RAYCAST':
-                abilities.atk = new RaycastAbility(skills.atk, 'atk');
-                break;
-            case 'BURST_FIRE':
-                abilities.atk = new BurstFireAbility(skills.atk, 'atk');
-                break;
-            case 'KUNAI_MARK':
-                abilities.atk = new KunaiAbility(skills.atk, 'atk');
-                break;
-            case 'MOMENTUM_PASSIVE':
-                abilities.atk = new MomentumPassiveAbility(skills.atk, 'atk');
-                break;
-            case 'LASER_BEAM':
-                abilities.atk = new LaserAbility(skills.atk, 'atk');
-                break;
-            case 'SNIPER_SHOT':
-                abilities.atk = new SniperAtkAbility(skills.atk, 'atk');
-                break;
-            case 'AXE_SWING':
-                abilities.atk = new AxeAtkAbility(skills.atk, 'atk');
-                break;
-            case 'BALLISTA_SHOT':
-                abilities.atk = new BallistaAtkAbility(skills.atk, 'atk');
-                break;
-        }
-
-        // Defense abilities
-        switch (skills.def.type) {
-            case 'PARRY_PASSIVE':
-                abilities.def = new ParryPassiveAbility(skills.def, 'def');
-                break;
-            case 'STATIC_PASSIVE':
-                abilities.def = new StaticPassiveAbility(skills.def, 'def');
-                break;
-            case 'RETREAT':
-                abilities.def = new RetreatAbility(skills.def, 'def');
-                break;
-            case 'SHIELD_DEFLECT':
-                abilities.def = new ShieldDeflectAbility(skills.def, 'def');
-                break;
-            case 'EVASION':
-                abilities.def = new EvasionAbility(skills.def, 'def');
-                break;
-            case 'FORCE_FIELD':
-                abilities.def = new ForceFieldAbility(skills.def, 'def');
-                break;
-            case 'CLAYMORE':
-                abilities.def = new ClaymoreAbility(skills.def, 'def');
-                break;
-            case 'BERSERKER_RAGE':
-                abilities.def = new BerserkerDefAbility(skills.def, 'def');
-                break;
-            case 'BARRIER_SHIELD':
-                abilities.def = new BallistaDefAbility(skills.def, 'def');
-                break;
-        }
-
-        // Ultimate abilities
-        switch (skills.ult.type) {
-            case 'DASH_ASSAULT':
-                abilities.ult = new DashAssaultAbility(skills.ult, 'ult');
-                break;
-            case 'DOUBLE_ZAP':
-                abilities.ult = new DoubleZapAbility(skills.ult, 'ult', skills.atk);
-                break;
-            case 'GRENADE':
-                abilities.ult = new GrenadeAbility(skills.ult, 'ult');
-                break;
-            case 'WALL_SLAM':
-                abilities.ult = new WallSlamAbility(skills.ult, 'ult');
-                break;
-            case 'FLASH_BARRAGE':
-                abilities.ult = new FlashBarrageAbility(skills.ult, 'ult', skills.atk, Projectile);
-                break;
-            case 'MISSILE_BARRAGE':
-                abilities.ult = new MissileBarrageAbility(skills.ult, 'ult');
-                break;
-            case 'SNIPER_MODE':
-                abilities.ult = new SniperUltAbility(skills.ult, 'ult');
-                break;
-            case 'EXECUTE':
-                abilities.ult = new ExecuteUltAbility(skills.ult, 'ult');
-                break;
-            case 'SIEGE_MODE':
-                abilities.ult = new BallistaUltAbility(skills.ult, 'ult');
-                break;
-        }
+        // Use AbilityRegistry for dynamic ability creation
+        abilities.atk = AbilityRegistry.create(skills.atk.type, skills.atk, 'atk');
+        abilities.def = AbilityRegistry.create(skills.def.type, skills.def, 'def');
+        abilities.ult = AbilityRegistry.create(skills.ult.type, skills.ult, 'ult', {
+            atkConfig: skills.atk,
+            ProjectileClass: Projectile
+        });
 
         return abilities;
     }
@@ -187,7 +92,7 @@ export class Fighter {
 
         // Apply timescale to timers (rounding for integer timers)
         const tick = (val) => Math.max(0, val - 1 * timeScale);
-        
+
         if (this.collisionImmunity > 0) this.collisionImmunity = tick(this.collisionImmunity);
         if (this.cooldowns.atk > 0) this.cooldowns.atk = tick(this.cooldowns.atk);
         if (this.cooldowns.def > 0) this.cooldowns.def = tick(this.cooldowns.def);
@@ -211,10 +116,10 @@ export class Fighter {
         if (this.teleportDelayTimer > 0) {
             this.teleportDelayTimer = tick(this.teleportDelayTimer);
             if (this.teleportDelayTimer <= 0 && this.kunaiPending.length > 0) {
-                this.chainDashQueue = [{x: this.x, y: this.y}];
+                this.chainDashQueue = [{ x: this.x, y: this.y }];
                 this.kunaiPending.forEach(p => {
                     if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) {
-                        this.chainDashQueue.push({x: p.x, y: p.y});
+                        this.chainDashQueue.push({ x: p.x, y: p.y });
                     }
                 });
                 this.kunaiPending = [];
@@ -360,7 +265,7 @@ export class Fighter {
                     // Parallel Blue Dash
                     this.game.particles.spawnSlash(current.x + nx * offset, current.y + ny * offset, next.x + nx * offset, next.y + ny * offset, '#00BFFF', 6);
                 }
-                
+
                 this.game.particles.spawn(next.x, next.y, '#ffd700', 5);
                 audioEngine.playTeleport();
 
@@ -386,9 +291,9 @@ export class Fighter {
                         const stopDist = hitTarget.radius + this.radius + 1;
                         this.x = hitTarget.x - Math.cos(impactAngle) * stopDist;
                         this.y = hitTarget.y - Math.sin(impactAngle) * stopDist;
-                        
+
                         this.triggerRasengan(hitTarget);
-                        
+
                         // Stop Dash Immediately
                         this.chainDashQueue = [];
                         this.dashTimer = 0;
@@ -471,7 +376,7 @@ export class Fighter {
         });
 
         audioEngine.playHeavyImpact();
-        
+
         if (directHitTarget) {
             logger.log(`${this.name} RASENGAN DIRECT HIT on ${directHitTarget.name}!`, 'combat');
             directHitTarget.takeDamage(rasenganDamage * 1.5, true); // Bonus dmg for direct hit? Or just ensure hit.
@@ -491,7 +396,7 @@ export class Fighter {
                 // To avoid double damage, we can check.
                 // Simple approach: Just deal damage here to all in AOE.
                 e.takeDamage(rasenganDamage, true); // Unblockable? Rasengan breaks guards usually.
-                
+
                 // Heavy Knockback
                 const knockAngle = Math.atan2(e.y - this.y, e.x - this.x);
                 e.dx = Math.cos(knockAngle) * 12;
@@ -583,12 +488,12 @@ export class Fighter {
 
             if (this.typeKey === 'THUNDER_MAGE') {
                 if (this.activeEffects.ultTimer % 10 === 0) {
-                    const rx = this.x + (Math.random()-0.5)*300;
-                    const ry = this.y + (Math.random()-0.5)*300;
-                    this.game.particles.spawnBolt([{x:rx, y:ry-200}, {x:rx, y:ry}], '#ffaa00');
+                    const rx = this.x + (Math.random() - 0.5) * 300;
+                    const ry = this.y + (Math.random() - 0.5) * 300;
+                    this.game.particles.spawnBolt([{ x: rx, y: ry - 200 }, { x: rx, y: ry }], '#ffaa00');
                     audioEngine.playZap();
                     enemies.forEach(e => {
-                        if(e !== this && !e.isDead && Physics.dist(rx, ry, e.x, e.y) < e.radius + 20) {
+                        if (e !== this && !e.isDead && Physics.dist(rx, ry, e.x, e.y) < e.radius + 20) {
                             e.takeDamage(5);
                             e.applyStatus('STUN');
                         }
@@ -624,7 +529,7 @@ export class Fighter {
                 logger.log(`${this.name} was KNOCKED OUT!`, 'error');
                 this.game.particles.spawnExplosion(this.x, this.y);
                 audioEngine.playExplosion();
-                
+
                 // Ghost effect
                 this.game.particles.particles.push({
                     x: this.x, y: this.y,
@@ -947,9 +852,9 @@ export class Fighter {
                 const hpRatio = barrier.hp / barrier.maxHp;
                 // Add fighter's angle so barriers rotate with the fighter
                 const adjustedAngle = barrier.angle + this.angle;
-                
+
                 // --- Shieldbearer 1:1 Visual Style ---
-                
+
                 // Glow
                 ctx.shadowBlur = 5 + hpRatio * 10;
                 ctx.shadowColor = '#8B4513';

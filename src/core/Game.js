@@ -9,6 +9,8 @@ import { audioEngine } from '../systems/Audio.js';
 import { ParticleSystem } from '../systems/Particles.js';
 import { logger } from '../systems/Logger.js';
 import { CombatTextHelper } from '../systems/CombatText.js';
+import { renderer } from '../systems/Renderer.js';
+import { CollisionHandler } from '../systems/CollisionHandler.js';
 import { Fighter } from '../entities/Fighter.js';
 import { Projectile } from '../entities/Projectile.js';
 
@@ -581,7 +583,7 @@ export class Game {
             this.ctx.fillRect(this.arenaBounds.x + this.arenaBounds.width, this.arenaBounds.y, this.width - (this.arenaBounds.x + this.arenaBounds.width), this.arenaBounds.height); // Right
         }
 
-        this.entities.forEach(ent => ent.draw(this.ctx));
+        this.entities.forEach(ent => renderer.drawFighter(this.ctx, ent));
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.particles.updateAndDraw(this.ctx);
 

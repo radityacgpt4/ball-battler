@@ -17,50 +17,34 @@ export class SniperAtkAbility extends Ability {
         this.laserColor = '#ff0000';
     }
 
-    // Passive update to show laser sight
+    // Passive update to calculate laser sight
     update(fighter, context) {
         const { game } = context;
 
         // Sync laser color with Ult state
         this.laserColor = fighter.activeEffects.ultActive ? '#00ff00' : '#ff0000';
 
-        // Draw Laser Sight
+        // Update Laser Sight Data
         if (fighter.cooldowns.atk <= 0) {
-            this.drawLaserSight(fighter, game);
+            this.updateLaserSight(fighter, game);
             this.checkLaserTrigger(fighter, context);
+        } else {
+            fighter.laserDist = 0; // Hide when on cooldown
         }
     }
 
-    drawLaserSight(fighter, game) {
+    updateLaserSight(fighter, game) {
         const angle = fighter.angle;
-        const dist = 800;
-        const endX = fighter.x + Math.cos(angle) * dist;
-        const endY = fighter.y + Math.sin(angle) * dist;
-
         // Perform raycast to stop at walls
         const bounds = game.arenaBounds;
         const hit = Physics.rayBoxIntersect(fighter.x, fighter.y, Math.cos(angle), Math.sin(angle), bounds.x, bounds.y, bounds.width, bounds.height);
-        
-        let targetX = endX;
-        let targetY = endY;
 
         if (hit) {
-            targetX = hit.x;
-            targetY = hit.y;
+            fighter.laserDist = hit.dist;
+        } else {
+            fighter.laserDist = 800; // Default max
         }
-
-        const ctx = game.ctx;
-        ctx.save();
-        ctx.strokeStyle = this.laserColor;
-        ctx.lineWidth = fighter.activeEffects.ultActive ? 3 : 1;
-        ctx.setLineDash([5, 5]);
-        ctx.globalAlpha = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(fighter.x, fighter.y);
-        ctx.lineTo(targetX, targetY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
+        fighter.laserColor = this.laserColor;
     }
 
     checkLaserTrigger(fighter, context) {
@@ -74,13 +58,13 @@ export class SniperAtkAbility extends Ability {
             if (enemy === fighter || enemy.isDead) continue;
 
             const hit = Physics.rayCircleIntersect(fighter.x, fighter.y, dirX, dirY, enemy.x, enemy.y, enemy.radius);
-            
+
             if (hit) {
                 // Ensure no wall in between
                 const distToEnemy = hit.dist;
                 const bounds = game.arenaBounds;
                 const wallHit = Physics.rayBoxIntersect(fighter.x, fighter.y, dirX, dirY, bounds.x, bounds.y, bounds.width, bounds.height);
-                
+
                 if (!wallHit || wallHit.dist > distToEnemy) {
                     // Trigger Shot!
                     this.execute(fighter, context);
@@ -92,7 +76,7 @@ export class SniperAtkAbility extends Ability {
 
     execute(fighter, context) {
         const { game } = context;
-        
+
         fighter.cooldowns.atk = this.cooldown;
 
         const p = new Projectile(
@@ -121,13 +105,14 @@ export class SniperAtkAbility extends Ability {
         }
 
         game.projectiles.push(p);
-        
+
         audioEngine.playGunshot(); // Or a bigger sound
         game.particles.spawn(fighter.x, fighter.y, '#ffffff', 5);
-        
+
         // Recoil
-        fighter.dx -= Math.cos(fighter.angle) * 2;
-        fighter.dy -= Math.sin(fighter.angle) * 2;
+        // Recoil (Increased 2.5x -> ~5.0)
+        fighter.dx -= Math.cos(fighter.angle) * 5;
+        fighter.dy -= Math.sin(fighter.angle) * 5;
     }
 }
 
@@ -181,14 +166,14 @@ export class SniperUltAbility extends Ability {
 
     execute(fighter, context) {
         const { game } = context;
-        
+
         fighter.activeEffects.ultActive = true;
         fighter.activeEffects.ultTimer = 600; // 10 seconds of Sniper Mode
         fighter.cooldowns.ult = this.cooldown;
 
         game.particles.spawn(fighter.x, fighter.y, '#00ff00', 10);
-        audioEngine.playPowerUp(); 
-        
+        audioEngine.playPowerUp();
+
         // Update Laser Color immediately for visual feedback
         if (fighter.abilities.atk instanceof SniperAtkAbility) {
             fighter.abilities.atk.laserColor = '#00ff00';

@@ -72,7 +72,7 @@ export class Game {
                 btn.className = 'char-btn';
                 const current = playerNum === 1 ? self.p1Type : self.p2Type;
                 if (current === key) btn.classList.add('active');
-                btn.innerHTML = `<span class="char-icon" style="background:${data.color}"></span> ${data.name}`;
+                btn.innerHTML = `<span class="char-icon" style="background:${data.color}"></span> P${playerNum} - ${data.name}`;
                 btn.onclick = () => {
                     if (playerNum === 1) self.p1Type = key;
                     else self.p2Type = key;
@@ -112,6 +112,7 @@ export class Game {
         this.entities = [];
         this.projectiles = [];
         this.particles = new ParticleSystem();
+        this.combatText = new CombatTextHelper(this.particles);
 
         this.entities.push(new Fighter(1, 100, 250, this.p1Type, FIGHTER_TYPES, this));
         this.entities.push(new Fighter(2, 400, 250, this.p2Type, FIGHTER_TYPES, this));
@@ -180,7 +181,7 @@ export class Game {
             `;
 
             div.innerHTML = `
-                <div class="hud-name" style="color:${ent.color}">${ent.name}</div>
+                <div class="hud-name" style="color:${ent.color}">P${ent.id} - ${ent.name}</div>
                 ${skillsHTML}
             `;
             uiHeader.appendChild(div);
@@ -351,6 +352,11 @@ export class Game {
                                     // Already being knocked - just damage, deactivate bolt
                                     p.active = false;
                                 }
+                            } else if (p.isMissile) {
+                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
+                                this.particles.spawnExplosion(ent.x, ent.y); // Small explosion
+                                p.active = false;
+                                audioEngine.playExplosion(); // Or lighter explosion sound
                             } else {
                                 ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
                                 if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
@@ -519,7 +525,7 @@ export class Game {
                     msg.style.color = "white";
                     logger.log("MATCH END: DRAW", 'system');
                 } else {
-                    msg.innerText = `${alive[0].name} WINS`;
+                    msg.innerText = `P${alive[0].id} - ${alive[0].name} WINS`;
                     msg.style.color = alive[0].color;
                     logger.log(`MATCH END: ${alive[0].name} WINS!`, 'system');
                 }

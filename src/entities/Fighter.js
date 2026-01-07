@@ -140,7 +140,8 @@ export class Fighter {
 
         if (this.isDashing) {
             this.handleDash(timeScale);
-        } else if (canMove) {
+        } else {
+            // Always allow physics/movement processing (stun now handled inside handleMovement)
             this.handleMovement(timeScale);
         }
 
@@ -156,8 +157,11 @@ export class Fighter {
     }
 
     handleMovement(timeScale) {
-        this.x += this.dx * timeScale;
-        this.y += this.dy * timeScale;
+        let speedMult = this.laserSpeedMult || 1.0;
+        if (this.status.slow > 0) speedMult *= 0.3; // 70% slow (Cumulative)
+
+        this.x += this.dx * speedMult * timeScale;
+        this.y += this.dy * speedMult * timeScale;
 
         let bounced = false;
 
@@ -227,15 +231,36 @@ export class Fighter {
         }
 
         const speed = Math.hypot(this.dx, this.dy);
-        if (speed > 0) {
-            let mod = (this.activeEffects.ultActive && this.typeKey === 'SOLDIER') ? 1.5 : 1.0;
-            if (this.status.slow > 0) mod *= 0.75; // 25% slow
 
-            let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
-            this.dx = (this.dx / speed) * targetSpeed * mod;
-            this.dy = (this.dy / speed) * targetSpeed * mod;
+        // If STUNNED, apply friction/decay instead of driving velocity
+        if (this.status.stun > 0) {
+            if (speed > 0) {
+                // Apply friction (lower decay to allow sliding/bouncing)
+                this.dx *= 0.98;
+                this.dy *= 0.98;
+                if (speed < 0.1) {
+                    this.dx = 0;
+                    this.dy = 0;
+                }
+            }
+        } else {
+            // RECOVERY: If speed dropped to 0 (e.g. after stun), restart movement
+            if (speed <= 0.1 && !this.isDead) {
+                const restartAngle = Math.random() * Math.PI * 2;
+                this.dx = Math.cos(restartAngle) * this.baseSpeed;
+                this.dy = Math.sin(restartAngle) * this.baseSpeed;
+            } else if (speed > 0) {
+                // Normal movement driving
+                let mod = (this.activeEffects.ultActive && this.typeKey === 'SOLDIER') ? 1.5 : 1.0;
+                if (this.status.slow > 0) mod *= 0.75; // 25% slow
+
+                let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
+                this.dx = (this.dx / speed) * targetSpeed * mod;
+                this.dy = (this.dy / speed) * targetSpeed * mod;
+            }
         }
     }
+
 
     handleDash(timeScale) {
         this.dashTimer -= 1 * timeScale;
@@ -839,7 +864,7 @@ export class Fighter {
             // ctx.translate(this.x, this.y); // Removed double translation
 
             // Visual copy of Shieldbearer shield style
-            const barrierDist = this.radius + 8;
+            const barrierDist = this.radius + 3;  // Closer to body like Shieldbearer
             // Shieldbearer is Math.PI * 0.65 (117 degrees)
             // We need 4 shields fitting in 360 without overlap. 360/4 = 90.
             // Let's use 70 degrees (approx 1.22 rad) to leave gaps
@@ -861,7 +886,7 @@ export class Fighter {
 
                 // 1. Thick Outer Base (lighter)
                 ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 8, adjustedAngle - halfArc, adjustedAngle + halfArc);
+                ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
                 ctx.lineWidth = 12;
                 ctx.strokeStyle = `rgba(210, 180, 140, ${0.6 + hpRatio * 0.4})`; // Tan/Wood light color
                 ctx.lineCap = 'round';
@@ -869,21 +894,30 @@ export class Fighter {
 
                 // 2. Main Inner Shield (darker core)
                 ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 8, adjustedAngle - halfArc, adjustedAngle + halfArc);
+                ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
                 ctx.lineWidth = 5;
                 ctx.strokeStyle = '#8B4513'; // SaddleBrown
                 ctx.stroke();
 
                 // 3. Detail Line (HP Indicator / Rim)
                 ctx.beginPath();
-                // Scale arc length by HP for effect, or keep static like shieldbearer?
-                // Shieldbearer code: ctx.arc(0, 0, this.radius + 12, -halfArc * 0.85, halfArc * 0.85);
-                // We copy that style
-                ctx.arc(0, 0, barrierDist + 12, adjustedAngle - halfArc * 0.85, adjustedAngle + halfArc * 0.85);
+                ctx.arc(0, 0, barrierDist + 7, adjustedAngle - halfArc * 0.85, adjustedAngle + halfArc * 0.85);
                 ctx.lineWidth = 2;
                 // Color change based on HP state
                 ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : (hpRatio > 0.25 ? '#FF8C00' : '#FF0000');
                 ctx.stroke();
+
+                // Draw HP text (same font size as Cyborg: 12px, no shield icon)
+                const textX = Math.cos(adjustedAngle) * (barrierDist + 18);
+                const textY = Math.sin(adjustedAngle) * (barrierDist + 18);
+                ctx.fillStyle = '#DAA520';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeText(Math.ceil(barrier.hp), textX, textY);
+                ctx.fillText(Math.ceil(barrier.hp), textX, textY);
 
                 ctx.shadowBlur = 0;
             }

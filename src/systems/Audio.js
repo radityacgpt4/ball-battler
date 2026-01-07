@@ -102,7 +102,7 @@ export class AudioEngine {
 
     playZap() {
         // Electrical crackle
-        this.playTone(600 + Math.random()*200, 'sawtooth', 0.1, 0.1);
+        this.playTone(600 + Math.random() * 200, 'sawtooth', 0.1, 0.1);
         this.playTone(1200, 'square', 0.05, 0.1, 200);
     }
 
@@ -137,6 +137,12 @@ export class AudioEngine {
 
     playRegen() {
         this.playTone(600, 'sine', 0.1, 0.1, 800); // Subtle rising bloop
+    }
+
+    playLaser() {
+        // Continuous beam sound (powerful hum)
+        this.playTone(400, 'sawtooth', 0.5, 0.3, 380);
+        this.playNoise(0.5, 0.2, 1000);
     }
 
     playPowerUp() {

@@ -55,6 +55,7 @@ export class KunaiAbility extends Ability {
         this.count = config.count;
         this.damage = config.damage;
         this.delay = config.delay;
+        this.zapStunDuration = 60; // 1 second stun
     }
 
     canUse(fighter, context) {
@@ -106,10 +107,63 @@ export class KunaiAbility extends Ability {
             audioEngine.playKunaiThrow();
         }
         game.particles.spawnText(fighter.x, fighter.y, isUlt ? "BARRAGE!" : "MARK!", "#ffd700");
-        logger.log(`${fighter.name} threw Kunai (${isUlt ? 'Barrage' : 'Mark'})`, 'combat');
     }
 
     update(fighter, context) {
+        const { game, enemies } = context;
+
+        // Check for electricity zap between embedded kunai
+        if (fighter.kunaiPending && fighter.kunaiPending.length >= 2) {
+            const embeddedKunai = fighter.kunaiPending.filter(k => k.isEmbedded && k.active !== false);
+
+            if (embeddedKunai.length >= 2) {
+                // Draw electricity and check for hits between pairs
+                for (let i = 0; i < embeddedKunai.length - 1; i++) {
+                    const k1 = embeddedKunai[i];
+                    const k2 = embeddedKunai[i + 1];
+
+                    // Visual: spawn electricity particles along the line
+                    if (Math.random() < 0.3) {
+                        const t = Math.random();
+                        const px = k1.x + (k2.x - k1.x) * t;
+                        const py = k1.y + (k2.y - k1.y) * t;
+                        game.particles.particles.push({
+                            x: px,
+                            y: py,
+                            vx: (Math.random() - 0.5) * 4,
+                            vy: (Math.random() - 0.5) * 4,
+                            life: 0.3,
+                            decay: 0.1,
+                            size: 3 + Math.random() * 2,
+                            color: '#00FFFF',
+                            type: 'dot'
+                        });
+                    }
+
+                    // Check if enemies cross the line
+                    for (const enemy of enemies) {
+                        if (enemy === fighter || enemy.isDead) continue;
+                        if (enemy.kunaiZapImmune > 0) continue; // Prevent repeated stuns
+
+                        if (Physics.lineCircleIntersect(k1.x, k1.y, k2.x, k2.y, enemy.x, enemy.y, enemy.radius)) {
+                            enemy.applyStatus('STUN', this.zapStunDuration);
+                            enemy.kunaiZapImmune = this.zapStunDuration; // Immunity frames
+                            game.particles.spawnText(enemy.x, enemy.y, "ZAPPED!", "#00FFFF");
+                            game.particles.spawnBolt([{x: k1.x, y: k1.y}, {x: enemy.x, y: enemy.y}, {x: k2.x, y: k2.y}], '#00FFFF');
+                            audioEngine.playZap();
+                        }
+                    }
+                }
+            }
+        }
+
+        // Decrease zap immunity
+        for (const enemy of enemies) {
+            if (enemy.kunaiZapImmune > 0) {
+                enemy.kunaiZapImmune--;
+            }
+        }
+
         if (this.canUse(fighter, context)) {
             this.execute(fighter, context, false);
         }

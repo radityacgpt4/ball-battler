@@ -143,7 +143,7 @@ export class Fighter {
             case 'BERSERKER_RAGE':
                 abilities.def = new BerserkerDefAbility(skills.def, 'def');
                 break;
-            case 'HEAVY_ARMOR':
+            case 'BARRIER_SHIELD':
                 abilities.def = new BallistaDefAbility(skills.def, 'def');
                 break;
         }
@@ -174,7 +174,7 @@ export class Fighter {
             case 'EXECUTE':
                 abilities.ult = new ExecuteUltAbility(skills.ult, 'ult');
                 break;
-            case 'TRIPLE_BOLT':
+            case 'SIEGE_MODE':
                 abilities.ult = new BallistaUltAbility(skills.ult, 'ult');
                 break;
         }
@@ -357,6 +357,63 @@ export class Fighter {
 
             if (this.typeKey === 'NINJA') {
                 this.game.projectiles = this.game.projectiles.filter(p => !p.isKunai || p.owner !== this);
+
+                // Rasengan effect at final position (ULT only)
+                if (this.pendingRasengan) {
+                    const rasenganDamage = this.pendingRasengan;
+                    const rasenganRadius = 50; // Small AOE
+
+                    // Visual: Rasengan spiral effect
+                    this.game.particles.spawnText(this.x, this.y - 20, "RASENGAN!", "#00BFFF");
+                    for (let i = 0; i < 20; i++) {
+                        const angle = (Math.PI * 2 / 20) * i;
+                        const dist = 15 + Math.random() * 20;
+                        this.game.particles.particles.push({
+                            x: this.x + Math.cos(angle) * dist,
+                            y: this.y + Math.sin(angle) * dist,
+                            vx: Math.cos(angle + Math.PI / 2) * 4,
+                            vy: Math.sin(angle + Math.PI / 2) * 4,
+                            life: 0.6,
+                            decay: 0.05,
+                            size: 4 + Math.random() * 3,
+                            color: '#00BFFF',
+                            type: 'dot'
+                        });
+                    }
+                    // Inner glow
+                    for (let i = 0; i < 8; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        this.game.particles.particles.push({
+                            x: this.x,
+                            y: this.y,
+                            vx: Math.cos(angle) * 6,
+                            vy: Math.sin(angle) * 6,
+                            life: 0.4,
+                            decay: 0.08,
+                            size: 6,
+                            color: '#FFFFFF',
+                            type: 'dot'
+                        });
+                    }
+
+                    audioEngine.playHeavyImpact();
+
+                    // AOE damage to nearby enemies
+                    const enemies = this.game.entities.filter(e => e !== this && !e.isDead);
+                    enemies.forEach(e => {
+                        const dist = Physics.dist(this.x, this.y, e.x, e.y);
+                        if (dist < rasenganRadius + e.radius) {
+                            e.takeDamage(rasenganDamage);
+                            this.game.particles.spawnText(e.x, e.y, `-${rasenganDamage}`, "#00BFFF");
+                            // Knockback from rasengan
+                            const knockAngle = Math.atan2(e.y - this.y, e.x - this.x);
+                            e.dx = Math.cos(knockAngle) * 8;
+                            e.dy = Math.sin(knockAngle) * 8;
+                        }
+                    });
+
+                    this.pendingRasengan = null;
+                }
             }
 
             this.chainDashQueue = [];
@@ -797,6 +854,54 @@ export class Fighter {
             ctx.fillRect(bowStart + 28, -6, 6, 12);
         }
         ctx.restore();
+
+        // Ballista Barriers Visual (4 sides)
+        if (this.ballistaBarriers) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            const barrierDist = this.radius + 12;
+            const arcAngle = Math.PI / 4; // 45 degree arc per barrier
+
+            for (const barrier of this.ballistaBarriers) {
+                if (barrier.destroyed) continue;
+
+                const hpRatio = barrier.hp / barrier.maxHp;
+                const startAngle = barrier.angle - arcAngle / 2;
+                const endAngle = barrier.angle + arcAngle / 2;
+
+                // Barrier glow based on HP
+                ctx.shadowBlur = 5 + hpRatio * 10;
+                ctx.shadowColor = '#8B4513';
+
+                // Outer arc (border)
+                ctx.beginPath();
+                ctx.arc(0, 0, barrierDist + 4, startAngle, endAngle);
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = `rgba(139, 69, 19, ${0.3 + hpRatio * 0.4})`;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                // Inner arc (main barrier)
+                ctx.beginPath();
+                ctx.arc(0, 0, barrierDist + 4, startAngle, endAngle);
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = `rgba(210, 105, 30, ${0.5 + hpRatio * 0.5})`;
+                ctx.stroke();
+
+                // HP indicator line
+                const hpArc = arcAngle * hpRatio;
+                ctx.beginPath();
+                ctx.arc(0, 0, barrierDist + 8, barrier.angle - hpArc / 2, barrier.angle + hpArc / 2);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = hpRatio > 0.5 ? '#4CAF50' : (hpRatio > 0.25 ? '#FFC107' : '#F44336');
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            }
+
+            ctx.restore();
+        }
 
         // Force Field Visual
         if (this.shieldHp > 0) {

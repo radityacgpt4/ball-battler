@@ -20,9 +20,13 @@ export class BallistaAtkAbility extends Ability {
         if (fighter.cooldowns.atk <= 0) {
             fighter.cooldowns.atk = this.cooldown;
 
-            // Fire 2 bolts in small cone pattern
-            const spreadAngle = 0.12; // ~7 degrees spread
-            const angles = [fighter.angle - spreadAngle, fighter.angle + spreadAngle];
+            // Fire 3 bolts in cone pattern
+            const spreadAngle = 0.15; // ~9 degrees spread
+            const angles = [
+                fighter.angle - spreadAngle,
+                fighter.angle,
+                fighter.angle + spreadAngle
+            ];
 
             angles.forEach((angle) => {
                 const p = new Projectile(
@@ -52,63 +56,78 @@ export class BallistaAtkAbility extends Ability {
 export class BallistaDefAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.maxStunDuration = 45; // 0.75 seconds at 60fps
+        this.barrierMaxHp = 30;
+        this.barrierCount = 4;
+        this.initialized = false;
+    }
+
+    update(fighter, context) {
+        const { game } = context;
+
+        // Initialize barriers on first update
+        if (!this.initialized) {
+            fighter.ballistaBarriers = [];
+            for (let i = 0; i < this.barrierCount; i++) {
+                fighter.ballistaBarriers.push({
+                    hp: this.barrierMaxHp,
+                    maxHp: this.barrierMaxHp,
+                    angle: (Math.PI * 2 / this.barrierCount) * i, // 0, 90, 180, 270 degrees
+                    destroyed: false
+                });
+            }
+            this.initialized = true;
+        }
     }
 
     onDamage(fighter, amount, context) {
         const { game, isDoT } = context;
 
-        // Don't trigger dash-back for DoT damage (bleed, etc)
+        // DoT bypasses barriers
         if (isDoT) {
             return amount;
         }
 
-        // Dash back slightly on direct hit
-        const dashBackDist = 35;
-        const oldX = fighter.x;
-        const oldY = fighter.y;
-        const angle = fighter.angle + Math.PI; // Opposite direction
+        // Check if any barrier can block
+        if (!fighter.ballistaBarriers) return amount;
 
-        fighter.x += Math.cos(angle) * dashBackDist;
-        fighter.y += Math.sin(angle) * dashBackDist;
+        // Find the barrier facing the attack direction (simplified - use fighter angle)
+        const attackAngle = fighter.angle + Math.PI; // Opposite of facing direction
 
-        // Keep in bounds
-        const bounds = game.arenaBounds;
-        fighter.x = Math.max(bounds.x + fighter.radius, Math.min(bounds.x + bounds.width - fighter.radius, fighter.x));
-        fighter.y = Math.max(bounds.y + fighter.radius, Math.min(bounds.y + bounds.height - fighter.radius, fighter.y));
+        let closestBarrier = null;
+        let closestAngleDiff = Infinity;
 
-        // Particle trail effect for dash-back
-        for (let i = 0; i < 6; i++) {
-            const t = i / 6;
-            const px = oldX + (fighter.x - oldX) * t;
-            const py = oldY + (fighter.y - oldY) * t;
-            game.particles.particles.push({
-                x: px,
-                y: py,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
-                life: 0.6,
-                decay: 0.08,
-                size: 4 + Math.random() * 3,
-                color: '#8B4513',
-                type: 'dot'
-            });
+        for (const barrier of fighter.ballistaBarriers) {
+            if (barrier.destroyed) continue;
+
+            let angleDiff = Math.abs(barrier.angle - attackAngle);
+            // Normalize angle difference
+            if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+
+            // Check if within barrier arc (45 degrees = PI/4)
+            if (angleDiff < Math.PI / 4 && angleDiff < closestAngleDiff) {
+                closestAngleDiff = angleDiff;
+                closestBarrier = barrier;
+            }
         }
 
-        // Dust cloud at landing spot
-        game.particles.spawn(fighter.x, fighter.y, '#D2691E', 5);
-        game.particles.spawnText(fighter.x, fighter.y - 20, "RECOIL", "#8B4513");
-        audioEngine.playBounce();
+        if (closestBarrier) {
+            // Barrier absorbs damage
+            const absorbed = Math.min(closestBarrier.hp, amount);
+            closestBarrier.hp -= absorbed;
+            amount -= absorbed;
 
-        return amount; // Still take damage
-    }
+            game.particles.spawnText(fighter.x, fighter.y - 20, `-${absorbed} BARRIER`, "#8B4513");
+            game.particles.spawn(fighter.x, fighter.y, '#D2691E', 5);
+            audioEngine.playBlock();
 
-    update(fighter, context) {
-        // Reduce stun duration if > 0.75 seconds
-        if (fighter.status.stun > this.maxStunDuration) {
-            fighter.status.stun = this.maxStunDuration;
-            context.game.particles.spawnText(fighter.x, fighter.y, "RESIST!", "#8B4513");
+            if (closestBarrier.hp <= 0) {
+                closestBarrier.destroyed = true;
+                game.particles.spawnText(fighter.x, fighter.y, "BARRIER DESTROYED!", "#ff4444");
+                audioEngine.playExplosion();
+            }
         }
+
+        return amount;
     }
 }
 
@@ -124,38 +143,28 @@ export class BallistaUltAbility extends Ability {
 
         fighter.cooldowns.ult = this.cooldown;
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = 30;
+        fighter.activeEffects.ultTimer = 60; // 1 second buff
 
-        // Fire 3 bolts in wider cone pattern
-        const spreadAngle = 0.2; // ~12 degrees spread
-        const angles = [
-            fighter.angle - spreadAngle,
-            fighter.angle,
-            fighter.angle + spreadAngle
-        ];
+        // ULT now buffs ATK - next few shots are enhanced
+        fighter.ballistaUltShots = 3; // 3 enhanced volleys
 
-        angles.forEach((angle, index) => {
-            const p = new Projectile(
-                fighter,
-                fighter.x + Math.cos(angle) * 30,
-                fighter.y + Math.sin(angle) * 30,
-                angle,
-                18, // Faster ult bolts
-                this.damage,
-                game
-            );
-
-            p.isBallistaBolt = true;
-            p.isUltBolt = true;
-            p.radius = 10;
-            p.dragTarget = null;
-            p.dragDuration = 30;
-            p.boltIndex = index;
-
-            game.projectiles.push(p);
-        });
-
-        game.particles.spawnText(fighter.x, fighter.y, "TRIPLE SHOT!", "#8B4513");
+        game.particles.spawnText(fighter.x, fighter.y, "SIEGE MODE!", "#8B4513");
         audioEngine.playHeavyImpact();
+
+        // Visual effect
+        for (let i = 0; i < 12; i++) {
+            const angle = (Math.PI * 2 / 12) * i;
+            game.particles.particles.push({
+                x: fighter.x + Math.cos(angle) * 30,
+                y: fighter.y + Math.sin(angle) * 30,
+                vx: Math.cos(angle) * 3,
+                vy: Math.sin(angle) * 3,
+                life: 0.8,
+                decay: 0.05,
+                size: 6,
+                color: '#8B4513',
+                type: 'dot'
+            });
+        }
     }
 }

@@ -65,8 +65,8 @@ export const FIGHTER_TYPES = {
         rotationSpeed: 0.16,
         skills: {
             atk: { type: "KUNAI_MARK", cooldown: 120, count: 2, damage: 5, delay: 90 }, // 1.5s total
-            def: { type: "EVASION", cooldown: 120, duration: 12 },
-            ult: { type: "FLASH_BARRAGE", cooldown: 180 }
+            def: { type: "EVASION", cooldown: 102, duration: 12 }, // Reduced by 0.3s (18 frames)
+            ult: { type: "FLASH_BARRAGE", cooldown: 180, rasenganDamage: 12 }
         }
     },
     CYBORG: {
@@ -116,9 +116,9 @@ export const FIGHTER_TYPES = {
         speed: 3.5,
         rotationSpeed: 0.09,
         skills: {
-            atk: { type: "BALLISTA_SHOT", cooldown: 120, damage: 15, projectileSpeed: 16 },
-            def: { type: "HEAVY_ARMOR" },
-            ult: { type: "TRIPLE_BOLT", cooldown: 120, damage: 15 }
+            atk: { type: "BALLISTA_SHOT", cooldown: 90, damage: 15, projectileSpeed: 16 },
+            def: { type: "BARRIER_SHIELD" },
+            ult: { type: "SIEGE_MODE", cooldown: 120, damage: 15 }
         }
     }
 };

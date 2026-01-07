@@ -97,6 +97,7 @@ export class FlashBarrageAbility extends Ability {
         super(config, slot);
         this.kunaiConfig = kunaiConfig;
         this.ProjectileClass = ProjectileClass;
+        this.rasenganDamage = config.rasenganDamage || 12;
     }
 
     execute(fighter, context) {
@@ -107,9 +108,19 @@ export class FlashBarrageAbility extends Ability {
         fighter.cooldowns.ult = this.cooldown;
         // Prevent normal attack from overriding the ult sequence
         fighter.cooldowns.atk = Math.max(fighter.cooldowns.atk, this.kunaiConfig.delay + 10);
-        
+
         fighter.teleportDelayTimer = this.kunaiConfig.delay;
         fighter.kunaiPending = [];
+
+        // Store rasengan damage for use when dash ends
+        fighter.pendingRasengan = this.rasenganDamage;
+
+        // Calculate max distance: base 350, but capped at 80% of arena diagonal
+        const baseMaxDist = 350;
+        const bounds = game.arenaBounds;
+        const arenaDiagonal = Math.hypot(bounds.width, bounds.height);
+        const maxAllowedDist = arenaDiagonal * 0.4; // 80% of half-diagonal (from center)
+        const maxDist = Math.min(baseMaxDist, maxAllowedDist);
 
         // Ensure 360 coverage even with low count
         for (let i = 0; i < count; i++) {
@@ -130,8 +141,8 @@ export class FlashBarrageAbility extends Ability {
             // Kunai specific props
             p.isKunai = true;
             p.radius = 6;
-            p.maxDist = 350; // Increased range to ensure it hits arena walls even when shrinking
-            
+            p.maxDist = maxDist;
+
             game.projectiles.push(p);
             fighter.kunaiPending.push(p);
             audioEngine.playKunaiThrow();

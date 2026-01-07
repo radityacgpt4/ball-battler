@@ -41,7 +41,7 @@ export class ParticleSystem {
         this.particles.push({
             x, y, text, color,
             vx: (Math.random() - 0.5) * 1, vy: -2,
-            life: 1.0, decay: 0.02, type: 'text'
+            life: 1.0, decay: 0.01, type: 'text'
         });
     }
 
@@ -85,9 +85,9 @@ export class ParticleSystem {
         let jagged = [];
         jagged.push(segments[0]);
 
-        for(let i = 0; i < segments.length - 1; i++) {
+        for (let i = 0; i < segments.length - 1; i++) {
             let p1 = segments[i];
-            let p2 = segments[i+1];
+            let p2 = segments[i + 1];
             let dist = Physics.dist(p1.x, p1.y, p2.x, p2.y);
             let steps = Math.max(1, Math.floor(dist / 15));
             let dx = (p2.x - p1.x) / steps;
@@ -96,9 +96,9 @@ export class ParticleSystem {
             let len = Math.hypot(perpX, perpY) || 1;
             perpX /= len; perpY /= len;
 
-            for(let j = 1; j < steps; j++) {
+            for (let j = 1; j < steps; j++) {
                 let jitter = (Math.random() - 0.5) * 15;
-                jagged.push({ x: p1.x + dx*j + perpX*jitter, y: p1.y + dy*j + perpY*jitter });
+                jagged.push({ x: p1.x + dx * j + perpX * jitter, y: p1.y + dy * j + perpY * jitter });
             }
             jagged.push(p2);
         }
@@ -115,7 +115,7 @@ export class ParticleSystem {
             if (p.type === 'text') {
                 p.x += p.vx; p.y += p.vy;
                 ctx.save(); ctx.globalAlpha = p.life;
-                ctx.font = "bold 20px monospace"; ctx.textAlign = "center";
+                ctx.font = "bold 26px monospace"; ctx.textAlign = "center";
                 ctx.lineWidth = 3; ctx.strokeStyle = "black"; ctx.strokeText(p.text, p.x, p.y);
                 ctx.fillStyle = p.color; ctx.fillText(p.text, p.x, p.y);
                 ctx.restore();
@@ -134,7 +134,7 @@ export class ParticleSystem {
                 ctx.strokeStyle = p.color; ctx.lineWidth = p.width;
                 ctx.shadowBlur = 10; ctx.shadowColor = p.color;
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
-                
+
                 // Core
                 ctx.strokeStyle = '#ffffff'; ctx.lineWidth = p.width / 2; ctx.shadowBlur = 0;
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
@@ -150,9 +150,9 @@ export class ParticleSystem {
                 ctx.shadowBlur = 20;
                 ctx.shadowColor = p.color;
                 ctx.beginPath();
-                if(p.segments.length > 0) {
+                if (p.segments.length > 0) {
                     ctx.moveTo(p.segments[0].x, p.segments[0].y);
-                    for(let j = 1; j < p.segments.length; j++) {
+                    for (let j = 1; j < p.segments.length; j++) {
                         ctx.lineTo(p.segments[j].x, p.segments[j].y);
                     }
                 }
@@ -168,7 +168,7 @@ export class ParticleSystem {
                 p.x += p.vx; p.y += p.vy;
                 ctx.save(); ctx.globalAlpha = p.life;
                 ctx.fillStyle = p.life > 0.5 ? '#ffff00' : '#ff0000';
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2); ctx.fill();
                 ctx.restore();
             }
             else if (p.type === 'shockwave') {
@@ -185,7 +185,7 @@ export class ParticleSystem {
             else {
                 p.x += p.vx; p.y += p.vy;
                 ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
                 ctx.globalAlpha = 1;
             }
         }

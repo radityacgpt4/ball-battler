@@ -83,11 +83,15 @@ export class BallistaDefAbility extends Ability {
         // Initialize barriers on first update
         if (!this.initialized) {
             fighter.ballistaBarriers = [];
-            for (let i = 0; i < this.barrierCount; i++) {
+
+            // Create 2 barriers: Right (PI/2) and Left (-PI/2)
+            const angles = [Math.PI / 2, -Math.PI / 2];
+
+            for (const angle of angles) {
                 fighter.ballistaBarriers.push({
                     hp: this.barrierMaxHp,
                     maxHp: this.barrierMaxHp,
-                    angle: (Math.PI * 2 / this.barrierCount) * i, // 0, 90, 180, 270 degrees
+                    angle: angle,
                     destroyed: false
                 });
             }
@@ -100,41 +104,42 @@ export class BallistaDefAbility extends Ability {
      */
     getBarrierIndex(localAngle) {
         if (!this.initialized) return -1;
-        
+
         // Normalize angle to -PI to PI
         localAngle = Physics.normalizeAngle(localAngle);
-        
+
         // Check each barrier
         // Barriers are at 0, PI/2 (1.57), PI (3.14), -PI/2 (-1.57)
         // We check if angle is within arcAngle/2 of barrier angle
-        
+
         const halfArc = this.arcAngle / 2;
-        const barrierAngles = [0, Math.PI/2, Math.PI, -Math.PI/2];
-        
-        for (let i = 0; i < 4; i++) {
+        // Angles corresponding to the barriers we created: Right (PI/2), Left (-PI/2)
+        const barrierAngles = [Math.PI / 2, -Math.PI / 2];
+
+        for (let i = 0; i < barrierAngles.length; i++) {
             const diff = Physics.normalizeAngle(localAngle - barrierAngles[i]);
             if (Math.abs(diff) < halfArc) {
                 return i;
             }
         }
-        
+
         return -1;
     }
-    
+
     damageBarrier(fighter, barrier, amount) {
         barrier.hp -= amount;
-        
+
         // Log sparingly? Or always for feedback
         // logger.log(`${fighter.name} Shield took ${Math.ceil(amount)} dmg.`, 'combat');
-        
+
         const game = fighter.game;
         const barrierWorldAngle = fighter.angle + barrier.angle;
         const effectX = fighter.x + Math.cos(barrierWorldAngle) * (fighter.radius + 15);
         const effectY = fighter.y + Math.sin(barrierWorldAngle) * (fighter.radius + 15);
-        
+
         // Block Effect
         game.particles.spawn(effectX, effectY, '#D2691E', 4);
-        
+
         if (barrier.hp <= 0 && !barrier.destroyed) {
             barrier.destroyed = true;
             barrier.hp = 0;
@@ -145,13 +150,13 @@ export class BallistaDefAbility extends Ability {
             logger.log(`${fighter.name} Barrier (${this.getSideName(barrier.angle)}) BROKEN!`, 'error');
         }
     }
-    
+
     getSideName(angle) {
         // approx check
         angle = Physics.normalizeAngle(angle);
         if (Math.abs(angle) < 0.1) return "FRONT";
-        if (Math.abs(angle - Math.PI/2) < 0.1) return "RIGHT";
-        if (Math.abs(angle + Math.PI/2) < 0.1) return "LEFT";
+        if (Math.abs(angle - Math.PI / 2) < 0.1) return "RIGHT";
+        if (Math.abs(angle + Math.PI / 2) < 0.1) return "LEFT";
         return "BACK";
     }
 
@@ -215,29 +220,29 @@ export class BallistaDefAbility extends Ability {
 
         // DoT bypasses barriers
         if (isDoT) return amount;
-        
+
         // If we don't know where damage came from, can't block directionally
         if (!attacker) return amount;
-        
+
         // If barriers not init
         if (!fighter.ballistaBarriers) return amount;
 
         const angleToAttacker = Math.atan2(attacker.y - fighter.y, attacker.x - fighter.x);
         const localAngle = Physics.normalizeAngle(angleToAttacker - fighter.angle);
-        
+
         const index = this.getBarrierIndex(localAngle);
-        
+
         if (index !== -1) {
             const barrier = fighter.ballistaBarriers[index];
             if (!barrier.destroyed) {
                 // Absorb damage
                 const absorbed = Math.min(barrier.hp, amount);
                 this.damageBarrier(fighter, barrier, absorbed);
-                
+
                 amount -= absorbed;
-                
+
                 logger.log(`${fighter.name} Barrier absorbed ${Math.ceil(absorbed)} dmg (Remaining: ${Math.ceil(amount)})`, 'combat');
-                
+
                 if (amount <= 0) return false; // Fully blocked
             }
         }

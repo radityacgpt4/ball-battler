@@ -112,6 +112,7 @@ export class Game {
         this.entities = [];
         this.projectiles = [];
         this.particles = new ParticleSystem();
+        this.combatText = new CombatTextHelper(this.particles);
 
         this.entities.push(new Fighter(1, 100, 250, this.p1Type, FIGHTER_TYPES, this));
         this.entities.push(new Fighter(2, 400, 250, this.p2Type, FIGHTER_TYPES, this));

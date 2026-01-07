@@ -25,7 +25,7 @@ export const FIGHTER_TYPES = {
         skills: {
             atk: { type: "RAYCAST", cooldown: 90, range: 800, damage: 15, bounces: 3 },
             def: { type: "STATIC_PASSIVE" },
-            ult: { type: "DOUBLE_ZAP", cooldown: 180 }
+            ult: { type: "DOUBLE_ZAP", cooldown: 160 }
         }
     },
     SOLDIER: {

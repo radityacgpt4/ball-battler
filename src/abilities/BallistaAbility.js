@@ -126,8 +126,9 @@ export class BallistaDefAbility extends Ability {
             // Normalize angle difference
             if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
 
-            // Check if within barrier arc (45 degrees = PI/4)
-            if (angleDiff < Math.PI / 4 && angleDiff < closestAngleDiff) {
+            // Check if within barrier arc (45 degrees visual = PI/4 total width)
+            // So we need +/- PI/8 from center
+            if (angleDiff < Math.PI / 8 && angleDiff < closestAngleDiff) {
                 closestAngleDiff = angleDiff;
                 closestBarrier = barrier;
             }
@@ -139,7 +140,15 @@ export class BallistaDefAbility extends Ability {
             closestBarrier.hp -= absorbed;
             amount -= absorbed;
 
-            game.particles.spawn(fighter.x, fighter.y, '#D2691E', 8);
+            // Spawn particles at shield surface (radius + 15 to match visual/Shieldbearer feel)
+            // Use attackAngle (angle from fighter to attacker)
+            // Note: attackAngle was calculated relative to attacker, so we point TOWARDS attacker
+            const hitDist = fighter.radius + 15;
+            // attackAngle is atan2(attacker - fighter), so it points to attacker
+            const hitX = fighter.x + Math.cos(attackAngle) * hitDist;
+            const hitY = fighter.y + Math.sin(attackAngle) * hitDist;
+
+            game.particles.spawn(hitX, hitY, '#D2691E', 8);
             audioEngine.playBlock();
 
             if (closestBarrier.hp <= 0) {

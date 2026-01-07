@@ -135,7 +135,7 @@ export class Game {
             this.arenaBounds.width = newW;
             this.arenaBounds.height = newH;
 
-            this.particles.spawnText(this.width / 2, this.height / 2, "ARENA SHRINK!", "#ff0000");
+            this.particles.spawnExplosion(this.width / 2, this.height / 2);
             audioEngine.playHeavyImpact();
 
             // Push entities inside
@@ -210,7 +210,6 @@ export class Game {
 
             if (p.isGrenade && p.hasExploded) {
                 this.particles.spawnExplosion(p.x, p.y);
-                this.particles.spawnText(p.x, p.y, "BOOM!", "#ffaa00");
                 audioEngine.playExplosion();
                 logger.log(`${p.owner.name}'s Grenade EXPLODED!`, 'combat');
                 const blastRadius = 60;
@@ -245,9 +244,8 @@ export class Game {
                         // Trigger Claymore
                         ent.takeDamage(p.damage);
                         if (p.slowDuration > 0) ent.applyStatus('SLOW', p.slowDuration);
-                        
+
                         this.particles.spawnExplosion(p.x, p.y);
-                        this.particles.spawnText(ent.x, ent.y, "TRAPPED!", "#ff0000");
                         audioEngine.playExplosion();
                         logger.log(`${ent.name} triggered ${p.owner.name}'s CLAYMORE!`, 'combat');
                         
@@ -277,8 +275,7 @@ export class Game {
                             p.angle = reflectAngle;
                             p.x = ent.x + Math.cos(reflectAngle) * (ent.radius + 15);
                             p.y = ent.y + Math.sin(reflectAngle) * (ent.radius + 15);
-                            this.particles.spawnText(ent.x, ent.y, "DEFLECT!", "#8b5cf6");
-                            this.particles.spawn(p.x, p.y, '#ffffff', 10);
+                            this.particles.spawn(p.x, p.y, '#8b5cf6', 10);
                             audioEngine.playBlock();
                             logger.log(`${ent.name} DEFLECTED projectile from ${p.owner.name}`, 'warn');
                         } else {
@@ -305,8 +302,6 @@ export class Game {
                                     // Set pending pin for wall collision
                                     ent.pendingBallistaPinned = { owner: p.owner };
                                     p.dragTarget = ent;
-
-                                    this.particles.spawnText(ent.x, ent.y, "KNOCKED!", "#8B4513");
 
                                     // Spawn knockback trail particles
                                     for (let i = 0; i < 8; i++) {
@@ -359,13 +354,13 @@ export class Game {
                     // Static passive (Volt's zap on contact)
                     if (e1.skills.def.type === 'STATIC_PASSIVE' && e2.status.stun <= 0) {
                         e2.applyStatus('STUN');
-                        this.particles.spawnText(e2.x, e2.y, "ZAP!", "#00FFFF");
+                        this.particles.spawn(e2.x, e2.y, '#00FFFF', 8);
                         audioEngine.playZap();
                         logger.log(`${e1.name} STATIC PASSIVE stunned ${e2.name}!`, 'combat');
                     }
                     if (e2.skills.def.type === 'STATIC_PASSIVE' && e1.status.stun <= 0) {
                         e1.applyStatus('STUN');
-                        this.particles.spawnText(e1.x, e1.y, "ZAP!", "#00FFFF");
+                        this.particles.spawn(e1.x, e1.y, '#00FFFF', 8);
                         audioEngine.playZap();
                         logger.log(`${e2.name} STATIC PASSIVE stunned ${e1.name}!`, 'combat');
                     }
@@ -382,7 +377,6 @@ export class Game {
                         if (speedTier <= 0 && !attacker.ultWallSlamActive) return false;
 
                         if (defender.isBlockedByShield(attacker.x, attacker.y)) {
-                            this.particles.spawnText(defender.x, defender.y, "BLOCKED!", "#ffffff");
                             logger.log(`${defender.name} blocked momentum slam from ${attacker.name}`, 'combat');
                             attacker.wallBounceSpeed = attacker.baseSpeed;
                             const reverseAngle = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
@@ -404,7 +398,7 @@ export class Game {
                         }
 
                         defender.takeDamage(damage);
-                        this.particles.spawnText(defender.x, defender.y, `SLAM ${damage}!`, "#8b5cf6");
+                        this.particles.spawn(defender.x, defender.y, '#8b5cf6', 8);
                         logger.log(`${attacker.name} SLAMMED ${defender.name} for ${damage} dmg (SpeedTier: ${speedTier})`, 'combat');
                         audioEngine.playHeavyImpact();
 
@@ -421,7 +415,6 @@ export class Game {
                             defender.dy = Math.sin(angle) * superSpeed;
 
                             defender.pendingWallSlam = { owner: attacker };
-                            this.particles.spawnText(defender.x, defender.y, "FLY!", "#ff4444");
 
                             for (let i = 0; i < 10; i++) {
                                 this.particles.spawn(defender.x, defender.y, '#ff4444', 1);

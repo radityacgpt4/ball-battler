@@ -118,8 +118,7 @@ export class RaycastAbility extends Ability {
             } else if (closest.type === 'shield') {
                 // Shield deflection - transfers ownership!
                 const enemy = closest.data.enemy;
-                game.particles.spawnText(enemy.x, enemy.y, "DEFLECT!", "#8b5cf6");
-                game.particles.spawn(closest.x, closest.y, '#ffffff', 15);
+                game.particles.spawn(closest.x, closest.y, '#8b5cf6', 15);
                 audioEngine.playBlock();
                 logger.log(`${enemy.name} DEFLECTED lightning from ${rayOwner.name}! Ownership transferred!`, 'warn');
 
@@ -182,7 +181,7 @@ export class DoubleZapAbility extends Ability {
 
         audioEngine.playThunder();
         fighter.cooldowns.ult = this.cooldown;
-        game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
+        game.particles.spawn(fighter.x, fighter.y, '#00FFFF', 15);
         logger.log(`${fighter.name} cast DOUBLE ZAP!`, 'combat');
     }
 }
@@ -295,8 +294,7 @@ export class LaserAbility extends Ability {
         this.hitBuffer.forEach(target => {
             if (target.type === 'shield') {
                 const enemy = target.data.enemy;
-                context.game.particles.spawnText(enemy.x, enemy.y, "BLOCK", "#ffffff");
-                if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ffffff', 3);
+                if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ffffff', 5);
                 audioEngine.playBlock();
                 // To avoid spamming logs every frame, only log periodically or on first hit
                 if (Math.random() < 0.1) logger.log(`${enemy.name} is blocking Laser`, 'info');

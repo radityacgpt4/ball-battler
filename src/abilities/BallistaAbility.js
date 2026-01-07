@@ -113,7 +113,9 @@ export class BallistaDefAbility extends Ability {
         for (const barrier of fighter.ballistaBarriers) {
             if (barrier.destroyed) continue;
 
-            let angleDiff = Math.abs(barrier.angle - attackAngle);
+            // Barrier faces world direction = fighter.angle + barrier.angle
+            const barrierWorldAngle = fighter.angle + barrier.angle;
+            let angleDiff = Math.abs(barrierWorldAngle - attackAngle);
             // Normalize angle difference
             if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
 
@@ -130,13 +132,12 @@ export class BallistaDefAbility extends Ability {
             closestBarrier.hp -= absorbed;
             amount -= absorbed;
 
-            game.particles.spawnText(fighter.x, fighter.y - 20, `-${absorbed} BARRIER`, "#8B4513");
-            game.particles.spawn(fighter.x, fighter.y, '#D2691E', 5);
+            game.particles.spawn(fighter.x, fighter.y, '#D2691E', 8);
             audioEngine.playBlock();
 
             if (closestBarrier.hp <= 0) {
                 closestBarrier.destroyed = true;
-                game.particles.spawnText(fighter.x, fighter.y, "BARRIER DESTROYED!", "#ff4444");
+                game.particles.spawnExplosion(fighter.x, fighter.y);
                 audioEngine.playExplosion();
             }
         }
@@ -162,7 +163,7 @@ export class BallistaUltAbility extends Ability {
         // ULT now buffs ATK - next few shots are enhanced
         fighter.ballistaUltShots = 3; // 3 enhanced volleys
 
-        game.particles.spawnText(fighter.x, fighter.y, "SIEGE MODE!", "#8B4513");
+        game.particles.spawn(fighter.x, fighter.y, '#8B4513', 10);
         audioEngine.playHeavyImpact();
 
         // Visual effect

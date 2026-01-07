@@ -27,7 +27,6 @@ export class MeleeAbility extends Ability {
                 // Check if blocked by shield - use sword tip position
                 if (enemy.isBlockedByShield(tipX, tipY)) {
                     if (fighter.cooldowns.atk <= 0) {
-                        game.particles.spawnText(enemy.x, enemy.y, "BLOCKED!", "#ffffff");
                         const shieldX = enemy.x + Math.cos(enemy.angle) * (enemy.radius + 8);
                         const shieldY = enemy.y + Math.sin(enemy.angle) * (enemy.radius + 8);
                         game.particles.spawn(shieldX, shieldY, '#8b5cf6', 8);
@@ -49,7 +48,7 @@ export class MeleeAbility extends Ability {
 
                     if (fighter.meleeHits % this.procRate === 0) {
                         enemy.applyStatus('BLEED');
-                        game.particles.spawnText(enemy.x, enemy.y, "BLEED", "#ff0000");
+                        game.particles.spawn(enemy.x, enemy.y, '#ff0000', 5);
                         logger.log(`${enemy.name} is BLEEDING!`, 'status');
                     }
                 }

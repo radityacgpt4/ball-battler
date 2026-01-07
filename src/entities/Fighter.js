@@ -264,7 +264,6 @@ export class Fighter {
 
             this.status.stun = 30;
 
-            this.game.particles.spawnText(this.x, this.y - 30, "WALL SLAM!", "#ff4444");
             this.game.particles.spawnWallImpact(this.x, this.y);
 
             const vAngle = Math.atan2(this.dy, this.dx);
@@ -275,7 +274,7 @@ export class Fighter {
                 const aAngle = Math.random() * Math.PI * 2;
                 attacker.dx = Math.cos(aAngle) * attacker.baseSpeed;
                 attacker.dy = Math.sin(aAngle) * attacker.baseSpeed;
-                this.game.particles.spawnText(attacker.x, attacker.y, "RESET", "#ffffff");
+                this.game.particles.spawn(attacker.x, attacker.y, '#ffffff', 5);
             }
 
             this.pendingWallSlam = null;
@@ -287,8 +286,6 @@ export class Fighter {
             this.status.stun = 30;
 
             audioEngine.playHeavyImpact();
-
-            this.game.particles.spawnText(this.x, this.y - 30, "PINNED!", "#8B4513");
             this.game.particles.spawnWallImpact(this.x, this.y);
 
             // Reset to normal speed
@@ -304,7 +301,7 @@ export class Fighter {
             const config = this.skills.atk;
             if (this.wallBounceSpeed < config.maxSpeed) {
                 this.wallBounceSpeed = Math.min(this.wallBounceSpeed + config.speedGain, config.maxSpeed);
-                this.game.particles.spawnText(this.x, this.y, "SPEED UP!", "#8b5cf6");
+                this.game.particles.spawn(this.x, this.y, '#8b5cf6', 5);
                 audioEngine.playSpeedUp();
                 this.spawnSonicBoom();
             }
@@ -340,7 +337,7 @@ export class Fighter {
                 enemies.forEach(e => {
                     if (Physics.lineCircleIntersect(current.x, current.y, next.x, next.y, e.x, e.y, e.radius + 10)) {
                         e.takeDamage(8);
-                        this.game.particles.spawnText(e.x, e.y, "FLASH!", "#ffd700");
+                        this.game.particles.spawn(e.x, e.y, '#ffd700', 5);
                     }
                 });
             }
@@ -364,7 +361,6 @@ export class Fighter {
                     const rasenganRadius = 50; // Small AOE
 
                     // Visual: Rasengan spiral effect
-                    this.game.particles.spawnText(this.x, this.y - 20, "RASENGAN!", "#00BFFF");
                     for (let i = 0; i < 20; i++) {
                         const angle = (Math.PI * 2 / 20) * i;
                         const dist = 15 + Math.random() * 20;
@@ -549,7 +545,6 @@ export class Fighter {
                 this.isDead = true;
                 logger.log(`${this.name} was KNOCKED OUT!`, 'error');
                 this.game.particles.spawnExplosion(this.x, this.y);
-                this.game.particles.spawnText(this.x, this.y, "KO!", "#ff0000");
                 audioEngine.playExplosion();
                 
                 // Ghost effect
@@ -571,7 +566,7 @@ export class Fighter {
         if (type === 'STUN') this.status.stun = duration || 60;
         if (type === 'SLOW') {
             if (this.status.slow <= 0) {
-                this.game.particles.spawnText(this.x, this.y, "SLOW", "#cccccc");
+                this.game.particles.spawn(this.x, this.y, '#cccccc', 5);
             }
             this.status.slow = duration || 30;
         }
@@ -855,7 +850,7 @@ export class Fighter {
         }
         ctx.restore();
 
-        // Ballista Barriers Visual (4 sides)
+        // Ballista Barriers Visual (4 sides) - rotate with fighter
         if (this.ballistaBarriers) {
             ctx.save();
             ctx.translate(this.x, this.y);
@@ -867,8 +862,10 @@ export class Fighter {
                 if (barrier.destroyed) continue;
 
                 const hpRatio = barrier.hp / barrier.maxHp;
-                const startAngle = barrier.angle - arcAngle / 2;
-                const endAngle = barrier.angle + arcAngle / 2;
+                // Add fighter's angle so barriers rotate with the fighter
+                const adjustedAngle = barrier.angle + this.angle;
+                const startAngle = adjustedAngle - arcAngle / 2;
+                const endAngle = adjustedAngle + arcAngle / 2;
 
                 // Barrier glow based on HP
                 ctx.shadowBlur = 5 + hpRatio * 10;
@@ -892,7 +889,7 @@ export class Fighter {
                 // HP indicator line
                 const hpArc = arcAngle * hpRatio;
                 ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 8, barrier.angle - hpArc / 2, barrier.angle + hpArc / 2);
+                ctx.arc(0, 0, barrierDist + 8, adjustedAngle - hpArc / 2, adjustedAngle + hpArc / 2);
                 ctx.lineWidth = 2;
                 ctx.strokeStyle = hpRatio > 0.5 ? '#4CAF50' : (hpRatio > 0.25 ? '#FFC107' : '#F44336');
                 ctx.stroke();

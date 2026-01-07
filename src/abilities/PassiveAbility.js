@@ -15,7 +15,7 @@ export class ParryPassiveAbility extends Ability {
 
     onDamage(fighter, damage, context) {
         if (Math.random() < this.chance) {
-            context.game.particles.spawnText(fighter.x, fighter.y, "BLOCK", "#ffffff");
+            context.game.particles.spawn(fighter.x, fighter.y, '#ffffff', 5);
             audioEngine.playBlock();
             logger.log(`${fighter.name} PARRIED incoming damage!`, 'info');
             return false; // Block the damage
@@ -34,7 +34,7 @@ export class EvasionAbility extends Ability {
         if (fighter.cooldowns.def <= 0) {
             fighter.activeEffects.evasionTimer = this.duration; // 0.2s visual
             fighter.cooldowns.def = this.cooldown;
-            context.game.particles.spawnText(fighter.x, fighter.y, "DODGE", "#ffd700");
+            context.game.particles.spawn(fighter.x, fighter.y, '#ffd700', 5);
             audioEngine.playSwordSwing();
             logger.log(`${fighter.name} DODGED incoming damage!`, 'info');
             return false; // Block the damage
@@ -151,12 +151,11 @@ export class ForceFieldAbility extends Ability {
             const absorbed = Math.min(this.currentShield, damage);
             this.currentShield -= absorbed;
             damage -= absorbed;
-            
-            context.game.particles.spawnText(fighter.x, fighter.y, "SHIELD", "#00ffff");
+
             audioEngine.playBlock();
-            
+
             // Visual feedback for shield hit
-            context.game.particles.spawn(fighter.x, fighter.y, '#00ffff', 5);
+            context.game.particles.spawn(fighter.x, fighter.y, '#00ffff', 8);
 
             if (damage <= 0) {
                 logger.log(`${fighter.name} Force Field absorbed full damage (${absorbed})`, 'info');

@@ -29,7 +29,6 @@ export class DashAssaultAbility extends Ability {
         const destY = fighter.y + Math.sin(aimAngle) * dist;
 
         game.particles.spawnSlash(fighter.x, fighter.y, destX, destY, '#ff0000'); // Red Slash
-        game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
         audioEngine.playSwordSwing();
 
         if (target && Physics.lineCircleIntersect(fighter.x, fighter.y, destX, destY, target.x, target.y, target.radius + 15)) {
@@ -79,7 +78,7 @@ export class RetreatAbility extends Ability {
         // Soldier Buff: Force aim to enemy (opposite of dash)
         fighter.angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
 
-        game.particles.spawnText(fighter.x, fighter.y, "RETREAT!", "#54a0ff");
+        game.particles.spawn(fighter.x, fighter.y, '#54a0ff', 5);
         logger.log(`${fighter.name} used Retreat!`, 'info');
         fighter.cooldowns.def = this.cooldown;
         audioEngine.playSwordSwing();
@@ -148,8 +147,7 @@ export class FlashBarrageAbility extends Ability {
             audioEngine.playKunaiThrow();
         }
 
-        game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
-        game.particles.spawnText(fighter.x, fighter.y + 20, "BARRAGE!", "#ffd700");
+        game.particles.spawn(fighter.x, fighter.y, '#ffd700', 10);
         logger.log(`${fighter.name} used Flash Barrage!`, 'combat');
     }
 }

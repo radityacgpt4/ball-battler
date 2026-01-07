@@ -36,7 +36,7 @@ export class AxeAtkAbility extends Ability {
             if (Physics.lineCircleIntersect(fighter.x, fighter.y, tipX, tipY, enemy.x, enemy.y, enemy.radius + 5)) {
                  if (enemy.isBlockedByShield(tipX, tipY)) {
                     if (fighter.cooldowns.atk <= 0) {
-                        game.particles.spawnText(enemy.x, enemy.y, "BLOCKED!", "#ffffff");
+                        game.particles.spawn(enemy.x, enemy.y, '#ffffff', 5);
                         audioEngine.playBlock();
                         fighter.cooldowns.atk = 20;
                     }
@@ -59,13 +59,11 @@ export class AxeAtkAbility extends Ability {
                     // 2. Track consecutive hits
                     fighter.axemanHits = (fighter.axemanHits || 0) + 1;
                     fighter.axemanComboTimer = 90; // 1.5 second to land next hit
-                    
-                    game.particles.spawnText(fighter.x, fighter.y - 30, `${fighter.axemanHits} HIT!`, "#ff6b6b");
 
                     // 3. Bleed condition (If 2 consecutive hits connected)
                     if (fighter.axemanHits >= 2) {
                        enemy.applyStatus('BLEED', this.bleedDuration);
-                       game.particles.spawnText(enemy.x, enemy.y, "BLEED", "#ff0000");
+                       game.particles.spawn(enemy.x, enemy.y, '#ff0000', 5);
                        logger.log(`${enemy.name} is BLEEDING from Axeman combo!`, 'status');
                    }
                }
@@ -150,7 +148,7 @@ export class ExecuteUltAbility extends Ability {
         fighter.activeEffects.ultTimer = 30; // 0.5 second visual
         fighter.cooldowns.ult = this.cooldown; // NOW apply cooldown
 
-        game.particles.spawnText(fighter.x, fighter.y, "EXECUTE!", "#ff0000");
+        game.particles.spawn(fighter.x, fighter.y, '#ff0000', 10);
 
         enemies.forEach(enemy => {
             if (enemy === fighter || enemy.isDead) return;
@@ -159,13 +157,11 @@ export class ExecuteUltAbility extends Ability {
                 if (enemy.hp <= 30) {
                     // Instant Kill - FATALITY
                     enemy.takeDamage(enemy.maxHp + 999, true);
-                    game.particles.spawnText(enemy.x, enemy.y, "FATALITY!", "#880000");
                     audioEngine.playHeavyImpact();
                 } else {
                     // Stun
                     enemy.takeDamage(10);
                     enemy.applyStatus('STUN', 120); // 2 sec
-                    game.particles.spawnText(enemy.x, enemy.y, "STUNNED", "#ffff00");
                     audioEngine.playHeavyImpact();
                 }
 

@@ -21,8 +21,6 @@ export class WallSlamAbility extends Ability {
 
         // Increase Mass significantly
         fighter.mass = fighter.originalMass * 5.0;
-        game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
-        game.particles.spawnText(fighter.x, fighter.y + 20, "MASS UP!", "#8b5cf6");
         audioEngine.playHeavyImpact();
         logger.log(`${fighter.name} activated WALL SLAM! Mass increased!`, 'combat');
 
@@ -61,7 +59,7 @@ export class DoubleZapUltAbility extends Ability {
 
         // The actual raycast is handled by the fighter's updateUltimate
         // This just triggers the effect
-        game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
+        game.particles.spawn(fighter.x, fighter.y, '#00FFFF', 15);
         audioEngine.playThunder();
         logger.log(`${fighter.name} unleashed DOUBLE ZAP Storm!`, 'combat');
 

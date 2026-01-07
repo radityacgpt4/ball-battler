@@ -186,7 +186,7 @@ export class SniperUltAbility extends Ability {
         fighter.activeEffects.ultTimer = 600; // 10 seconds of Sniper Mode
         fighter.cooldowns.ult = this.cooldown;
 
-        game.particles.spawnText(fighter.x, fighter.y, "SNIPER MODE", "#00ff00");
+        game.particles.spawn(fighter.x, fighter.y, '#00ff00', 10);
         audioEngine.playPowerUp(); 
         
         // Update Laser Color immediately for visual feedback

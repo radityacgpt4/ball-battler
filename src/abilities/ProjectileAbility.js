@@ -106,7 +106,7 @@ export class KunaiAbility extends Ability {
             fighter.kunaiPending.push(p);
             audioEngine.playKunaiThrow();
         }
-        game.particles.spawnText(fighter.x, fighter.y, isUlt ? "BARRAGE!" : "MARK!", "#ffd700");
+        game.particles.spawn(fighter.x, fighter.y, '#ffd700', 8);
     }
 
     update(fighter, context) {
@@ -122,22 +122,9 @@ export class KunaiAbility extends Ability {
                     const k1 = embeddedKunai[i];
                     const k2 = embeddedKunai[i + 1];
 
-                    // Visual: spawn electricity particles along the line
-                    if (Math.random() < 0.3) {
-                        const t = Math.random();
-                        const px = k1.x + (k2.x - k1.x) * t;
-                        const py = k1.y + (k2.y - k1.y) * t;
-                        game.particles.particles.push({
-                            x: px,
-                            y: py,
-                            vx: (Math.random() - 0.5) * 4,
-                            vy: (Math.random() - 0.5) * 4,
-                            life: 0.3,
-                            decay: 0.1,
-                            size: 3 + Math.random() * 2,
-                            color: '#00FFFF',
-                            type: 'dot'
-                        });
+                    // Visual: continuous lightning bolt between kunai (like Thunder Mage)
+                    if (Math.random() < 0.5) {
+                        game.particles.spawnBolt([{x: k1.x, y: k1.y}, {x: k2.x, y: k2.y}], '#00FFFF');
                     }
 
                     // Check if enemies cross the line
@@ -148,7 +135,6 @@ export class KunaiAbility extends Ability {
                         if (Physics.lineCircleIntersect(k1.x, k1.y, k2.x, k2.y, enemy.x, enemy.y, enemy.radius)) {
                             enemy.applyStatus('STUN', this.zapStunDuration);
                             enemy.kunaiZapImmune = this.zapStunDuration; // Immunity frames
-                            game.particles.spawnText(enemy.x, enemy.y, "ZAPPED!", "#00FFFF");
                             game.particles.spawnBolt([{x: k1.x, y: k1.y}, {x: enemy.x, y: enemy.y}, {x: k2.x, y: k2.y}], '#00FFFF');
                             audioEngine.playZap();
                         }
@@ -245,7 +231,7 @@ export class MissileBarrageAbility extends Ability {
 
         audioEngine.playMissileLaunch();
         fighter.cooldowns.ult = this.cooldown;
-        game.particles.spawnText(fighter.x, fighter.y, "BARRAGE!", "#ff4400");
+        game.particles.spawn(fighter.x, fighter.y, '#ff4400', 10);
         logger.log(`${fighter.name} launched Missile Barrage!`, 'combat');
     }
 }

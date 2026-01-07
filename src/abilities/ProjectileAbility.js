@@ -172,8 +172,7 @@ export class KunaiAbility extends Ability {
                         if (enemy.kunaiZapImmune > 0) continue; // Prevent repeated stuns
 
                         if (Physics.lineCircleIntersect(k1.x, k1.y, k2.x, k2.y, enemy.x, enemy.y, enemy.radius)) {
-                            // Check immunity from specific source? Current logic is global zap immunity per enemy
-                            enemy.applyStatus('STUN', this.zapStunDuration);
+                            enemy.applyStatus('STUN', 45); // 0.75s stun
                             enemy.kunaiZapImmune = this.zapImmunityDuration; // Immunity frames (1s)
                             game.particles.spawnBolt([{ x: k1.x, y: k1.y }, { x: enemy.x, y: enemy.y }, { x: k2.x, y: k2.y }], '#00FFFF', 3);
                             audioEngine.playZap();

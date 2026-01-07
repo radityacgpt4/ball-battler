@@ -192,7 +192,7 @@ export class LaserAbility extends Ability {
         this.duration = 180; // 3 seconds firing (1.5x increase)
         this.chargeTime = 150; // 2.5 seconds charging
         this.damage = config.damage || 1;
-        this.range = config.range || Math.max(800, 1200); // Arena diagonal approx
+        this.range = 2000; // Guaranteed to touch edge regardless of arena size
 
         this.state = 'IDLE'; // IDLE, CHARGING, FIRING
         this.timer = 0;
@@ -330,30 +330,40 @@ export class LaserAbility extends Ability {
         const hitY = rayY + dirY * closest.dist;
 
         // Draw Kamehameha Beam
-        // 5x width = ~30 px (Base was 6)
-        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ff4400', 30);
+        // Slightly thinner than before (20px instead of 30px)
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ff4400', 20);
         // Inner core
-        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffff00', 12);
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffff00', 8);
 
-        // Spiral Effect particles along the beam
+        // Spiral Effect (Visible sine waves crossing the beam)
         const beamDist = closest.dist;
-        const step = 40;
-        const time = Date.now() * 0.01;
+        const step = 25; // More particles for better effect
+        const time = Date.now() * 0.012;
+
         for (let d = 0; d < beamDist; d += step) {
             const ratio = d / beamDist;
-            const spiralX = Math.cos(time + ratio * 10) * 15;
-            const spiralY = Math.sin(time + ratio * 10) * 15;
+            // Two oscillating sine waves to simulate a 2D spiral
+            const offset1 = Math.sin(time + d * 0.05) * 12;
+            const offset2 = Math.sin(time + d * 0.05 + Math.PI) * 12;
 
-            // Transform to beam orientation
-            const worldX = fighter.x + dirX * d + (-dirY * spiralX + dirX * spiralY);
-            const worldY = fighter.y + dirY * d + (dirX * spiralX + dirY * spiralY);
+            // Transform offsets to be perpendicular to the beam direction (dirX, dirY)
+            const perpX = -dirY;
+            const perpY = dirX;
+
+            const spawnSpiral = (off) => {
+                game.particles.particles.push({
+                    x: fighter.x + dirX * d + perpX * off,
+                    y: fighter.y + dirY * d + perpY * off,
+                    vx: 0, vy: 0,
+                    life: 0.6, decay: 0.06, // Lasts 10 frames
+                    size: 2 + Math.random() * 2,
+                    color: '#ffcc00', type: 'dot'
+                });
+            };
 
             if (this.timer % 2 === 0) {
-                game.particles.particles.push({
-                    x: worldX, y: worldY,
-                    vx: 0, vy: 0, life: 0.3, decay: 0.1,
-                    size: 2, color: '#ffcc00', type: 'dot'
-                });
+                spawnSpiral(offset1);
+                spawnSpiral(offset2);
             }
         }
 

@@ -72,7 +72,7 @@ export class Game {
                 btn.className = 'char-btn';
                 const current = playerNum === 1 ? self.p1Type : self.p2Type;
                 if (current === key) btn.classList.add('active');
-                btn.innerHTML = `<span class="char-icon" style="background:${data.color}"></span> ${data.name}`;
+                btn.innerHTML = `<span class="char-icon" style="background:${data.color}"></span> P${playerNum} - ${data.name}`;
                 btn.onclick = () => {
                     if (playerNum === 1) self.p1Type = key;
                     else self.p2Type = key;
@@ -181,7 +181,7 @@ export class Game {
             `;
 
             div.innerHTML = `
-                <div class="hud-name" style="color:${ent.color}">${ent.name}</div>
+                <div class="hud-name" style="color:${ent.color}">P${ent.id} - ${ent.name}</div>
                 ${skillsHTML}
             `;
             uiHeader.appendChild(div);
@@ -525,7 +525,7 @@ export class Game {
                     msg.style.color = "white";
                     logger.log("MATCH END: DRAW", 'system');
                 } else {
-                    msg.innerText = `${alive[0].name} WINS`;
+                    msg.innerText = `P${alive[0].id} - ${alive[0].name} WINS`;
                     msg.style.color = alive[0].color;
                     logger.log(`MATCH END: ${alive[0].name} WINS!`, 'system');
                 }

@@ -30,10 +30,10 @@ export class ParticleSystem {
         });
     }
 
-    spawnBeam(x1, y1, x2, y2, color) {
+    spawnBeam(x1, y1, x2, y2, color, width = 6) {
         this.particles.push({
             type: 'beam', x1, y1, x2, y2, color,
-            life: 1.0, decay: 0.5, width: 6 // Fast decay for no trails
+            life: 1.0, decay: 0.5, width: width // Fast decay for no trails
         });
     }
 
@@ -79,7 +79,7 @@ export class ParticleSystem {
         });
     }
 
-    spawnBolt(segments, color) {
+    spawnBolt(segments, color, width = 5) {
         if (segments.length < 2) return;
 
         let jagged = [];
@@ -103,7 +103,7 @@ export class ParticleSystem {
             jagged.push(p2);
         }
 
-        this.particles.push({ type: 'bolt', segments: jagged, life: 1.0, decay: 0.08, color: color });
+        this.particles.push({ type: 'bolt', segments: jagged, life: 1.0, decay: 0.08, color: color, width: width });
     }
 
     updateAndDraw(ctx) {
@@ -146,7 +146,7 @@ export class ParticleSystem {
                 ctx.lineJoin = 'round';
                 ctx.lineCap = 'round';
                 ctx.strokeStyle = p.color;
-                ctx.lineWidth = 5;
+                ctx.lineWidth = p.width || 5;
                 ctx.shadowBlur = 20;
                 ctx.shadowColor = p.color;
                 ctx.beginPath();

@@ -128,7 +128,7 @@ export class Projectile {
             if (this.target) {
                 const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
                 let angleDiff = targetAngle - this.angle;
-                
+
                 // Normalize angle
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
@@ -242,40 +242,45 @@ export class Projectile {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
-            
-            // Fins
-            ctx.fillStyle = '#555';
+
+            // Draw Missile Body (Cylinder)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-8, -3, 16, 6);
+
+            // Nose Cone (Red)
+            ctx.fillStyle = '#ff0000';
             ctx.beginPath();
-            ctx.moveTo(-6, 0);
-            ctx.lineTo(-10, 8);
-            ctx.lineTo(-2, 0);
-            ctx.lineTo(-10, -8);
+            ctx.moveTo(8, -3);
+            ctx.lineTo(14, 0);
+            ctx.lineTo(8, 3);
             ctx.fill();
 
-            // Draw Missile Body (Bigger)
-            ctx.fillStyle = '#ff4400';
+            // Fins (Dark Grey)
+            ctx.fillStyle = '#333';
             ctx.beginPath();
-            ctx.moveTo(10, 0); // Longer nose
-            ctx.lineTo(-6, 5); // Wider body
-            ctx.lineTo(-6, -5);
+            ctx.moveTo(-8, 0);
+            ctx.lineTo(-12, 6);
+            ctx.lineTo(-4, 3);
+            ctx.lineTo(-4, -3);
+            ctx.lineTo(-12, -6);
             ctx.fill();
 
-            // Thruster/Engine
-            ctx.fillStyle = '#ffff00';
+            // Thruster/Engine Flame
+            ctx.fillStyle = '#ffaa00';
             ctx.beginPath();
-            ctx.moveTo(-6, 0);
-            ctx.lineTo(-14, 0); // Longer flame
-            ctx.lineWidth = 3;
+            ctx.moveTo(-8, 0);
+            ctx.lineTo(-18 + Math.random() * -4, 0); // Flickering flame
+            ctx.lineWidth = 4;
             ctx.stroke();
 
             ctx.restore();
         }
         else if (this.isClaymore) {
-            ctx.fillStyle = '#333';
+            ctx.fillStyle = '#ff6600'; // Orange for high contrast
             ctx.beginPath();
             ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
             ctx.fill();
-            
+
             // Blink light
             if (Math.floor(Date.now() / 200) % 2 === 0) {
                 ctx.fillStyle = '#ff0000';
@@ -283,7 +288,7 @@ export class Projectile {
                 ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
                 ctx.fill();
             }
-            
+
             // Range indicator (faint)
             ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)';
             ctx.lineWidth = 1;
@@ -295,11 +300,11 @@ export class Projectile {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
-            
+
             ctx.fillStyle = this.isUnblockable ? '#00ff00' : '#ff0000';
             ctx.shadowBlur = 10;
             ctx.shadowColor = ctx.fillStyle;
-            
+
             ctx.beginPath();
             ctx.fillRect(-10, -2, 20, 4); // Long bullet
             ctx.restore();

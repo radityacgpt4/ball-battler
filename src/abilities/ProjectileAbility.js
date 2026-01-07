@@ -55,7 +55,8 @@ export class KunaiAbility extends Ability {
         this.count = config.count;
         this.damage = config.damage;
         this.delay = config.delay;
-        this.zapStunDuration = config.zapDuration || 60; // Default 1 second stun
+        this.zapStunDuration = config.zapDuration || 30; // 0.5 second stun
+        this.zapImmunityDuration = 60; // 1 second immunity
     }
 
     canUse(fighter, context) {
@@ -160,9 +161,9 @@ export class KunaiAbility extends Ability {
                         continue;
                     }
 
-                    // Visual: continuous lightning bolt between kunai (Reduced intensity)
+                    // Visual: continuous lightning bolt between kunai (Reduced intensity - 30% thinner)
                     if (Math.random() < 0.15) {
-                        game.particles.spawnBolt([{x: k1.x, y: k1.y}, {x: k2.x, y: k2.y}], '#00FFFF');
+                        game.particles.spawnBolt([{ x: k1.x, y: k1.y }, { x: k2.x, y: k2.y }], '#00FFFF', 3);
                     }
 
                     // Check if enemies cross the line
@@ -171,9 +172,10 @@ export class KunaiAbility extends Ability {
                         if (enemy.kunaiZapImmune > 0) continue; // Prevent repeated stuns
 
                         if (Physics.lineCircleIntersect(k1.x, k1.y, k2.x, k2.y, enemy.x, enemy.y, enemy.radius)) {
+                            // Check immunity from specific source? Current logic is global zap immunity per enemy
                             enemy.applyStatus('STUN', this.zapStunDuration);
-                            enemy.kunaiZapImmune = this.zapStunDuration; // Immunity frames
-                            game.particles.spawnBolt([{x: k1.x, y: k1.y}, {x: enemy.x, y: enemy.y}, {x: k2.x, y: k2.y}], '#00FFFF');
+                            enemy.kunaiZapImmune = this.zapImmunityDuration; // Immunity frames (1s)
+                            game.particles.spawnBolt([{ x: k1.x, y: k1.y }, { x: enemy.x, y: enemy.y }, { x: k2.x, y: k2.y }], '#00FFFF', 3);
                             audioEngine.playZap();
                         }
                     }
@@ -228,7 +230,7 @@ export class GrenadeAbility extends Ability {
 
         game.projectiles.push(p);
         audioEngine.playGrenadeThrow();
-        
+
         logger.log(`${fighter.name} threw a GRENADE!`, 'combat');
 
         fighter.cooldowns.ult = this.cooldown;
@@ -244,12 +246,12 @@ export class MissileBarrageAbility extends Ability {
 
     execute(fighter, context) {
         const { game } = context;
-        
+
         for (let i = 0; i < this.count; i++) {
             // Spread missiles in an arc
             const spread = (i - (this.count - 1) / 2) * 0.5; // 0.5 rad spread
             const angle = fighter.angle + spread;
-            
+
             const p = new Projectile(
                 fighter,
                 fighter.x + Math.cos(angle) * 20,
@@ -263,7 +265,7 @@ export class MissileBarrageAbility extends Ability {
             p.isMissile = true;
             p.radius = 5;
             p.turnSpeed = 0.08; // Weak homing
-            
+
             game.projectiles.push(p);
         }
 

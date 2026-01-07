@@ -308,16 +308,52 @@ export class Renderer {
             ctx.fillRect(-fighter.radius - 10, 1, 15, 4);
         });
 
-        // Cyborg - Eye
+        // Cyborg - Eye + Charging Visual
         this.registerAccessory('CYBORG', (ctx, fighter) => {
+            // Charge Visual (Kamehameha charge peak)
+            if (fighter.laserState === 'CHARGING') {
+                const ratio = fighter.laserChargeRatio || 0;
+                ctx.save();
+                ctx.fillStyle = `rgba(255, 170, 0, ${0.3 + ratio * 0.4})`;
+                ctx.beginPath();
+                ctx.ellipse(20, 0, 10 + ratio * 20, 10 + ratio * 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Add some glow
+                ctx.shadowBlur = 10 + ratio * 20;
+                ctx.shadowColor = '#ffaa00';
+                ctx.stroke();
+                ctx.restore();
+            }
+
             ctx.fillStyle = '#ffaa00';
             ctx.beginPath();
             ctx.arc(fighter.radius, 0, 5, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        // Sniper - Rifle (simple)
+        // Sniper - Rifle + Laser Sight
         this.registerAccessory('SNIPER', (ctx, fighter) => {
+            // Laser Sight (Rendered in render loop so it's not wiped by update)
+            if (fighter.laserDist > 0) {
+                ctx.save();
+                ctx.strokeStyle = fighter.laserColor || '#ff0000';
+                ctx.lineWidth = fighter.activeEffects.ultActive ? 4 : 2;
+                ctx.setLineDash([5, 5]);
+                ctx.globalAlpha = fighter.activeEffects.ultActive ? 1.0 : 0.6;
+
+                if (fighter.activeEffects.ultActive) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = fighter.laserColor;
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(fighter.laserDist, 0);
+                ctx.stroke();
+                ctx.restore();
+            }
+
             ctx.fillStyle = '#2F4F2F';
             ctx.fillRect(fighter.radius - 5, -3, 35, 6);
             ctx.fillStyle = '#1C1C1C';

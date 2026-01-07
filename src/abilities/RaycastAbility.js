@@ -35,12 +35,12 @@ export class RaycastAbility extends Ability {
         dirX /= dirLen;
         dirY /= dirLen;
 
-        let points = [{x: rayX, y: rayY}];
+        let points = [{ x: rayX, y: rayY }];
         let currentDamage = this.damage;
         let rayOwner = fighter;
         let hitEntities = new Set();
 
-        if(!isUlt) audioEngine.playZap();
+        if (!isUlt) audioEngine.playZap();
 
         for (let bounce = 0; bounce <= MAX_BOUNCES; bounce++) {
             // Find closest hit among walls, enemies, and shields
@@ -189,44 +189,101 @@ export class DoubleZapAbility extends Ability {
 export class LaserAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.duration = config.duration || 60; // 1 second firing
+        this.duration = 180; // 3 seconds firing (1.5x increase)
+        this.chargeTime = 150; // 2.5 seconds charging
         this.damage = config.damage || 1;
-        this.range = config.range || 800;
-        this.active = false;
+        this.range = config.range || Math.max(800, 1200); // Arena diagonal approx
+
+        this.state = 'IDLE'; // IDLE, CHARGING, FIRING
         this.timer = 0;
         this.originalRotation = 0;
-        this.hitBuffer = new Set(); // Stores unique enemies hit between damage ticks
+        this.hitBuffer = new Set();
     }
 
     execute(fighter, context) {
-        this.active = true;
-        this.timer = this.duration;
-        fighter.cooldowns.atk = this.cooldown;
-        this.hitBuffer.clear();
-        
-        // Boost rotation speed
+        this.state = 'CHARGING';
+        this.timer = this.chargeTime;
+
+        // Reset cooldown to 0 so the gap between FIRE-END and FIRE-START is exactly chargeTime
+        fighter.cooldowns.atk = 0;
+
+        // Save original rotation for slowing during firing
         this.originalRotation = fighter.rotationSpeed;
-        fighter.rotationSpeed *= 1.5;
-        
-        audioEngine.playZap();
+
+        audioEngine.playPowerUp(); // Charge sound
+        // context.game.particles.spawn(fighter.x, fighter.y, '#00ffff', 5);
     }
 
     update(fighter, context) {
-        if (this.active) {
+        // Interrupt logic: Stun breaks the channel
+        if ((this.state === 'CHARGING' || this.state === 'FIRING') && fighter.status.stun > 0) {
+            this.state = 'IDLE';
+            fighter.rotationSpeed = this.originalRotation;
+            fighter.laserSpeedMult = 1.0; // Restore speed
+            this.hitBuffer.clear();
+            // Start cooldown only after beam ends/interrupts to maintain the 2.5s gap
+            fighter.cooldowns.atk = 1;
+            return;
+        }
+
+        if (this.state === 'CHARGING') {
             this.timer--;
-            
-            // Scan every frame and buffer hits
+
+            // Charging Visuals Data (Renderer will handle the dash/oval)
+            const chargeRatio = 1 - (this.timer / this.chargeTime);
+            fighter.laserState = 'CHARGING';
+            fighter.laserChargeRatio = chargeRatio;
+
+            const { game } = context;
+            // Pulsing gathering effect (Particles are fine in update)
+            if (this.timer % 10 === 0) {
+                game.particles.particles.push({
+                    x: fighter.x + (Math.random() - 0.5) * 40,
+                    y: fighter.y + (Math.random() - 0.5) * 40,
+                    vx: (fighter.x - (fighter.x + (Math.random() - 0.5) * 40)) * 0.05,
+                    vy: (fighter.y - (fighter.y + (Math.random() - 0.5) * 40)) * 0.05,
+                    life: 0.5, decay: 0.05,
+                    size: 2, color: '#ffaa00', type: 'dot'
+                });
+            }
+
+            if (this.timer <= 0) {
+                this.state = 'FIRING';
+                fighter.laserState = 'FIRING';
+                this.timer = this.duration;
+
+                // Slow rotation ONLY while firing (90% reduction)
+                fighter.rotationSpeed = this.originalRotation * 0.1;
+                // Reduce movement speed by 75%
+                fighter.laserSpeedMult = 0.25;
+
+                if (typeof audioEngine.playLaser === 'function') {
+                    audioEngine.playLaser(); // Fire sound
+                } else {
+                    audioEngine.playZap(); // Fallback to avoid hang
+                }
+                this.hitBuffer.clear();
+            }
+
+        } else if (this.state === 'FIRING') {
+            fighter.laserState = 'FIRING';
+            this.timer--;
+
+            // Scan every frame
             this.scanBeam(fighter, context);
 
-            // Apply damage every 3 frames (0.05s) to anything in the buffer
+            // Apply damage ticks (every 3 frames = 0.05s, increased damage speed)
             if (this.timer % 3 === 0) {
                 this.applyBufferedDamage(fighter, context);
             }
 
             if (this.timer <= 0) {
-                this.active = false;
+                this.state = 'IDLE';
                 fighter.rotationSpeed = this.originalRotation; // Revert
+                fighter.laserSpeedMult = 1.0; // Restore speed
                 this.hitBuffer.clear();
+                // Cooldown set to small value to trigger next execute via canUse check
+                fighter.cooldowns.atk = 1;
             }
         } else if (this.canUse(fighter, context)) {
             // Auto-fire
@@ -263,28 +320,53 @@ export class LaserAbility extends Ability {
             // Body check
             const bodyHit = Physics.rayCircleIntersect(rayX, rayY, dirX, dirY, enemy.x, enemy.y, enemy.radius);
             if (bodyHit && bodyHit.dist < closest.dist) {
-                 if (!enemy.isBlockedByShield(rayX, rayY)) {
+                if (!enemy.isBlockedByShield(rayX, rayY)) {
                     closest = { dist: bodyHit.dist, type: 'enemy', data: enemy };
-                 }
+                }
             }
         }
 
         const hitX = rayX + dirX * closest.dist;
         const hitY = rayY + dirY * closest.dist;
 
-        // Draw Beam
-        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffdd00');
+        // Draw Kamehameha Beam
+        // 5x width = ~30 px (Base was 6)
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ff4400', 30);
+        // Inner core
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffff00', 12);
+
+        // Spiral Effect particles along the beam
+        const beamDist = closest.dist;
+        const step = 40;
+        const time = Date.now() * 0.01;
+        for (let d = 0; d < beamDist; d += step) {
+            const ratio = d / beamDist;
+            const spiralX = Math.cos(time + ratio * 10) * 15;
+            const spiralY = Math.sin(time + ratio * 10) * 15;
+
+            // Transform to beam orientation
+            const worldX = fighter.x + dirX * d + (-dirY * spiralX + dirX * spiralY);
+            const worldY = fighter.y + dirY * d + (dirX * spiralX + dirY * spiralY);
+
+            if (this.timer % 2 === 0) {
+                game.particles.particles.push({
+                    x: worldX, y: worldY,
+                    vx: 0, vy: 0, life: 0.3, decay: 0.1,
+                    size: 2, color: '#ffcc00', type: 'dot'
+                });
+            }
+        }
 
         // Buffer the hit
         if (closest.type === 'enemy') {
-            closest.data.applyStatus('SLOW'); // Apply Slow effect instantly
+            closest.data.applyStatus('SLOW', 45); // Heavier slow impact (longer duration + effect implementation)
             this.hitBuffer.add(closest.data);
-            this.lastHitPos = {x: hitX, y: hitY}; // Store for particle
+            this.lastHitPos = { x: hitX, y: hitY };
         } else if (closest.type === 'shield') {
             this.hitBuffer.add({ type: 'shield', data: closest.data });
-            this.lastHitPos = {x: hitX, y: hitY};
+            this.lastHitPos = { x: hitX, y: hitY };
         } else if (closest.type === 'wall') {
-            if (this.timer % 3 === 0) game.particles.spawn(hitX, hitY, '#ffff00', 2);
+            if (this.timer % 3 === 0) game.particles.spawn(hitX, hitY, '#ffff00', 5);
         }
     }
 

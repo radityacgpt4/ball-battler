@@ -352,6 +352,11 @@ export class Game {
                                     // Already being knocked - just damage, deactivate bolt
                                     p.active = false;
                                 }
+                            } else if (p.isMissile) {
+                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
+                                this.particles.spawnExplosion(ent.x, ent.y); // Small explosion
+                                p.active = false;
+                                audioEngine.playExplosion(); // Or lighter explosion sound
                             } else {
                                 ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
                                 if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);

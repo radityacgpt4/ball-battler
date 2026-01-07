@@ -157,8 +157,11 @@ export class Fighter {
     }
 
     handleMovement(timeScale) {
-        this.x += this.dx * timeScale;
-        this.y += this.dy * timeScale;
+        let speedMult = this.laserSpeedMult || 1.0;
+        if (this.status.slow > 0) speedMult *= 0.3; // 70% slow (Cumulative)
+
+        this.x += this.dx * speedMult * timeScale;
+        this.y += this.dy * speedMult * timeScale;
 
         let bounced = false;
 

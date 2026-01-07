@@ -326,7 +326,8 @@ export class Fighter {
                 const current = this.chainDashQueue.shift();
                 const next = this.chainDashQueue[0];
 
-                this.game.particles.spawnSlash(current.x, current.y, next.x, next.y, '#ffd700');
+                this.game.particles.spawnSlash(current.x, current.y, next.x, next.y, '#ffd700'); // Main Yellow
+                this.game.particles.spawnSlash(current.x, current.y, next.x, next.y, '#00BFFF', 15); // Inner Blue
                 this.game.particles.spawn(next.x, next.y, '#ffd700', 5);
                 audioEngine.playTeleport();
 
@@ -358,7 +359,7 @@ export class Fighter {
                 // Rasengan effect at final position (ULT only)
                 if (this.pendingRasengan) {
                     const rasenganDamage = this.pendingRasengan;
-                    const rasenganRadius = 50; // Small AOE
+                    const rasenganRadius = 60; // Small AOE (Increased by 20%)
 
                     // Visual: Rasengan spiral effect
                     for (let i = 0; i < 20; i++) {

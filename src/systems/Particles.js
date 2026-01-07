@@ -23,10 +23,10 @@ export class ParticleSystem {
         }
     }
 
-    spawnSlash(x1, y1, x2, y2, color) {
+    spawnSlash(x1, y1, x2, y2, color, width = 40) {
         this.particles.push({
             type: 'slash', x1, y1, x2, y2, color,
-            life: 1.0, decay: 0.08, width: 40
+            life: 1.0, decay: 0.08, width: width
         });
     }
 

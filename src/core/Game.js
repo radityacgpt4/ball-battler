@@ -36,6 +36,12 @@ export class Game {
         this.timeScale = 1.0;
         this.finishTimer = 0;
         this.isMatchOver = false;
+
+        // FPS standardization
+        this.targetFPS = CONSTANTS.TARGET_FPS || 60;
+        this.frameTime = 1000 / this.targetFPS;
+        this.lastFrameTime = 0;
+        this.frameAccumulator = 0;
     }
 
     init() {
@@ -86,7 +92,7 @@ export class Game {
         document.getElementById('char-select').style.display = 'none';
         this.width = CONSTANTS.WIDTH;
         this.height = CONSTANTS.HEIGHT;
-        
+
         // Reset Arena Bounds
         this.arenaBounds = {
             x: 0,
@@ -111,6 +117,8 @@ export class Game {
         this.createUI();
 
         this.running = true;
+        this.lastFrameTime = performance.now();
+        this.frameAccumulator = 0;
         requestAnimationFrame(this.loop.bind(this));
     }
 
@@ -124,7 +132,7 @@ export class Game {
         this.arenaTimer++;
         if (this.arenaTimer >= 900) {
             this.arenaTimer = 0;
-            
+
             // Shrink bounds towards center
             const shrinkFactor = 0.85;
             const newW = Math.floor(this.arenaBounds.width * shrinkFactor);
@@ -168,7 +176,7 @@ export class Game {
                     <div id="p${ent.id}-ult" class="skill-node skill-ult"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ULT</span></div></div>
                 </div>
             `;
-            
+
             div.innerHTML = `
                 <div class="hud-name" style="color:${ent.color}">${ent.name}</div>
                 ${skillsHTML}
@@ -253,7 +261,7 @@ export class Game {
                         this.particles.spawnExplosion(p.x, p.y);
                         audioEngine.playExplosion();
                         logger.log(`${ent.name} triggered ${p.owner.name}'s CLAYMORE!`, 'combat');
-                        
+
                         p.active = false;
                         break;
                     }
@@ -352,7 +360,7 @@ export class Game {
                         // Unblockable shots destroy shield logic (pierce through? or just ignore?)
                         // Current logic: if unblockable, we skipped the shield block block.
                         // So we are here.
-                        
+
                         if (!p.isKunai || (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage))) break;
                     }
                 }
@@ -525,14 +533,38 @@ export class Game {
         }
     }
 
-    loop() {
+    loop(currentTime) {
         if (!this.running) return;
-        
-        // Only shrink arena if match is not over
-        if (!this.isMatchOver) {
-            this.handleArenaShrink();
+
+        if (!currentTime) currentTime = performance.now();
+
+        const deltaTime = currentTime - this.lastFrameTime;
+        this.lastFrameTime = currentTime;
+
+        this.frameAccumulator += deltaTime;
+
+        // Prevent spiral of death
+        if (this.frameAccumulator > 200) {
+            this.frameAccumulator = this.frameTime;
         }
 
+        // Fixed time step updates
+        while (this.frameAccumulator >= this.frameTime) {
+            // Only shrink arena if match is not over
+            if (!this.isMatchOver) {
+                this.handleArenaShrink();
+            }
+
+            this.entities.forEach(ent => ent.update(this.entities, this.timeScale));
+            this.resolveCollisions();
+            this.projectiles.forEach(p => p.update(this.timeScale));
+            this.updateUI();
+            this.checkWinCondition();
+
+            this.frameAccumulator -= this.frameTime;
+        }
+
+        // Render at monitor refresh rate
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         // Draw Arena Bounds
@@ -549,16 +581,10 @@ export class Game {
             this.ctx.fillRect(this.arenaBounds.x + this.arenaBounds.width, this.arenaBounds.y, this.width - (this.arenaBounds.x + this.arenaBounds.width), this.arenaBounds.height); // Right
         }
 
-        this.entities.forEach(ent => ent.update(this.entities, this.timeScale));
-        this.resolveCollisions(); // Physics resolution is usually instantaneous position fix, so timeScale optional depending on implementation
-        this.updateUI();
-
         this.entities.forEach(ent => ent.draw(this.ctx));
-        this.projectiles.forEach(p => p.update(this.timeScale)); // Update projectiles first
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.particles.updateAndDraw(this.ctx);
 
-        this.checkWinCondition();
         if (this.running) requestAnimationFrame(this.loop.bind(this));
     }
 }

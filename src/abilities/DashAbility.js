@@ -139,9 +139,10 @@ export class FlashBarrageAbility extends Ability {
 
             // Kunai specific props
             p.isKunai = true;
+            p.isUlt = true;
             p.radius = 6;
             p.maxDist = maxDist;
-
+            
             game.projectiles.push(p);
             fighter.kunaiPending.push(p);
             audioEngine.playKunaiThrow();

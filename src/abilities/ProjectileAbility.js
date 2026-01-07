@@ -99,6 +99,7 @@ export class KunaiAbility extends Ability {
 
             // Kunai specific props
             p.isKunai = true;
+            p.isUlt = isUlt;
             p.radius = 6;
             p.maxDist = 220 + Math.random() * 50;
 
@@ -122,8 +123,45 @@ export class KunaiAbility extends Ability {
                     const k1 = embeddedKunai[i];
                     const k2 = embeddedKunai[i + 1];
 
-                    // Visual: continuous lightning bolt between kunai (like Thunder Mage)
-                    if (Math.random() < 0.5) {
+                    // Skip if either kunai is from Ultimate (Rasengan instead)
+                    if (k1.isUlt || k2.isUlt) continue;
+
+                    // Skip if either kunai is from Ultimate (Rasengan instead)
+                    if (k1.isUlt || k2.isUlt) {
+                        // Rasengan Effect (Bomb/Swirl) for ULT Kunai
+                        if (Math.random() < 0.3) {
+                            const k = k1.isUlt ? k1 : k2;
+                            game.particles.particles.push({
+                                x: k.x, y: k.y,
+                                vx: (Math.random() - 0.5) * 2,
+                                vy: (Math.random() - 0.5) * 2,
+                                life: 0.5, decay: 0.05,
+                                size: 3, color: '#00BFFF',
+                                type: 'dot'
+                            });
+                        }
+                        continue;
+                    }
+
+                    // Skip if either kunai is from Ultimate (Rasengan instead)
+                    if (k1.isUlt || k2.isUlt) {
+                        // Rasengan Effect (Bomb/Swirl) for ULT Kunai
+                        if (Math.random() < 0.3) {
+                            const k = k1.isUlt ? k1 : k2;
+                            game.particles.particles.push({
+                                x: k.x, y: k.y,
+                                vx: (Math.random() - 0.5) * 2,
+                                vy: (Math.random() - 0.5) * 2,
+                                life: 0.5, decay: 0.05,
+                                size: 3, color: '#00BFFF',
+                                type: 'dot'
+                            });
+                        }
+                        continue;
+                    }
+
+                    // Visual: continuous lightning bolt between kunai (Reduced intensity)
+                    if (Math.random() < 0.15) {
                         game.particles.spawnBolt([{x: k1.x, y: k1.y}, {x: k2.x, y: k2.y}], '#00FFFF');
                     }
 

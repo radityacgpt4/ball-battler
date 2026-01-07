@@ -853,7 +853,7 @@ export class Fighter {
         // Ballista Barriers Visual (4 sides) - rotate with fighter
         if (this.ballistaBarriers) {
             ctx.save();
-            ctx.translate(this.x, this.y);
+            // ctx.translate(this.x, this.y); // Removed double translation
 
             const barrierDist = this.radius + 12;
             const arcAngle = Math.PI / 4; // 45 degree arc per barrier

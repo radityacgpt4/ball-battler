@@ -5,6 +5,7 @@
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class DashAssaultAbility extends Ability {
     constructor(config, slot) {
@@ -28,13 +29,13 @@ export class DashAssaultAbility extends Ability {
         const destY = fighter.y + Math.sin(aimAngle) * dist;
 
         game.particles.spawnSlash(fighter.x, fighter.y, destX, destY, '#ff0000'); // Red Slash
-        game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
         audioEngine.playSwordSwing();
 
         if (target && Physics.lineCircleIntersect(fighter.x, fighter.y, destX, destY, target.x, target.y, target.radius + 15)) {
-            target.takeDamage(this.damage);
+            target.takeDamage(this.damage, false, false, fighter);
             target.applyStatus('BLEED');
             audioEngine.playHit();
+            logger.log(`${fighter.name} Dash Assault HIT ${target.name}!`, 'combat');
         }
 
         fighter.x = Math.max(fighter.radius, Math.min(game.width - fighter.radius, destX));
@@ -73,8 +74,12 @@ export class RetreatAbility extends Ability {
         const dashSpeed = 8;
         fighter.dx = Math.cos(angle) * dashSpeed;
         fighter.dy = Math.sin(angle) * dashSpeed;
+        
+        // Soldier Buff: Force aim to enemy (opposite of dash)
+        fighter.angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
 
-        game.particles.spawnText(fighter.x, fighter.y, "RETREAT!", "#54a0ff");
+        game.particles.spawn(fighter.x, fighter.y, '#54a0ff', 5);
+        logger.log(`${fighter.name} used Retreat!`, 'info');
         fighter.cooldowns.def = this.cooldown;
         audioEngine.playSwordSwing();
     }
@@ -91,17 +96,32 @@ export class FlashBarrageAbility extends Ability {
         super(config, slot);
         this.kunaiConfig = kunaiConfig;
         this.ProjectileClass = ProjectileClass;
+        this.rasenganDamage = config.rasenganDamage || 12;
     }
 
     execute(fighter, context) {
         const { game } = context;
         const Projectile = this.ProjectileClass;
-        const count = 5;
+        const count = 2; // Reduced to 2 as requested
 
         fighter.cooldowns.ult = this.cooldown;
+        // Prevent normal attack from overriding the ult sequence
+        fighter.cooldowns.atk = Math.max(fighter.cooldowns.atk, this.kunaiConfig.delay + 10);
+
         fighter.teleportDelayTimer = this.kunaiConfig.delay;
         fighter.kunaiPending = [];
 
+        // Store rasengan damage for use when dash ends
+        fighter.pendingRasengan = this.rasenganDamage;
+
+        // Calculate max distance: base 350, but capped at 80% of arena diagonal
+        const baseMaxDist = 350;
+        const bounds = game.arenaBounds;
+        const arenaDiagonal = Math.hypot(bounds.width, bounds.height);
+        const maxAllowedDist = arenaDiagonal * 0.4; // 80% of half-diagonal (from center)
+        const maxDist = Math.min(baseMaxDist, maxAllowedDist);
+
+        // Ensure 360 coverage even with low count
         for (let i = 0; i < count; i++) {
             // ULT: 360 Degree Spread (Evenly spaced)
             const throwAngle = fighter.angle + ((Math.PI * 2) / count) * i;
@@ -109,8 +129,8 @@ export class FlashBarrageAbility extends Ability {
 
             const p = new Projectile(
                 fighter,
-                fighter.x + Math.cos(fighter.angle) * 20,
-                fighter.y + Math.sin(fighter.angle) * 20,
+                fighter.x + Math.cos(throwAngle) * 20,
+                fighter.y + Math.sin(throwAngle) * 20,
                 throwAngle,
                 speed,
                 this.kunaiConfig.damage,
@@ -119,15 +139,16 @@ export class FlashBarrageAbility extends Ability {
 
             // Kunai specific props
             p.isKunai = true;
+            p.isUlt = true;
             p.radius = 6;
-            p.maxDist = 220 + Math.random() * 50;
-
+            p.maxDist = maxDist;
+            
             game.projectiles.push(p);
             fighter.kunaiPending.push(p);
             audioEngine.playKunaiThrow();
         }
 
-        game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
-        game.particles.spawnText(fighter.x, fighter.y + 20, "BARRAGE!", "#ffd700");
+        game.particles.spawn(fighter.x, fighter.y, '#ffd700', 10);
+        logger.log(`${fighter.name} used Flash Barrage!`, 'combat');
     }
 }

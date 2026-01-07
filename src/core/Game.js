@@ -7,6 +7,10 @@ import { FIGHTER_TYPES } from '../data/fighters.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { ParticleSystem } from '../systems/Particles.js';
+import { logger } from '../systems/Logger.js';
+import { CombatTextHelper } from '../systems/CombatText.js';
+import { renderer } from '../systems/Renderer.js';
+import { CollisionHandler } from '../systems/CollisionHandler.js';
 import { Fighter } from '../entities/Fighter.js';
 import { Projectile } from '../entities/Projectile.js';
 
@@ -17,18 +21,35 @@ export class Game {
         this.entities = [];
         this.projectiles = [];
         this.particles = new ParticleSystem();
+        this.combatText = new CombatTextHelper(this.particles);
         this.running = false;
         this.p1Type = 'THUNDER_MAGE';
         this.p2Type = 'SHIELDBEARER';
 
         this.width = CONSTANTS.WIDTH;
         this.height = CONSTANTS.HEIGHT;
+        this.arenaBounds = {
+            x: 0,
+            y: 0,
+            width: CONSTANTS.WIDTH,
+            height: CONSTANTS.HEIGHT
+        };
         this.arenaTimer = 0;
+        this.timeScale = 1.0;
+        this.finishTimer = 0;
+        this.isMatchOver = false;
+
+        // FPS standardization
+        this.targetFPS = CONSTANTS.TARGET_FPS || 60;
+        this.frameTime = 1000 / this.targetFPS;
+        this.lastFrameTime = 0;
+        this.frameAccumulator = 0;
     }
 
     init() {
         this.canvas = document.getElementById('arena');
         this.ctx = this.canvas.getContext('2d');
+        logger.init();
         this.showSelect();
     }
 
@@ -67,11 +88,25 @@ export class Game {
 
     startMatch() {
         audioEngine.init();
+        logger.clear();
+        logger.log(`MATCH START: ${this.p1Type} vs ${this.p2Type}`, 'system');
 
         document.getElementById('char-select').style.display = 'none';
         this.width = CONSTANTS.WIDTH;
         this.height = CONSTANTS.HEIGHT;
+
+        // Reset Arena Bounds
+        this.arenaBounds = {
+            x: 0,
+            y: 0,
+            width: CONSTANTS.WIDTH,
+            height: CONSTANTS.HEIGHT
+        };
+
         this.arenaTimer = 0;
+        this.timeScale = 1.0;
+        this.finishTimer = 0;
+        this.isMatchOver = false;
         this.updateCanvasSize();
 
         this.entities = [];
@@ -84,6 +119,8 @@ export class Game {
         this.createUI();
 
         this.running = true;
+        this.lastFrameTime = performance.now();
+        this.frameAccumulator = 0;
         requestAnimationFrame(this.loop.bind(this));
     }
 
@@ -97,15 +134,29 @@ export class Game {
         this.arenaTimer++;
         if (this.arenaTimer >= 900) {
             this.arenaTimer = 0;
-            this.width = Math.floor(this.width * 0.85);
-            this.height = Math.floor(this.height * 0.85);
-            this.updateCanvasSize();
-            this.particles.spawnText(this.width / 2, this.height / 2, "ARENA SHRINK!", "#ff0000");
+
+            // Shrink bounds towards center
+            const shrinkFactor = 0.85;
+            const newW = Math.floor(this.arenaBounds.width * shrinkFactor);
+            const newH = Math.floor(this.arenaBounds.height * shrinkFactor);
+            const dW = (this.arenaBounds.width - newW) / 2;
+            const dH = (this.arenaBounds.height - newH) / 2;
+
+            this.arenaBounds.x += dW;
+            this.arenaBounds.y += dH;
+            this.arenaBounds.width = newW;
+            this.arenaBounds.height = newH;
+
+            // Log and visual feedback for arena shrink
+            logger.log(`ARENA SHRINKING! New size: ${newW}x${newH}`, 'error');
+            this.combatText.arenaShrink(this.width / 2, this.height / 2);
+            this.particles.spawnExplosion(this.width / 2, this.height / 2);
             audioEngine.playHeavyImpact();
 
+            // Push entities inside
             this.entities.forEach(e => {
-                e.x = Math.min(e.x, this.width - e.radius);
-                e.y = Math.min(e.y, this.height - e.radius);
+                e.x = Math.max(this.arenaBounds.x + e.radius, Math.min(e.x, this.arenaBounds.x + this.arenaBounds.width - e.radius));
+                e.y = Math.max(this.arenaBounds.y + e.radius, Math.min(e.y, this.arenaBounds.y + this.arenaBounds.height - e.radius));
             });
         }
     }
@@ -167,22 +218,22 @@ export class Game {
     }
 
     resolveCollisions() {
-        // Projectiles
+        // Projectiles Collision Logic (Moved update to loop for timescale control)
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             let p = this.projectiles[i];
-            p.update();
+            // p.update(); // Removed, called in loop with timeScale
 
             if (p.isGrenade && p.hasExploded) {
                 this.particles.spawnExplosion(p.x, p.y);
-                this.particles.spawnText(p.x, p.y, "BOOM!", "#ffaa00");
                 audioEngine.playExplosion();
+                logger.log(`${p.owner.name}'s Grenade EXPLODED!`, 'combat');
                 const blastRadius = 60;
 
                 this.entities.forEach(ent => {
                     if (!ent.isDead && ent !== p.owner) {
                         const d = Physics.dist(p.x, p.y, ent.x, ent.y);
                         if (d < blastRadius + ent.radius) {
-                            ent.takeDamage(p.damage);
+                            ent.takeDamage(p.damage, false, false, p.owner);
                             const angle = Math.atan2(ent.y - p.y, ent.x - p.x);
                             const force = 12;
                             ent.dx += Math.cos(angle) * force;
@@ -201,13 +252,32 @@ export class Game {
                 continue;
             }
 
+            if (p.isClaymore) {
+                for (let ent of this.entities) {
+                    if (ent === p.owner || ent.isDead) continue;
+                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius + 5) {
+                        // Trigger Claymore
+                        ent.takeDamage(p.damage, false, false, p.owner);
+                        if (p.slowDuration > 0) ent.applyStatus('SLOW', p.slowDuration);
+
+                        this.particles.spawnExplosion(p.x, p.y);
+                        audioEngine.playExplosion();
+                        logger.log(`${ent.name} triggered ${p.owner.name}'s CLAYMORE!`, 'combat');
+
+                        p.active = false;
+                        break;
+                    }
+                }
+                continue;
+            }
+
             if (!p.isGrenade) {
                 for (let ent of this.entities) {
                     if (ent === p.owner || ent.isDead) continue;
                     if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
 
                         // Check if projectile is blocked by shield
-                        if (ent.isBlockedByShield(p.x, p.y)) {
+                        if (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage)) {
                             p.owner = ent;
                             p.hitList = [];
                             p.travelled = 0;
@@ -220,24 +290,80 @@ export class Game {
                             p.angle = reflectAngle;
                             p.x = ent.x + Math.cos(reflectAngle) * (ent.radius + 15);
                             p.y = ent.y + Math.sin(reflectAngle) * (ent.radius + 15);
-                            this.particles.spawnText(ent.x, ent.y, "DEFLECT!", "#8b5cf6");
-                            this.particles.spawn(p.x, p.y, '#ffffff', 10);
+
+                            // FIX: Add lifetime to deflected projectiles so they don't litter arena
+                            p.deflectLifetime = 120; // 2 seconds at 60fps
+                            p.isDeflected = true;
+
+                            // Reset kunai max distance for deflected travel
+                            if (p.isKunai) {
+                                p.maxDist = p.travelled + 300; // Allow more travel distance
+                            }
+                            // Disable missile homing after deflection
+                            if (p.isMissile) {
+                                p.target = null;
+                                p.isMissile = false; // Convert to dumb projectile
+                            }
+
+                            this.particles.spawn(p.x, p.y, '#8b5cf6', 10);
                             audioEngine.playBlock();
+                            logger.log(`${ent.name} DEFLECTED projectile from ${p.owner.name}`, 'warn');
                         } else {
                             if (p.isKunai) {
                                 if (!p.hitList.includes(ent.id)) {
-                                    ent.takeDamage(p.damage);
+                                    ent.takeDamage(p.damage, false, false, p.owner);
                                     p.hitList.push(ent.id);
                                     this.particles.spawn(ent.x, ent.y, '#ffd700', 3);
                                     audioEngine.playHit();
                                 }
+                            } else if (p.isBallistaBolt) {
+                                // Ballista bolt - damage and knockback
+                                ent.takeDamage(p.damage, false, false, p.owner);
+                                this.particles.spawn(ent.x, ent.y, '#8B4513', 5);
+                                audioEngine.playHit();
+
+                                // Only knockback if not already being knocked back
+                                if (!ent.pendingBallistaPinned && !p.dragTarget) {
+                                    // Apply knockback velocity in bolt direction (fixed speed)
+                                    const knockbackSpeed = 8;
+                                    ent.dx = Math.cos(p.angle) * knockbackSpeed;
+                                    ent.dy = Math.sin(p.angle) * knockbackSpeed;
+
+                                    // Set pending pin for wall collision
+                                    ent.pendingBallistaPinned = { owner: p.owner };
+                                    p.dragTarget = ent;
+
+                                    // Spawn knockback trail particles
+                                    for (let i = 0; i < 8; i++) {
+                                        this.particles.particles.push({
+                                            x: ent.x,
+                                            y: ent.y,
+                                            vx: -Math.cos(p.angle) * (2 + Math.random() * 2),
+                                            vy: -Math.sin(p.angle) * (2 + Math.random() * 2),
+                                            life: 0.6,
+                                            decay: 0.05,
+                                            size: 4 + Math.random() * 3,
+                                            color: '#8B4513',
+                                            type: 'dot'
+                                        });
+                                    }
+                                } else {
+                                    // Already being knocked - just damage, deactivate bolt
+                                    p.active = false;
+                                }
                             } else {
-                                ent.takeDamage(p.damage);
+                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
+                                if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
+
                                 p.active = false;
                                 audioEngine.playHit();
                             }
                         }
-                        if (!p.isKunai || ent.isBlockedByShield(p.x, p.y)) break;
+                        // Unblockable shots destroy shield logic (pierce through? or just ignore?)
+                        // Current logic: if unblockable, we skipped the shield block block.
+                        // So we are here.
+
+                        if (!p.isKunai || (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage))) break;
                     }
                 }
             }
@@ -258,13 +384,15 @@ export class Game {
                     // Static passive (Volt's zap on contact)
                     if (e1.skills.def.type === 'STATIC_PASSIVE' && e2.status.stun <= 0) {
                         e2.applyStatus('STUN');
-                        this.particles.spawnText(e2.x, e2.y, "ZAP!", "#00FFFF");
+                        this.particles.spawn(e2.x, e2.y, '#00FFFF', 8);
                         audioEngine.playZap();
+                        logger.log(`${e1.name} STATIC PASSIVE stunned ${e2.name}!`, 'combat');
                     }
                     if (e2.skills.def.type === 'STATIC_PASSIVE' && e1.status.stun <= 0) {
                         e1.applyStatus('STUN');
-                        this.particles.spawnText(e1.x, e1.y, "ZAP!", "#00FFFF");
+                        this.particles.spawn(e1.x, e1.y, '#00FFFF', 8);
                         audioEngine.playZap();
+                        logger.log(`${e2.name} STATIC PASSIVE stunned ${e1.name}!`, 'combat');
                     }
 
                     // SHIELDBEARER: Momentum Collision
@@ -278,8 +406,12 @@ export class Game {
 
                         if (speedTier <= 0 && !attacker.ultWallSlamActive) return false;
 
-                        if (defender.isBlockedByShield(attacker.x, attacker.y)) {
-                            this.particles.spawnText(defender.x, defender.y, "BLOCKED!", "#ffffff");
+                        // Calculate potential damage for shield check
+                        let damage = speedTier * config.damagePerTier;
+                        if (attacker.ultWallSlamActive) damage = Math.max(damage, 10);
+
+                        if (defender.isBlockedByShield(attacker.x, attacker.y, damage)) {
+                            logger.log(`${defender.name} blocked momentum slam from ${attacker.name}`, 'combat');
                             attacker.wallBounceSpeed = attacker.baseSpeed;
                             const reverseAngle = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
                             attacker.dx = Math.cos(reverseAngle) * 10;
@@ -293,14 +425,10 @@ export class Game {
                             return true;
                         }
 
-                        let damage = speedTier * config.damagePerTier;
-
-                        if (attacker.ultWallSlamActive) {
-                            damage = Math.max(damage, 10);
-                        }
-
-                        defender.takeDamage(damage);
-                        this.particles.spawnText(defender.x, defender.y, `SLAM ${damage}!`, "#8b5cf6");
+                        // Damage already calculated above
+                        defender.takeDamage(damage, false, false, attacker);
+                        this.particles.spawn(defender.x, defender.y, '#8b5cf6', 8);
+                        logger.log(`${attacker.name} SLAMMED ${defender.name} for ${damage} dmg (SpeedTier: ${speedTier})`, 'combat');
                         audioEngine.playHeavyImpact();
 
                         const massRatio = attacker.mass / defender.mass;
@@ -311,12 +439,11 @@ export class Game {
                         if (attacker.ultWallSlamActive) {
                             const angle = Math.atan2(defender.y - attacker.y, defender.x - attacker.x);
 
-                            const superSpeed = 18;
-                            defender.dx = Math.cos(angle) * superSpeed;
-                            defender.dy = Math.sin(angle) * superSpeed;
+                            const knockbackSpeed = 8; // Fixed knockback speed
+                            defender.dx = Math.cos(angle) * knockbackSpeed;
+                            defender.dy = Math.sin(angle) * knockbackSpeed;
 
                             defender.pendingWallSlam = { owner: attacker };
-                            this.particles.spawnText(defender.x, defender.y, "FLY!", "#ff4444");
 
                             for (let i = 0; i < 10; i++) {
                                 this.particles.spawn(defender.x, defender.y, '#ff4444', 1);
@@ -354,7 +481,15 @@ export class Game {
 
                     // Normal elastic collision (only if no special hit happened)
                     if (!hit1 && !hit2) {
-                        let nx = (e2.x - e1.x) / dist, ny = (e2.y - e1.y) / dist;
+                        let nx, ny;
+                        if (dist < 0.001) {
+                            // Handle overlap/NaN prevention
+                            nx = 1; ny = 0;
+                        } else {
+                            nx = (e2.x - e1.x) / dist;
+                            ny = (e2.y - e1.y) / dist;
+                        }
+
                         let p = 2 * (e1.dx * nx + e1.dy * ny - e2.dx * nx - e2.dy * ny) / (m1 + m2);
                         e1.dx -= p * m2 * nx;
                         e1.dy -= p * m2 * ny;
@@ -368,38 +503,90 @@ export class Game {
     }
 
     checkWinCondition() {
+        if (this.isMatchOver) {
+            this.finishTimer++;
+            // Wait 120 frames (approx 2s at 60fps, but effectively longer due to timescale)
+            // We want real-time waiting, so if timescale is 0.2, we need fewer ticks or check real time
+            // Let's just count frames, at 0.2 scale it looks cool.
+            if (this.finishTimer > 150) {
+                this.running = false;
+                const alive = this.entities.filter(e => !e.isDead);
+                const overlay = document.getElementById('end-screen');
+                const msg = document.getElementById('win-msg');
+                overlay.style.display = 'flex';
+                if (alive.length === 0) {
+                    msg.innerText = "DRAW";
+                    msg.style.color = "white";
+                    logger.log("MATCH END: DRAW", 'system');
+                } else {
+                    msg.innerText = `${alive[0].name} WINS`;
+                    msg.style.color = alive[0].color;
+                    logger.log(`MATCH END: ${alive[0].name} WINS!`, 'system');
+                }
+            }
+            return;
+        }
+
         const alive = this.entities.filter(e => !e.isDead);
         if (alive.length <= 1) {
-            if (this.running) audioEngine.playWin();
-            this.running = false;
-
-            const overlay = document.getElementById('end-screen');
-            const msg = document.getElementById('win-msg');
-            overlay.style.display = 'flex';
-            if (alive.length === 0) {
-                msg.innerText = "DRAW";
-                msg.style.color = "white";
-            } else {
-                msg.innerText = `${alive[0].name} WINS`;
-                msg.style.color = alive[0].color;
-            }
+            this.isMatchOver = true;
+            this.timeScale = 0.2; // SLOW MOTION
+            audioEngine.playWin();
         }
     }
 
-    loop() {
+    loop(currentTime) {
         if (!this.running) return;
-        this.handleArenaShrink();
+
+        if (!currentTime) currentTime = performance.now();
+
+        const deltaTime = currentTime - this.lastFrameTime;
+        this.lastFrameTime = currentTime;
+
+        this.frameAccumulator += deltaTime;
+
+        // Prevent spiral of death
+        if (this.frameAccumulator > 200) {
+            this.frameAccumulator = this.frameTime;
+        }
+
+        // Fixed time step updates
+        while (this.frameAccumulator >= this.frameTime) {
+            // Only shrink arena if match is not over
+            if (!this.isMatchOver) {
+                this.handleArenaShrink();
+            }
+
+            this.entities.forEach(ent => ent.update(this.entities, this.timeScale));
+            this.resolveCollisions();
+            this.projectiles.forEach(p => p.update(this.timeScale));
+            this.updateUI();
+            this.checkWinCondition();
+
+            this.frameAccumulator -= this.frameTime;
+        }
+
+        // Render at monitor refresh rate
         this.ctx.clearRect(0, 0, this.width, this.height);
 
-        this.entities.forEach(ent => ent.update(this.entities));
-        this.resolveCollisions();
-        this.updateUI();
+        // Draw Arena Bounds
+        this.ctx.strokeStyle = '#333';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(this.arenaBounds.x, this.arenaBounds.y, this.arenaBounds.width, this.arenaBounds.height);
 
-        this.entities.forEach(ent => ent.draw(this.ctx));
+        // Draw Danger Zone
+        if (this.arenaBounds.width < this.width) {
+            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.05)';
+            this.ctx.fillRect(0, 0, this.width, this.arenaBounds.y); // Top
+            this.ctx.fillRect(0, this.arenaBounds.y + this.arenaBounds.height, this.width, this.height - (this.arenaBounds.y + this.arenaBounds.height)); // Bottom
+            this.ctx.fillRect(0, this.arenaBounds.y, this.arenaBounds.x, this.arenaBounds.height); // Left
+            this.ctx.fillRect(this.arenaBounds.x + this.arenaBounds.width, this.arenaBounds.y, this.width - (this.arenaBounds.x + this.arenaBounds.width), this.arenaBounds.height); // Right
+        }
+
+        this.entities.forEach(ent => renderer.drawFighter(this.ctx, ent));
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.particles.updateAndDraw(this.ctx);
 
-        this.checkWinCondition();
         if (this.running) requestAnimationFrame(this.loop.bind(this));
     }
 }

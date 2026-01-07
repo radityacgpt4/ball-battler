@@ -5,6 +5,7 @@
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class ParryPassiveAbility extends Ability {
     constructor(config, slot) {
@@ -14,8 +15,10 @@ export class ParryPassiveAbility extends Ability {
 
     onDamage(fighter, damage, context) {
         if (Math.random() < this.chance) {
-            context.game.particles.spawnText(fighter.x, fighter.y, "BLOCK", "#ffffff");
+            context.game.combatText.parried(fighter.x, fighter.y - fighter.radius);
+            context.game.particles.spawn(fighter.x, fighter.y, '#ffffff', 5);
             audioEngine.playBlock();
+            logger.log(`${fighter.name} PARRIED incoming damage!`, 'info');
             return false; // Block the damage
         }
         return damage;
@@ -32,8 +35,10 @@ export class EvasionAbility extends Ability {
         if (fighter.cooldowns.def <= 0) {
             fighter.activeEffects.evasionTimer = this.duration; // 0.2s visual
             fighter.cooldowns.def = this.cooldown;
-            context.game.particles.spawnText(fighter.x, fighter.y, "DODGE", "#ffd700");
+            context.game.combatText.dodged(fighter.x, fighter.y - fighter.radius);
+            context.game.particles.spawn(fighter.x, fighter.y, '#ffd700', 5);
             audioEngine.playSwordSwing();
+            logger.log(`${fighter.name} DODGED incoming damage!`, 'info');
             return false; // Block the damage
         }
         return damage;
@@ -86,7 +91,7 @@ export class ShieldDeflectAbility extends Ability {
     /**
      * Check if attacker position is blocked by shield
      */
-    isBlocked(fighter, attackerX, attackerY) {
+    isBlocked(fighter, attackerX, attackerY, damage = 0) {
         const angleToAttacker = Math.atan2(attackerY - fighter.y, attackerX - fighter.x);
         const angleDiff = Physics.normalizeAngle(angleToAttacker - fighter.angle);
         const halfArc = this.arcAngle / 2;
@@ -106,4 +111,61 @@ export class MomentumPassiveAbility extends Ability {
 
     // Momentum is handled in Fighter movement and collision
     // This stores the config values
+}
+
+export class ForceFieldAbility extends Ability {
+    constructor(config, slot) {
+        super(config, slot);
+        this.maxShield = config.maxShield || 75;
+        this.regenRate = config.regenRate || 2; // HP per sec
+        this.currentShield = this.maxShield;
+        this.regenTimer = 0;
+    }
+
+    update(fighter, context) {
+        // Expose shield HP to fighter for rendering/logic
+        fighter.shieldHp = this.currentShield;
+        fighter.maxShield = this.maxShield;
+
+        // Regen logic
+        if (this.currentShield < this.maxShield && fighter.hp > 0) {
+            this.regenTimer++;
+            if (this.regenTimer >= 30) { // 0.5 sec (assuming 60fps)
+                this.currentShield = Math.min(this.currentShield + 1, this.maxShield);
+                this.regenTimer = 0;
+                
+                // Visual feedback (small +1)
+                if (Math.random() < 0.3) {
+                     context.game.particles.spawnText(fighter.x, fighter.y - 20, "+1", "#00ffff");
+                     audioEngine.playRegen();
+                }
+                
+                // Log regen periodically to avoid spam
+                if (this.currentShield % 10 === 0 && this.currentShield < this.maxShield) {
+                    logger.log(`${fighter.name} Force Field regenerating... (${Math.floor(this.currentShield)}/${this.maxShield})`, 'info');
+                }
+            }
+        }
+    }
+
+    onDamage(fighter, damage, context) {
+        if (this.currentShield > 0) {
+            const absorbed = Math.min(this.currentShield, damage);
+            this.currentShield -= absorbed;
+            damage -= absorbed;
+
+            audioEngine.playBlock();
+
+            // Visual feedback for shield hit
+            context.game.particles.spawn(fighter.x, fighter.y, '#00ffff', 8);
+
+            if (damage <= 0) {
+                logger.log(`${fighter.name} Force Field absorbed full damage (${absorbed})`, 'info');
+                return false; // Fully absorbed
+            } else {
+                logger.log(`${fighter.name} Force Field absorbed ${absorbed} damage`, 'info');
+            }
+        }
+        return damage;
+    }
 }

@@ -45,31 +45,31 @@ export class Physics {
         };
     }
 
-    static rayBoxIntersect(px, py, dx, dy, w, h) {
+    static rayBoxIntersect(px, py, dx, dy, bx, by, bw, bh) {
         let minT = Infinity;
         let hit = null;
         if (dx !== 0) {
-            let t1 = (0 - px) / dx;
+            let t1 = (bx - px) / dx;
             if (t1 > 0.01 && t1 < minT) {
                 let y = py + t1 * dy;
-                if (y >= 0 && y <= h) { minT = t1; hit = {x: 0, y: y, nx: 1, ny: 0, dist: t1 * Math.hypot(dx, dy)}; }
+                if (y >= by && y <= by + bh) { minT = t1; hit = {x: bx, y: y, nx: 1, ny: 0, dist: t1 * Math.hypot(dx, dy)}; }
             }
-            let t2 = (w - px) / dx;
+            let t2 = ((bx + bw) - px) / dx;
             if (t2 > 0.01 && t2 < minT) {
                 let y = py + t2 * dy;
-                if (y >= 0 && y <= h) { minT = t2; hit = {x: w, y: y, nx: -1, ny: 0, dist: t2 * Math.hypot(dx, dy)}; }
+                if (y >= by && y <= by + bh) { minT = t2; hit = {x: bx + bw, y: y, nx: -1, ny: 0, dist: t2 * Math.hypot(dx, dy)}; }
             }
         }
         if (dy !== 0) {
-            let t3 = (0 - py) / dy;
+            let t3 = (by - py) / dy;
             if (t3 > 0.01 && t3 < minT) {
                 let x = px + t3 * dx;
-                if (x >= 0 && x <= w) { minT = t3; hit = {x: x, y: 0, nx: 0, ny: 1, dist: t3 * Math.hypot(dx, dy)}; }
+                if (x >= bx && x <= bx + bw) { minT = t3; hit = {x: x, y: by, nx: 0, ny: 1, dist: t3 * Math.hypot(dx, dy)}; }
             }
-            let t4 = (h - py) / dy;
+            let t4 = ((by + bh) - py) / dy;
             if (t4 > 0.01 && t4 < minT) {
                 let x = px + t4 * dx;
-                if (x >= 0 && x <= w) { minT = t4; hit = {x: x, y: h, nx: 0, ny: -1, dist: t4 * Math.hypot(dx, dy)}; }
+                if (x >= bx && x <= bx + bw) { minT = t4; hit = {x: x, y: by + bh, nx: 0, ny: -1, dist: t4 * Math.hypot(dx, dy)}; }
             }
         }
         return hit;

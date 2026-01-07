@@ -1,7 +1,5 @@
 /**
  * Fighter Configuration Data
- * CRITICAL: Do not change any values - HP, Mass, Speed, Colors, and Skill parameters
- * must match the original code exactly
  */
 export const FIGHTER_TYPES = {
     SWORD_MASTER: {
@@ -10,11 +8,11 @@ export const FIGHTER_TYPES = {
         hp: 100,
         mass: 1.0,
         speed: 4.5,
-        rotationSpeed: 0.12,
+        rotationSpeed: 0.15,
         skills: {
             atk: { type: "MELEE_PASSIVE", range: 50, damage: 5, procRate: 3 },
-            def: { type: "PARRY_PASSIVE", chance: 0.15 },
-            ult: { type: "DASH_ASSAULT", cooldown: 180, damage: 5 }
+            def: { type: "PARRY_PASSIVE", chance: 0.17 },
+            ult: { type: "DASH_ASSAULT", cooldown: 150, damage: 7 }
         }
     },
     THUNDER_MAGE: {
@@ -27,7 +25,7 @@ export const FIGHTER_TYPES = {
         skills: {
             atk: { type: "RAYCAST", cooldown: 90, range: 800, damage: 15, bounces: 3 },
             def: { type: "STATIC_PASSIVE" },
-            ult: { type: "DOUBLE_ZAP", cooldown: 180 }
+            ult: { type: "DOUBLE_ZAP", cooldown: 160 }
         }
     },
     SOLDIER: {
@@ -38,9 +36,9 @@ export const FIGHTER_TYPES = {
         speed: 4,
         rotationSpeed: 0.12,
         skills: {
-            atk: { type: "BURST_FIRE", cooldown: 100, count: 10, damage: 2 },
-            def: { type: "RETREAT", cooldown: 180, range: 150 },
-            ult: { type: "GRENADE", cooldown: 90, damage: 20 }
+            atk: { type: "BURST_FIRE", cooldown: 100, count: 10, damage: 3 },
+            def: { type: "RETREAT", cooldown: 120, range: 150 },
+            ult: { type: "GRENADE", cooldown: 60, damage: 20 }
         }
     },
     SHIELDBEARER: {
@@ -51,8 +49,8 @@ export const FIGHTER_TYPES = {
         speed: 4,
         rotationSpeed: 0.10,
         skills: {
-            atk: { type: "MOMENTUM_PASSIVE", maxSpeed: 8, speedGain: 1, damagePerTier: 5, knockback: 10 },
-            def: { type: "SHIELD_DEFLECT", arcAngle: Math.PI * 0.7 }, // 35% coverage (126 degrees)
+            atk: { type: "MOMENTUM_PASSIVE", maxSpeed: 8, speedGain: 1, damagePerTier: 5, knockback: 15 },
+            def: { type: "SHIELD_DEFLECT", arcAngle: Math.PI * 0.65 },
             ult: { type: "WALL_SLAM", cooldown: 120, damage: 10 }
         }
     },
@@ -64,9 +62,61 @@ export const FIGHTER_TYPES = {
         speed: 5,
         rotationSpeed: 0.16,
         skills: {
-            atk: { type: "KUNAI_MARK", cooldown: 120, count: 2, damage: 5, delay: 90 }, // 1.5s total
-            def: { type: "EVASION", cooldown: 120, duration: 12 },
-            ult: { type: "FLASH_BARRAGE", cooldown: 180 }
+            atk: { type: "KUNAI_MARK", cooldown: 120, count: 2, damage: 5, delay: 90, zapDuration: 60 }, // 1.5s total
+            def: { type: "EVASION", cooldown: 102, duration: 12 }, // Reduced by 0.3s (18 frames)
+            ult: { type: "FLASH_BARRAGE", cooldown: 180, rasenganDamage: 12 }
+        }
+    },
+    CYBORG: {
+        name: "Cyborg",
+        color: "#c0c0c0",
+        hp: 75,
+        mass: 1.4,
+        speed: 4.5,
+        rotationSpeed: 0.07,
+        skills: {
+            atk: { type: "LASER_BEAM", cooldown: 120, duration: 60, damage: 1, range: 360 }, // 1s active, 1s cooldown
+            def: { type: "FORCE_FIELD", maxShield: 75, regenRate: 0.033 }, // 2 HP/sec @ 60fps
+            ult: { type: "MISSILE_BARRAGE", cooldown: 120, damage: 9 }
+        }
+    },
+    SNIPER: {
+        name: "Sniper",
+        color: "#556b2f",
+        hp: 100,
+        mass: 1.1,
+        speed: 4.2,
+        rotationSpeed: 0.08,
+        skills: {
+            atk: { type: "SNIPER_SHOT", cooldown: 90, damage: 12, stun: 60, projectileSpeed: 25 },
+            def: { type: "CLAYMORE", cooldown: 180, damage: 5, lifeTime: 360, slowDuration: 120 },
+            ult: { type: "SNIPER_MODE", cooldown: 300 }
+        }
+    },
+    AXEMAN: {
+        name: "Axeman",
+        color: "#800000",
+        hp: 100,
+        mass: 1.5,
+        speed: 4.2,
+        rotationSpeed: 0.13,
+        skills: {
+            atk: { type: "AXE_SWING" },
+            def: { type: "BERSERKER_RAGE" },
+            ult: { type: "EXECUTE", cooldown: 60 }
+        }
+    },
+    BALLISTA: {
+        name: "Ballista",
+        color: "#8B4513",
+        hp: 100,
+        mass: 2,
+        speed: 3.5,
+        rotationSpeed: 0.09,
+        skills: {
+            atk: { type: "BALLISTA_SHOT", cooldown: 90, damage: 15, projectileSpeed: 16 },
+            def: { type: "BARRIER_SHIELD", barrierMaxHp: 30, barrierCount: 4, arcAngle: 1.22 },
+            ult: { type: "SIEGE_MODE", cooldown: 120, damage: 15 }
         }
     }
 };

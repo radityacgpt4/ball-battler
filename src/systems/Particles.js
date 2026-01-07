@@ -23,10 +23,17 @@ export class ParticleSystem {
         }
     }
 
-    spawnSlash(x1, y1, x2, y2, color) {
+    spawnSlash(x1, y1, x2, y2, color, width = 40) {
         this.particles.push({
             type: 'slash', x1, y1, x2, y2, color,
-            life: 1.0, decay: 0.08, width: 40
+            life: 1.0, decay: 0.08, width: width
+        });
+    }
+
+    spawnBeam(x1, y1, x2, y2, color) {
+        this.particles.push({
+            type: 'beam', x1, y1, x2, y2, color,
+            life: 1.0, decay: 0.5, width: 6 // Fast decay for no trails
         });
     }
 
@@ -119,6 +126,17 @@ export class ParticleSystem {
                 ctx.shadowBlur = 20; ctx.shadowColor = p.color;
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
                 ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.shadowBlur = 0;
+                ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
+                ctx.restore();
+            }
+            else if (p.type === 'beam') {
+                ctx.save(); ctx.globalAlpha = p.life; ctx.lineCap = 'butt';
+                ctx.strokeStyle = p.color; ctx.lineWidth = p.width;
+                ctx.shadowBlur = 10; ctx.shadowColor = p.color;
+                ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
+                
+                // Core
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = p.width / 2; ctx.shadowBlur = 0;
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
                 ctx.restore();
             }

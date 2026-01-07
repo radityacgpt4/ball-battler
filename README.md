@@ -38,7 +38,7 @@ ball-battler/
 
 ## Features
 
-- **5 Unique Fighters**: Sword Master, Thundermage, Rifleman, Shieldbearer, Yellow Flash
+- **6 Unique Fighters**: Sword Master, Thundermage, Rifleman, Shieldbearer, Yellow Flash, Cyborg
 - **Ability System**: Strategy pattern for modular skill implementation
 - **Physics Engine**: Preserved collision detection and resolution
 - **Procedural Audio**: All sounds generated via Web Audio API
@@ -53,6 +53,7 @@ ball-battler/
 | Rifleman | 100 | 1.2 | 4.0 | Burst Fire | Retreat | Grenade |
 | Shieldbearer | 100 | 1.8 | 4.0 | Momentum Passive | Shield Deflect | Wall Slam |
 | Yellow Flash | 100 | 1.0 | 5.0 | Kunai Mark | Evasion | Flash Barrage |
+| Cyborg | 75 | 1.4 | 4.5 | Laser Beam | Force Field | Missile Barrage |
 
 ## Running the Game
 

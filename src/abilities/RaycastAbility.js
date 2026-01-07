@@ -5,6 +5,7 @@
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class RaycastAbility extends Ability {
     constructor(config, slot) {
@@ -46,7 +47,8 @@ export class RaycastAbility extends Ability {
             let closest = { dist: Infinity, type: null, data: null, x: 0, y: 0 };
 
             // Check wall
-            const wallHit = Physics.rayBoxIntersect(rayX, rayY, dirX, dirY, game.width, game.height);
+            const bounds = game.arenaBounds;
+            const wallHit = Physics.rayBoxIntersect(rayX, rayY, dirX, dirY, bounds.x, bounds.y, bounds.width, bounds.height);
             if (wallHit && wallHit.dist < closest.dist) {
                 closest = { dist: wallHit.dist, type: 'wall', data: wallHit, x: wallHit.x, y: wallHit.y };
             }
@@ -95,9 +97,10 @@ export class RaycastAbility extends Ability {
 
             // Process hit
             if (closest.type === 'enemy') {
-                closest.data.takeDamage(currentDamage);
+                closest.data.takeDamage(currentDamage, false, false, fighter);
                 game.particles.spawnExplosion(closest.x, closest.y);
                 audioEngine.playHit();
+                logger.log(`${rayOwner.name} Zap Hit ${closest.data.name} for ${currentDamage} dmg`, 'combat');
                 hitEntities.add(closest.data);
                 break; // Ray stops
 
@@ -115,9 +118,9 @@ export class RaycastAbility extends Ability {
             } else if (closest.type === 'shield') {
                 // Shield deflection - transfers ownership!
                 const enemy = closest.data.enemy;
-                game.particles.spawnText(enemy.x, enemy.y, "DEFLECT!", "#8b5cf6");
-                game.particles.spawn(closest.x, closest.y, '#ffffff', 15);
+                game.particles.spawn(closest.x, closest.y, '#8b5cf6', 15);
                 audioEngine.playBlock();
+                logger.log(`${enemy.name} DEFLECTED lightning from ${rayOwner.name}! Ownership transferred!`, 'warn');
 
                 // Big spark effect
                 for (let i = 0; i < 8; i++) {
@@ -178,6 +181,130 @@ export class DoubleZapAbility extends Ability {
 
         audioEngine.playThunder();
         fighter.cooldowns.ult = this.cooldown;
-        game.particles.spawnText(fighter.x, fighter.y, "ULTIMATE!", "#ffaa00");
+        game.particles.spawn(fighter.x, fighter.y, '#00FFFF', 15);
+        logger.log(`${fighter.name} cast DOUBLE ZAP!`, 'combat');
+    }
+}
+
+export class LaserAbility extends Ability {
+    constructor(config, slot) {
+        super(config, slot);
+        this.duration = config.duration || 60; // 1 second firing
+        this.damage = config.damage || 1;
+        this.range = config.range || 800;
+        this.active = false;
+        this.timer = 0;
+        this.originalRotation = 0;
+        this.hitBuffer = new Set(); // Stores unique enemies hit between damage ticks
+    }
+
+    execute(fighter, context) {
+        this.active = true;
+        this.timer = this.duration;
+        fighter.cooldowns.atk = this.cooldown;
+        this.hitBuffer.clear();
+        
+        // Boost rotation speed
+        this.originalRotation = fighter.rotationSpeed;
+        fighter.rotationSpeed *= 1.5;
+        
+        audioEngine.playZap();
+    }
+
+    update(fighter, context) {
+        if (this.active) {
+            this.timer--;
+            
+            // Scan every frame and buffer hits
+            this.scanBeam(fighter, context);
+
+            // Apply damage every 3 frames (0.05s) to anything in the buffer
+            if (this.timer % 3 === 0) {
+                this.applyBufferedDamage(fighter, context);
+            }
+
+            if (this.timer <= 0) {
+                this.active = false;
+                fighter.rotationSpeed = this.originalRotation; // Revert
+                this.hitBuffer.clear();
+            }
+        } else if (this.canUse(fighter, context)) {
+            // Auto-fire
+            this.execute(fighter, context);
+        }
+    }
+
+    scanBeam(fighter, context) {
+        const { enemies, game } = context;
+        let rayX = fighter.x;
+        let rayY = fighter.y;
+        let dirX = Math.cos(fighter.angle);
+        let dirY = Math.sin(fighter.angle);
+
+        let closest = { dist: this.range, type: null, data: null };
+
+        // Check Wall
+        const bounds = game.arenaBounds;
+        const wallHit = Physics.rayBoxIntersect(rayX, rayY, dirX, dirY, bounds.x, bounds.y, bounds.width, bounds.height);
+        if (wallHit && wallHit.dist < closest.dist) {
+            closest = { dist: wallHit.dist, type: 'wall', data: wallHit };
+        }
+
+        // Check Enemies
+        for (let enemy of enemies) {
+            if (enemy === fighter || enemy.isDead) continue;
+
+            // Shield check
+            const shieldHit = enemy.getShieldHit(rayX, rayY, dirX, dirY);
+            if (shieldHit && shieldHit.dist < closest.dist) {
+                closest = { dist: shieldHit.dist, type: 'shield', data: { enemy, ...shieldHit } };
+            }
+
+            // Body check
+            const bodyHit = Physics.rayCircleIntersect(rayX, rayY, dirX, dirY, enemy.x, enemy.y, enemy.radius);
+            if (bodyHit && bodyHit.dist < closest.dist) {
+                 if (!enemy.isBlockedByShield(rayX, rayY)) {
+                    closest = { dist: bodyHit.dist, type: 'enemy', data: enemy };
+                 }
+            }
+        }
+
+        const hitX = rayX + dirX * closest.dist;
+        const hitY = rayY + dirY * closest.dist;
+
+        // Draw Beam
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffdd00');
+
+        // Buffer the hit
+        if (closest.type === 'enemy') {
+            closest.data.applyStatus('SLOW'); // Apply Slow effect instantly
+            this.hitBuffer.add(closest.data);
+            this.lastHitPos = {x: hitX, y: hitY}; // Store for particle
+        } else if (closest.type === 'shield') {
+            this.hitBuffer.add({ type: 'shield', data: closest.data });
+            this.lastHitPos = {x: hitX, y: hitY};
+        } else if (closest.type === 'wall') {
+            if (this.timer % 3 === 0) game.particles.spawn(hitX, hitY, '#ffff00', 2);
+        }
+    }
+
+    applyBufferedDamage(fighter, context) {
+        if (this.hitBuffer.size === 0) return;
+
+        this.hitBuffer.forEach(target => {
+            if (target.type === 'shield') {
+                const enemy = target.data.enemy;
+                if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ffffff', 5);
+                audioEngine.playBlock();
+                // To avoid spamming logs every frame, only log periodically or on first hit
+                if (Math.random() < 0.1) logger.log(`${enemy.name} is blocking Laser`, 'info');
+            } else {
+                // Enemy
+                target.takeDamage(this.damage, false, false, fighter);
+                if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ff4400', 3);
+            }
+        });
+
+        this.hitBuffer.clear();
     }
 }

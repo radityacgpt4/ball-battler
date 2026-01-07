@@ -55,7 +55,7 @@ export class KunaiAbility extends Ability {
         this.count = config.count;
         this.damage = config.damage;
         this.delay = config.delay;
-        this.zapStunDuration = 60; // 1 second stun
+        this.zapStunDuration = config.zapDuration || 60; // Default 1 second stun
     }
 
     canUse(fighter, context) {

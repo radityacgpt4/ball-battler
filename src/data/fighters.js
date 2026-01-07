@@ -62,9 +62,9 @@ export const FIGHTER_TYPES = {
         speed: 5,
         rotationSpeed: 0.16,
         skills: {
-            atk: { type: "KUNAI_MARK", cooldown: 120, count: 2, damage: 5, delay: 90 }, // 1.5s total
-            def: { type: "EVASION", cooldown: 120, duration: 12 },
-            ult: { type: "FLASH_BARRAGE", cooldown: 180, rasenganDamage: 10 }
+            atk: { type: "KUNAI_MARK", cooldown: 120, count: 2, damage: 5, delay: 90, zapDuration: 60 }, // 1.5s total
+            def: { type: "EVASION", cooldown: 102, duration: 12 }, // Reduced by 0.3s (18 frames)
+            ult: { type: "FLASH_BARRAGE", cooldown: 180, rasenganDamage: 12 }
         }
     },
     CYBORG: {

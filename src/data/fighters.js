@@ -38,7 +38,7 @@ export const FIGHTER_TYPES = {
         skills: {
             atk: { type: "BURST_FIRE", cooldown: 100, count: 10, damage: 3 },
             def: { type: "RETREAT", cooldown: 120, range: 150 },
-            ult: { type: "GRENADE", cooldown: 90, damage: 20 }
+            ult: { type: "GRENADE", cooldown: 60, damage: 20 }
         }
     },
     SHIELDBEARER: {

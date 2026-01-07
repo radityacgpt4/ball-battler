@@ -6,6 +6,7 @@ import { Ability } from './Ability.js';
 import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 export class BallistaAtkAbility extends Ability {
     constructor(config, slot) {
@@ -126,9 +127,9 @@ export class BallistaDefAbility extends Ability {
             // Normalize angle difference
             if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
 
-            // Check if within barrier arc (45 degrees visual = PI/4 total width)
-            // So we need +/- PI/8 from center
-            if (angleDiff < Math.PI / 8 && angleDiff < closestAngleDiff) {
+            // Check if within barrier arc (72 degrees visual = ~PI/2.5 total width)
+            // So we need +/- PI/5 from center (36 degrees)
+            if (angleDiff < Math.PI / 5 && angleDiff < closestAngleDiff) {
                 closestAngleDiff = angleDiff;
                 closestBarrier = barrier;
             }
@@ -139,6 +140,11 @@ export class BallistaDefAbility extends Ability {
             const absorbed = Math.min(closestBarrier.hp, amount);
             closestBarrier.hp -= absorbed;
             amount -= absorbed;
+
+            // Logging
+            const sides = ["FRONT", "RIGHT", "BACK", "LEFT"];
+            const sideName = sides[fighter.ballistaBarriers.indexOf(closestBarrier)];
+            logger.log(`${fighter.name} Barrier (${sideName}) absorbed ${Math.ceil(absorbed)} dmg. Remaining: ${Math.ceil(closestBarrier.hp)}`, 'combat');
 
             // Spawn particles at shield surface (radius + 15 to match visual/Shieldbearer feel)
             // Use attackAngle (angle from fighter to attacker)

@@ -855,8 +855,13 @@ export class Fighter {
             ctx.save();
             // ctx.translate(this.x, this.y); // Removed double translation
 
-            const barrierDist = this.radius + 8; // Same distance as Shieldbearer shield
-            const arcAngle = Math.PI / 4; // 45 degree arc per barrier
+            // Visual copy of Shieldbearer shield style
+            const barrierDist = this.radius + 8;
+            // Shieldbearer is Math.PI * 0.65 (117 degrees)
+            // We need 4 shields fitting in 360 without overlap. 360/4 = 90.
+            // Let's use 70 degrees (approx 1.22 rad) to leave gaps
+            const arcAngle = 1.22;
+            const halfArc = arcAngle / 2;
 
             for (const barrier of this.ballistaBarriers) {
                 if (barrier.destroyed) continue;
@@ -864,34 +869,37 @@ export class Fighter {
                 const hpRatio = barrier.hp / barrier.maxHp;
                 // Add fighter's angle so barriers rotate with the fighter
                 const adjustedAngle = barrier.angle + this.angle;
-                const startAngle = adjustedAngle - arcAngle / 2;
-                const endAngle = adjustedAngle + arcAngle / 2;
-
-                // Barrier glow based on HP
+                
+                // --- Shieldbearer 1:1 Visual Style ---
+                
+                // Glow
                 ctx.shadowBlur = 5 + hpRatio * 10;
                 ctx.shadowColor = '#8B4513';
 
-                // Outer arc (border)
+                // 1. Thick Outer Base (lighter)
                 ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 4, startAngle, endAngle);
-                ctx.lineWidth = 8;
-                ctx.strokeStyle = `rgba(139, 69, 19, ${0.3 + hpRatio * 0.4})`;
+                ctx.arc(0, 0, barrierDist + 8, adjustedAngle - halfArc, adjustedAngle + halfArc);
+                ctx.lineWidth = 12;
+                ctx.strokeStyle = `rgba(210, 180, 140, ${0.6 + hpRatio * 0.4})`; // Tan/Wood light color
                 ctx.lineCap = 'round';
                 ctx.stroke();
 
-                // Inner arc (main barrier)
+                // 2. Main Inner Shield (darker core)
                 ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 4, startAngle, endAngle);
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = `rgba(210, 105, 30, ${0.5 + hpRatio * 0.5})`;
+                ctx.arc(0, 0, barrierDist + 8, adjustedAngle - halfArc, adjustedAngle + halfArc);
+                ctx.lineWidth = 5;
+                ctx.strokeStyle = '#8B4513'; // SaddleBrown
                 ctx.stroke();
 
-                // HP indicator line
-                const hpArc = arcAngle * hpRatio;
+                // 3. Detail Line (HP Indicator / Rim)
                 ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 8, adjustedAngle - hpArc / 2, adjustedAngle + hpArc / 2);
+                // Scale arc length by HP for effect, or keep static like shieldbearer?
+                // Shieldbearer code: ctx.arc(0, 0, this.radius + 12, -halfArc * 0.85, halfArc * 0.85);
+                // We copy that style
+                ctx.arc(0, 0, barrierDist + 12, adjustedAngle - halfArc * 0.85, adjustedAngle + halfArc * 0.85);
                 ctx.lineWidth = 2;
-                ctx.strokeStyle = hpRatio > 0.5 ? '#4CAF50' : (hpRatio > 0.25 ? '#FFC107' : '#F44336');
+                // Color change based on HP state
+                ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : (hpRatio > 0.25 ? '#FF8C00' : '#FF0000');
                 ctx.stroke();
 
                 ctx.shadowBlur = 0;

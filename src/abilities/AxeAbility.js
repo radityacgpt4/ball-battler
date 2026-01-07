@@ -48,7 +48,7 @@ export class AxeAtkAbility extends Ability {
                     fighter.cooldowns.atk = 15; // Swing cooldown
                     
                     // Damage
-                    enemy.takeDamage(this.damage);
+                    enemy.takeDamage(this.damage, false, false, fighter);
                     game.particles.spawn(tipX, tipY, '#ff0000', 5);
                     audioEngine.playSwordSwing();
                     audioEngine.playHit();
@@ -156,11 +156,11 @@ export class ExecuteUltAbility extends Ability {
             if (dist <= range + enemy.radius) {
                 if (enemy.hp <= 30) {
                     // Instant Kill - FATALITY
-                    enemy.takeDamage(enemy.maxHp + 999, true);
+                    enemy.takeDamage(enemy.maxHp + 999, true, false, fighter);
                     audioEngine.playHeavyImpact();
                 } else {
                     // Stun
-                    enemy.takeDamage(10);
+                    enemy.takeDamage(10, false, false, fighter);
                     enemy.applyStatus('STUN', 120); // 2 sec
                     audioEngine.playHeavyImpact();
                 }

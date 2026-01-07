@@ -104,8 +104,15 @@ export class BallistaDefAbility extends Ability {
         // Check if any barrier can block
         if (!fighter.ballistaBarriers) return amount;
 
-        // Find the barrier facing the attack direction (simplified - use fighter angle)
-        const attackAngle = fighter.angle + Math.PI; // Opposite of facing direction
+        // Use context.attacker if available, otherwise fallback to fighter's back
+        const attacker = context.attacker;
+        let attackAngle;
+        
+        if (attacker) {
+            attackAngle = Math.atan2(attacker.y - fighter.y, attacker.x - fighter.x);
+        } else {
+            attackAngle = fighter.angle + Math.PI; // Opposite of facing direction
+        }
 
         let closestBarrier = null;
         let closestAngleDiff = Infinity;

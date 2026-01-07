@@ -39,7 +39,7 @@ export class MeleeAbility extends Ability {
 
                 if (fighter.cooldowns.atk <= 0) {
                     fighter.meleeHits++;
-                    enemy.takeDamage(this.damage);
+                    enemy.takeDamage(this.damage, false, false, fighter);
                     game.particles.spawn(tipX, tipY, '#fff', 5);
                     audioEngine.playSwordSwing();
                     audioEngine.playHit();

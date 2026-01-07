@@ -97,7 +97,7 @@ export class RaycastAbility extends Ability {
 
             // Process hit
             if (closest.type === 'enemy') {
-                closest.data.takeDamage(currentDamage);
+                closest.data.takeDamage(currentDamage, false, false, fighter);
                 game.particles.spawnExplosion(closest.x, closest.y);
                 audioEngine.playHit();
                 logger.log(`${rayOwner.name} Zap Hit ${closest.data.name} for ${currentDamage} dmg`, 'combat');
@@ -300,7 +300,7 @@ export class LaserAbility extends Ability {
                 if (Math.random() < 0.1) logger.log(`${enemy.name} is blocking Laser`, 'info');
             } else {
                 // Enemy
-                target.takeDamage(this.damage);
+                target.takeDamage(this.damage, false, false, fighter);
                 if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ff4400', 3);
             }
         });

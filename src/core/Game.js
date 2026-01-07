@@ -218,7 +218,7 @@ export class Game {
                     if (!ent.isDead && ent !== p.owner) {
                         const d = Physics.dist(p.x, p.y, ent.x, ent.y);
                         if (d < blastRadius + ent.radius) {
-                            ent.takeDamage(p.damage);
+                            ent.takeDamage(p.damage, false, false, p.owner);
                             const angle = Math.atan2(ent.y - p.y, ent.x - p.x);
                             const force = 12;
                             ent.dx += Math.cos(angle) * force;
@@ -242,7 +242,7 @@ export class Game {
                     if (ent === p.owner || ent.isDead) continue;
                     if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius + 5) {
                         // Trigger Claymore
-                        ent.takeDamage(p.damage);
+                        ent.takeDamage(p.damage, false, false, p.owner);
                         if (p.slowDuration > 0) ent.applyStatus('SLOW', p.slowDuration);
 
                         this.particles.spawnExplosion(p.x, p.y);
@@ -281,14 +281,14 @@ export class Game {
                         } else {
                             if (p.isKunai) {
                                 if (!p.hitList.includes(ent.id)) {
-                                    ent.takeDamage(p.damage);
+                                    ent.takeDamage(p.damage, false, false, p.owner);
                                     p.hitList.push(ent.id);
                                     this.particles.spawn(ent.x, ent.y, '#ffd700', 3);
                                     audioEngine.playHit();
                                 }
                             } else if (p.isBallistaBolt) {
                                 // Ballista bolt - damage and knockback
-                                ent.takeDamage(p.damage);
+                                ent.takeDamage(p.damage, false, false, p.owner);
                                 this.particles.spawn(ent.x, ent.y, '#8B4513', 5);
                                 audioEngine.playHit();
 
@@ -322,7 +322,7 @@ export class Game {
                                     p.active = false;
                                 }
                             } else {
-                                ent.takeDamage(p.damage, p.isUnblockable);
+                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
                                 if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
 
                                 p.active = false;
@@ -397,7 +397,7 @@ export class Game {
                             damage = Math.max(damage, 10);
                         }
 
-                        defender.takeDamage(damage);
+                        defender.takeDamage(damage, false, false, attacker);
                         this.particles.spawn(defender.x, defender.y, '#8b5cf6', 8);
                         logger.log(`${attacker.name} SLAMMED ${defender.name} for ${damage} dmg (SpeedTier: ${speedTier})`, 'combat');
                         audioEngine.playHeavyImpact();

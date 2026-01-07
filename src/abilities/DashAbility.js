@@ -32,7 +32,7 @@ export class DashAssaultAbility extends Ability {
         audioEngine.playSwordSwing();
 
         if (target && Physics.lineCircleIntersect(fighter.x, fighter.y, destX, destY, target.x, target.y, target.radius + 15)) {
-            target.takeDamage(this.damage);
+            target.takeDamage(this.damage, false, false, fighter);
             target.applyStatus('BLEED');
             audioEngine.playHit();
             logger.log(`${fighter.name} Dash Assault HIT ${target.name}!`, 'combat');

@@ -521,10 +521,10 @@ export class Fighter {
         }
     }
 
-    takeDamage(amount, isUnblockable = false, isDoT = false) {
+    takeDamage(amount, isUnblockable = false, isDoT = false, attacker = null) {
         if (this.isDashing && !isUnblockable) return;
 
-        const context = { game: this.game, isDoT };
+        const context = { game: this.game, isDoT, attacker };
 
         // Check defensive abilities (skip for DoT unless ability handles it)
         if (this.abilities.def && !isUnblockable) {
@@ -855,7 +855,7 @@ export class Fighter {
             ctx.save();
             // ctx.translate(this.x, this.y); // Removed double translation
 
-            const barrierDist = this.radius + 12;
+            const barrierDist = this.radius + 8;
             const arcAngle = Math.PI / 4; // 45 degree arc per barrier
 
             for (const barrier of this.ballistaBarriers) {

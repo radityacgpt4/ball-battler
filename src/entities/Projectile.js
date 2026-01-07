@@ -49,9 +49,22 @@ export class Projectile {
         this.dragTarget = null;
         this.dragDuration = 0;
         this.boltIndex = 0;
+
+        // Deflection props
+        this.isDeflected = false;
+        this.deflectLifetime = 0;
     }
 
     update(timeScale = 1.0) {
+        // Handle deflected projectile lifetime (even if embedded)
+        if (this.isDeflected && this.deflectLifetime > 0) {
+            this.deflectLifetime -= 1 * timeScale;
+            if (this.deflectLifetime <= 0) {
+                this.active = false;
+                return;
+            }
+        }
+
         if (this.isEmbedded) return; // Stop moving if embedded
 
         if (this.isClaymore) {

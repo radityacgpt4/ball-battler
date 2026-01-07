@@ -280,6 +280,21 @@ export class Game {
                             p.angle = reflectAngle;
                             p.x = ent.x + Math.cos(reflectAngle) * (ent.radius + 15);
                             p.y = ent.y + Math.sin(reflectAngle) * (ent.radius + 15);
+
+                            // FIX: Add lifetime to deflected projectiles so they don't litter arena
+                            p.deflectLifetime = 120; // 2 seconds at 60fps
+                            p.isDeflected = true;
+
+                            // Reset kunai max distance for deflected travel
+                            if (p.isKunai) {
+                                p.maxDist = p.travelled + 300; // Allow more travel distance
+                            }
+                            // Disable missile homing after deflection
+                            if (p.isMissile) {
+                                p.target = null;
+                                p.isMissile = false; // Convert to dumb projectile
+                            }
+
                             this.particles.spawn(p.x, p.y, '#8b5cf6', 10);
                             audioEngine.playBlock();
                             logger.log(`${ent.name} DEFLECTED projectile from ${p.owner.name}`, 'warn');

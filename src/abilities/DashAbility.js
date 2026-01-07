@@ -102,7 +102,7 @@ export class FlashBarrageAbility extends Ability {
     execute(fighter, context) {
         const { game } = context;
         const Projectile = this.ProjectileClass;
-        const count = 4; // Explicitly set to 4 as requested
+        const count = 2; // Reduced to 2 as requested
 
         fighter.cooldowns.ult = this.cooldown;
         // Prevent normal attack from overriding the ult sequence

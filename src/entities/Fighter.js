@@ -212,9 +212,19 @@ export class Fighter {
             this.teleportDelayTimer = tick(this.teleportDelayTimer);
             if (this.teleportDelayTimer <= 0 && this.kunaiPending.length > 0) {
                 this.chainDashQueue = [{x: this.x, y: this.y}];
-                this.kunaiPending.forEach(p => this.chainDashQueue.push({x: p.x, y: p.y}));
+                this.kunaiPending.forEach(p => {
+                    if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) {
+                        this.chainDashQueue.push({x: p.x, y: p.y});
+                    }
+                });
                 this.kunaiPending = [];
-                this.isDashing = true;
+                if (this.chainDashQueue.length > 1) {
+                    this.isDashing = true;
+                } else {
+                    // Fail safe: if no valid targets, cancel dash
+                    this.teleportDelayTimer = 0;
+                    this.chainDashQueue = [];
+                }
                 this.dashTimer = this.chainDashQueue.length * 4;
                 this.dashTimerStart = this.dashTimer;
             }
@@ -325,6 +335,13 @@ export class Fighter {
             if (this.dashTimer % 4 === 0) {
                 const current = this.chainDashQueue.shift();
                 const next = this.chainDashQueue[0];
+
+                // Validate coordinates
+                if (!next || !Number.isFinite(next.x) || !Number.isFinite(next.y)) {
+                    this.dashTimer = 0;
+                    this.isDashing = false;
+                    return;
+                }
 
                 // === Visual: Parallel Lines ===
                 const dx = next.x - current.x;

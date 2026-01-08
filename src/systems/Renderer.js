@@ -441,6 +441,89 @@ export class Renderer {
             ctx.closePath();
             ctx.fill();
         });
+
+        // Divine General - Golden 8-Spoke Wheel
+        this.registerAccessory('DIVINE_GENERAL', (ctx, fighter) => {
+            // "The fighter has a GOLDEN 8-SPOKE WHEEL as its permanent weapon visual."
+            // "ALWAYS VISIBLE - no conditions, renders every frame"
+
+            // Counter-rotate logic to make wheel spin independently
+            // "Wheel spins independently (use frameCount * 0.05, counter-rotate fighter angle)"
+            // We use fighter.wheelRotation which is updated in Fighter.update()
+            
+            ctx.save();
+            // Counter-rotate fighter angle so wheel stays independent of body rotation, then add spin
+            ctx.rotate(-fighter.angle + (fighter.wheelRotation || 0));
+
+            // Radius: this.radius + 10
+            const wheelRadius = fighter.radius + 10;
+            
+            // "Draw 8 spokes as lines from radius+3 to radius+18"
+            // Wait, radius of what? If wheel is at radius+10, maybe it means from wheel center?
+            // "Radius: this.radius + 10" -> This usually means the distance from fighter center to wheel center?
+            // NO, the prompt says "Use ctx.arc() for the outer ring (full 360° circle, not an arc). Radius: this.radius + 10".
+            // So the wheel SURROUNDS the fighter? Like a halo?
+            // "Radius: this.radius + 10" implies the ring is slightly larger than the fighter body.
+            // Mahoraga's wheel is usually above the head. But here it's 2D top down.
+            // "Use ctx.arc() for the outer ring ... Radius: this.radius + 10" -> Ring AROUND the fighter.
+            
+            // "Apply golden glow: ctx.shadowBlur = 12, shadowColor = '#FFD700'"
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#FFD700';
+
+            // "Line width: 6px outer ring, 3px inner highlight"
+            // "Colors: #B8860B (dark gold) and #FFD700 (bright gold)"
+            
+            // Outer Ring
+            ctx.beginPath();
+            ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = '#B8860B'; // Dark gold
+            ctx.stroke();
+
+            // Inner Highlight
+            ctx.beginPath();
+            ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#FFD700'; // Bright gold
+            ctx.stroke();
+
+            // "Draw 8 spokes as lines from radius+3 to radius+18, spaced 45° apart"
+            // If wheelRadius is R, spokes are likely connecting the ring to something?
+            // Or protruding? "from radius+3 to radius+18".
+            // If "radius" refers to fighter.radius, then it goes from slightly outside body to outside wheel?
+            // Let's assume relative to Fighter Center (0,0).
+            // Fighter radius is ~20. Wheel radius is ~30.
+            // Spokes from R+3 (~23) to R+18 (~38). Wheel is at ~30. So spokes cross the ring.
+            
+            const startR = fighter.radius + 3;
+            const endR = fighter.radius + 18; // Note: wheel ring is at fighter.radius + 10.
+            
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#B8860B';
+
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const sx = Math.cos(angle) * startR;
+                const sy = Math.sin(angle) * startR;
+                const ex = Math.cos(angle) * endR;
+                const ey = Math.sin(angle) * endR;
+                
+                ctx.beginPath();
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
+
+                // "Draw 8 orbs (filled circles) at spoke tips"
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        });
     }
 }
 

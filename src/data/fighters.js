@@ -118,5 +118,18 @@ export const FIGHTER_TYPES = {
             def: { type: "BARRIER_SHIELD", barrierMaxHp: 30, barrierCount: 4, arcAngle: 1.22 },
             ult: { type: "SIEGE_MODE", cooldown: 120, damage: 15 }
         }
+    },
+    DIVINE_GENERAL: {
+        name: "Divine General",
+        color: "#ffffff",
+        hp: 100,
+        mass: 1.3,
+        speed: 4.8,
+        rotationSpeed: 0.18,
+        skills: {
+            atk: { type: "EIGHTFOLD_STRIKE" },
+            def: { type: "ADAPTATION_HEAL" },
+            ult: { type: "ADAPTATION_ULT", cooldown: 180 }
+        }
     }
 };

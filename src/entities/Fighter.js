@@ -69,6 +69,9 @@ export class Fighter {
         // Fairplay Mechanism
         this.collisionImmunity = 0;
 
+        // Visuals
+        this.wheelRotation = 0;
+
         // Initialize abilities
         this.abilities = this.createAbilities(stats.skills);
     }
@@ -152,6 +155,9 @@ export class Fighter {
             }
             this.angle += rot;
         }
+
+        // Update visual rotation for wheel
+        this.wheelRotation += 0.05 * timeScale;
 
         this.updateSkills(allEntities, timeScale);
     }

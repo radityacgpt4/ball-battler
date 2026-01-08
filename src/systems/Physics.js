@@ -6,6 +6,11 @@
 export class Physics {
     static dist(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); }
 
+    static checkCollision(e1, e2) {
+        const dist = Physics.dist(e1.x, e1.y, e2.x, e2.y);
+        return dist < e1.radius + e2.radius;
+    }
+
     static lineCircleIntersect(x1, y1, x2, y2, cx, cy, r) {
         const dx = x2 - x1;
         const dy = y2 - y1;

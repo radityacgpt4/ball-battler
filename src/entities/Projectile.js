@@ -78,6 +78,19 @@ export class Projectile {
             this.dy *= 0.9;
         }
 
+        // Ginto Trap Lifetime
+        if (this.isGintoTrap) {
+            this.lifeTime -= 1 * timeScale;
+            if (this.lifeTime <= 0) {
+                this.active = false;
+                return;
+            }
+            // Ginto is stationary
+            this.dx = 0;
+            this.dy = 0;
+            return; // Don't move
+        }
+
         // Ballista Bolt Drag Logic
         if (this.isBallistaBolt && this.dragTarget && !this.dragTarget.isDead) {
             // Bolt follows and pushes the target
@@ -145,6 +158,37 @@ export class Projectile {
                 const speed = Math.hypot(this.dx, this.dy);
                 this.dx = Math.cos(this.angle) * speed;
                 this.dy = Math.sin(this.angle) * speed;
+            }
+        }
+
+        // Quincy Arrow - Spirit Trail (Reishi Particles)
+        if (this.isQuincyArrow && this.active) {
+            // Spawn trailing spirit particles every frame
+            if (Math.random() < 0.8) {
+                // Core bright particles
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 8,
+                    y: this.y - Math.sin(this.angle) * 8,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 1.5,
+                    life: 0.5, decay: 0.06,
+                    size: this.isPerfectShot ? 4 : 3,
+                    color: '#E0FFFF',
+                    type: 'square'
+                });
+            }
+            // Outer glow particles (less frequent)
+            if (Math.random() < 0.4) {
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 5 + (Math.random() - 0.5) * 10,
+                    y: this.y - Math.sin(this.angle) * 5 + (Math.random() - 0.5) * 10,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    life: 0.35, decay: 0.04,
+                    size: this.isPerfectShot ? 6 : 4,
+                    color: '#1E90FF',
+                    type: 'square'
+                });
             }
         }
 
@@ -349,6 +393,66 @@ export class Projectile {
             ctx.moveTo(-15, 2);
             ctx.lineTo(-22, 8);
             ctx.lineTo(-18, 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+        else if (this.isQuincyArrow) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            // Glow effect
+            ctx.shadowBlur = this.isPerfectShot ? 15 : 8;
+            ctx.shadowColor = '#00BFFF';
+
+            // Arrow body (energy beam)
+            ctx.fillStyle = this.isLichtRegen ? '#87CEEB' : '#1E90FF';
+            ctx.beginPath();
+            ctx.moveTo(12, 0);   // Tip
+            ctx.lineTo(-8, -3);  // Back top
+            ctx.lineTo(-5, 0);   // Notch
+            ctx.lineTo(-8, 3);   // Back bottom
+            ctx.closePath();
+            ctx.fill();
+
+            // Core (brighter center)
+            ctx.fillStyle = '#FFFFFF';
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 6, 1.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+        else if (this.isGintoTrap) {
+            // Ginto silver tube trap
+            ctx.save();
+
+            // Pulsing glow
+            const pulse = 0.5 + Math.sin(Date.now() / 150) * 0.3;
+            ctx.globalAlpha = pulse;
+
+            // Outer glow ring
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#1E90FF';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner tube
+            ctx.globalAlpha = 0.8;
+            ctx.fillStyle = '#C0C0C0';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Blue energy core
+            ctx.fillStyle = '#1E90FF';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.restore();

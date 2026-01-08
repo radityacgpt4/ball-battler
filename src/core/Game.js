@@ -332,6 +332,25 @@ export class Game {
                 continue;
             }
 
+            // Ginto Trap (Quincy)
+            if (p.isGintoTrap) {
+                for (let ent of this.entities) {
+                    if (ent === p.owner || ent.isDead) continue;
+                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
+                        // Trigger Ginto - stun the enemy
+                        if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
+
+                        this.particles.spawnHirenkyaku(p.x, p.y);
+                        audioEngine.playZap();
+                        logger.log(`${ent.name} stepped on ${p.owner.name}'s GINTO TRAP!`, 'combat');
+
+                        p.active = false;
+                        break;
+                    }
+                }
+                continue;
+            }
+
             if (!p.isGrenade) {
                 for (let ent of this.entities) {
                     if (ent === p.owner || ent.isDead) continue;
@@ -376,6 +395,21 @@ export class Game {
                                     p.hitList.push(ent.id);
                                     this.particles.spawn(ent.x, ent.y, '#ffd700', 3);
                                     audioEngine.playHit();
+                                }
+                            } else if (p.isQuincyArrow) {
+                                // Quincy arrows - piercing if perfect shot or Licht Regen
+                                if (p.piercing) {
+                                    if (!p.hitList.includes(ent.id)) {
+                                        ent.takeDamage(p.damage, false, false, p.owner);
+                                        p.hitList.push(ent.id);
+                                        this.particles.spawnQuincyArrow(ent.x, ent.y);
+                                        audioEngine.playZap();
+                                    }
+                                } else {
+                                    ent.takeDamage(p.damage, false, false, p.owner);
+                                    this.particles.spawnQuincyArrow(ent.x, ent.y);
+                                    audioEngine.playZap();
+                                    p.active = false;
                                 }
                             } else if (p.isBallistaBolt) {
                                 // Ballista bolt - damage and knockback
@@ -429,7 +463,10 @@ export class Game {
                         // Current logic: if unblockable, we skipped the shield block block.
                         // So we are here.
 
-                        if (!p.isKunai || (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage))) break;
+                        if (!p.isKunai && !(p.isQuincyArrow && p.piercing)) {
+                            if (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage)) break;
+                            if (!p.piercing) break;
+                        }
                     }
                 }
             }

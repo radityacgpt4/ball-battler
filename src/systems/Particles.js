@@ -190,6 +190,59 @@ export class ParticleSystem {
         this.spawnText(x, y - 50, "MAX BLACK FLASH!!", "#FF0000");
     }
 
+    // Quincy Heilig Pfeil trail (Reishi Spirit Particles)
+    spawnQuincyArrow(x, y) {
+        // Core trail (dense bright)
+        for (let i = 0; i < 3; i++) {
+            this.particles.push({
+                x, y,
+                color: '#E0FFFF', // Light Cyan
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                life: 0.4, decay: 0.08,
+                size: 3, type: 'square'
+            });
+        }
+        // Aura trail (larger blue halo)
+        for (let i = 0; i < 2; i++) {
+            this.particles.push({
+                x, y,
+                color: '#1E90FF', // Dodger Blue
+                vx: (Math.random() - 0.5) * 5,
+                vy: (Math.random() - 0.5) * 5,
+                life: 0.3, decay: 0.05,
+                size: 5, type: 'square'
+            });
+        }
+    }
+
+    // Hirenkyaku blink effect (Reishi Platform)
+    spawnHirenkyaku(x, y) {
+        for (let i = 0; i < 10; i++) {
+            this.particles.push({
+                x: x + (Math.random() - 0.5) * 25,
+                y: y + (Math.random() - 0.5) * 25,
+                color: '#87CEEB',
+                vx: 0,
+                vy: -1 - Math.random(), // Float up
+                life: 0.8, decay: 0.05,
+                size: 4 + Math.random() * 4, type: 'square'
+            });
+        }
+        this.spawnShockwave(x, y, '#1E90FF');
+    }
+
+    // Licht Regen shockwave
+    spawnLichtRegen(x, y) {
+        this.particles.push({
+            type: 'shockwave',
+            x, y,
+            radius: 5, maxRadius: 80,
+            life: 0.8, decay: 0.08,
+            color: '#1E90FF'
+        });
+    }
+
     spawnBolt(segments, color, width = 5) {
         if (segments.length < 2) return;
 
@@ -291,6 +344,23 @@ export class ParticleSystem {
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                 ctx.stroke();
+                ctx.restore();
+            }
+            else if (p.type === 'square') {
+                p.x += p.vx; p.y += p.vy;
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.translate(p.x, p.y);
+                // Rotate slowly
+                ctx.rotate(p.life * 5);
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+
+                // Glow
+                ctx.shadowBlur = 4;
+                ctx.shadowColor = p.color;
+                ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
+
                 ctx.restore();
             }
             else {

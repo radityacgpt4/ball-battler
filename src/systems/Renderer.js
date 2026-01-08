@@ -540,6 +540,77 @@ export class Renderer {
             ctx.arc(fistDist + 8, separation, 2, 0, Math.PI * 2);
             ctx.fill();
         });
+
+        // Quincy - Spirit Bow (Energia)
+        this.registerAccessory('QUINCY', (ctx, fighter) => {
+            const bowDist = fighter.radius + 5;
+
+            ctx.save();
+
+            // Decouple from fighter rotation and aim at target
+            ctx.rotate(-fighter.angle);
+            const aimAngle = (fighter.quincyTargetAngle !== undefined && fighter.quincyTargetAngle !== null)
+                ? fighter.quincyTargetAngle
+                : fighter.angle;
+            ctx.rotate(aimAngle);
+
+            // Glow effect based on lock progress
+            const lockRatio = (fighter.lockProgress || 0) / 100;
+
+            // Main bow arc (translucent blue energy)
+            ctx.strokeStyle = '#1E90FF';
+            ctx.lineWidth = 3 + lockRatio * 2;
+            ctx.shadowBlur = 10 + lockRatio * 15;
+            ctx.shadowColor = '#00BFFF';
+            ctx.globalAlpha = 0.7 + lockRatio * 0.3;
+
+            // Draw curved bow arms
+            ctx.beginPath();
+            ctx.arc(bowDist, 0, 22, -Math.PI * 0.45, Math.PI * 0.45);
+            ctx.stroke();
+
+            // Inner energy glow
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.5 + lockRatio * 0.5;
+            ctx.beginPath();
+            ctx.arc(bowDist, 0, 20, -Math.PI * 0.4, Math.PI * 0.4);
+            ctx.stroke();
+
+            // Bowstring (energy thread)
+            ctx.strokeStyle = '#B0E0E6';
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.8;
+            ctx.shadowBlur = 5;
+
+            const topX = bowDist + Math.cos(-Math.PI * 0.45) * 22;
+            const topY = Math.sin(-Math.PI * 0.45) * 22;
+            const botX = bowDist + Math.cos(Math.PI * 0.45) * 22;
+            const botY = Math.sin(Math.PI * 0.45) * 22;
+
+            ctx.beginPath();
+            ctx.moveTo(topX, topY);
+            ctx.lineTo(bowDist - 8, 0); // Pulled back
+            ctx.lineTo(botX, botY);
+            ctx.stroke();
+
+            // Charging arrow (visible when locking)
+            if (fighter.lockProgress > 20) {
+                ctx.fillStyle = `rgba(30, 144, 255, ${lockRatio * 0.8})`;
+                ctx.shadowBlur = 20 * lockRatio;
+                ctx.shadowColor = '#1E90FF';
+
+                // Arrow shape
+                ctx.beginPath();
+                ctx.moveTo(bowDist + 15, 0);  // Tip
+                ctx.lineTo(bowDist - 5, -3);
+                ctx.lineTo(bowDist - 5, 3);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            ctx.restore();
+        });
     }
 }
 

@@ -16,6 +16,7 @@ import { AxeAtkAbility, BerserkerDefAbility, ExecuteUltAbility } from '../abilit
 import { BallistaAtkAbility, BallistaDefAbility, BallistaUltAbility } from '../abilities/BallistaAbility.js';
 import { DivineGeneralAtkAbility, DivineGeneralDefAbilityWithUlt, DivineGeneralUltAbility } from '../abilities/DivineGeneralAbility.js';
 import { DivineBrawlerAtkAbility, DivineBrawlerDefAbility, DivineBrawlerUltAbility } from '../abilities/DivineBrawlerAbility.js';
+import { QuincyAtkAbility, QuincyDefAbility, QuincyUltAbility } from '../abilities/QuincyAbility.js';
 
 class AbilityRegistryClass {
     constructor() {
@@ -117,6 +118,11 @@ class AbilityRegistryClass {
         this.register('SIEGE_MODE', BallistaUltAbility);
         this.register('ADAPTATION_ULT', DivineGeneralUltAbility);
         this.register('UNSHAKEABLE_FOCUS', DivineBrawlerUltAbility);
+
+        // Quincy abilities
+        this.register('HEILIG_PFEIL', QuincyAtkAbility);
+        this.register('HIRENKYAKU', QuincyDefAbility);
+        this.register('LICHT_REGEN', QuincyUltAbility);
     }
 }
 

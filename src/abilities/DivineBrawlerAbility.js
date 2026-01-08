@@ -103,23 +103,75 @@ export class DivineBrawlerAtkAbility extends Ability {
 export class DivineBrawlerDefAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.cooldown = config.cooldown || 210;
+        this.projectileCooldown = 120;  // 2s CD when dodging projectiles
+        this.fallbackCooldown = 240;    // 4s CD for fallback swap
     }
 
     update(fighter, context) {
-        // Logic handled in execute() or canUse()?
-        // Active abilities are usually triggered. But this is an auto-battler.
-        // We need a trigger condition. 
-        // Trigger: Whenever off cooldown AND enemy is alive.
+        if (fighter.cooldowns.def > 0) return;
+        if (fighter.status.stun > 0) return;
 
-        if (fighter.cooldowns.def <= 0) {
-            const enemy = context.enemies.find(e => e !== fighter && !e.isDead);
-            if (enemy) {
-                this.execute(fighter, { enemy, game: context.game });
-                fighter.cooldowns.def = this.cooldown;
-                fighter.maxCooldowns.def = this.cooldown;
+        const enemy = context.enemies.find(e => e !== fighter && !e.isDead);
+        if (!enemy) return;
+
+        // Priority 1: Check for approaching projectiles
+        const approachingProjectile = this.findApproachingProjectile(fighter, context.game);
+
+        if (approachingProjectile) {
+            // Swap to dodge the projectile!
+            this.execute(fighter, { enemy, game: context.game, triggeredByProjectile: true });
+            fighter.cooldowns.def = this.projectileCooldown;
+            fighter.maxCooldowns.def = this.projectileCooldown;
+            return;
+        }
+
+        // Priority 2: Fallback - swap anyway if cooldown allows
+        // Use a separate internal timer for fallback
+        if (!fighter._fallbackSwapTimer) fighter._fallbackSwapTimer = 0;
+        fighter._fallbackSwapTimer++;
+
+        if (fighter._fallbackSwapTimer >= this.fallbackCooldown) {
+            this.execute(fighter, { enemy, game: context.game, triggeredByProjectile: false });
+            fighter.cooldowns.def = this.projectileCooldown; // Short CD after any swap
+            fighter.maxCooldowns.def = this.projectileCooldown;
+            fighter._fallbackSwapTimer = 0;
+        }
+    }
+
+    findApproachingProjectile(fighter, game) {
+        const detectionRadius = 100; // How close projectile must be
+        const approachThreshold = 0.7; // Dot product threshold (facing towards fighter)
+
+        for (const p of game.projectiles) {
+            if (p.owner === fighter) continue; // Ignore own projectiles
+            if (!p.active) continue;
+            if (p.isClaymore || p.isGintoTrap) continue; // Ignore traps
+
+            const dist = Math.hypot(p.x - fighter.x, p.y - fighter.y);
+            if (dist > detectionRadius) continue;
+
+            // Check if projectile is moving towards fighter
+            const speed = Math.hypot(p.dx, p.dy);
+            if (speed < 1) continue; // Ignore stationary
+
+            const toFighterX = fighter.x - p.x;
+            const toFighterY = fighter.y - p.y;
+            const toFighterDist = Math.hypot(toFighterX, toFighterY);
+
+            // Normalize
+            const normToFighterX = toFighterX / toFighterDist;
+            const normToFighterY = toFighterY / toFighterDist;
+            const normDx = p.dx / speed;
+            const normDy = p.dy / speed;
+
+            // Dot product: if positive and high, projectile is heading towards fighter
+            const dot = normDx * normToFighterX + normDy * normToFighterY;
+
+            if (dot > approachThreshold) {
+                return p; // Found an approaching projectile!
             }
         }
+        return null;
     }
 
     execute(fighter, context) {
@@ -134,7 +186,7 @@ export class DivineBrawlerDefAbility extends Ability {
         context.game.particles.spawn(fighter.x, fighter.y, '#4B0082', 10);
         context.game.particles.spawn(enemy.x, enemy.y, '#FF0000', 10);
 
-        // SWAP PHYCIS
+        // SWAP PHYSICS
         fighter.x = enemy.x;
         fighter.y = enemy.y;
         enemy.x = oldX;
@@ -145,25 +197,21 @@ export class DivineBrawlerDefAbility extends Ability {
         context.game.projectiles.forEach(p => {
             if (p.owner === enemy) {
                 p.owner = fighter; // Hijack ownership
-                p.isDeflected = true; // Optional: use existing deflect logic traits
+                p.isDeflected = true;
                 p.deflectLifetime = 180;
-
-                // Visual Feedback: Turn it deep purple
-                // Projectile.draw() might need to check for this or we just accept default
-                // We can flag it
-                p.isHijacked = true; // Custom flag for renderer if needed
+                p.isHijacked = true;
                 hijackedCount++;
             }
         });
 
         // 3. VISUALS & AUDIO
-        context.game.particles.spawnShockwave(fighter.x, fighter.y, '#4B0082'); // New pos
-        context.game.particles.spawnShockwave(enemy.x, enemy.y, '#4B0082');   // New pos
+        context.game.particles.spawnShockwave(fighter.x, fighter.y, '#4B0082');
+        context.game.particles.spawnShockwave(enemy.x, enemy.y, '#4B0082');
 
-        // CLAP SOUND (Using PowerUp as placeholder or specific if added)
         audioEngine.playPowerUp();
 
         let logMsg = `${fighter.name} CLAPPED & Swapped!`;
+        if (context.triggeredByProjectile) logMsg += ' (Dodged projectile!)';
         if (hijackedCount > 0) logMsg += ` Hijacked ${hijackedCount} projectiles!`;
         logger.log(logMsg, 'combat');
     }

@@ -103,13 +103,23 @@ export const FIGHTER_TYPES = {
         }
     },
     DIVINE_BRAWLER: {
-        name: "Divine Brawler",
+        name: "Sorcerer Brawler",
         color: "#4B0082",
         hp: 110, mass: 1.6, speed: 5.4, rotationSpeed: 0.15,
         skills: {
             atk: { name: "Black Flash", desc: "Every 4th hit deals up to 6x damage based on HP.", type: "BLACK_FLASH", damage: 5, isPassive: true },
-            def: { name: "Boogie Woogie", desc: "Claps to swap places and hijack enemy projectiles.", type: "BOOGIE_WOOGIE", cooldown: 210, isPassive: false },
+            def: { name: "Boogie Woogie", desc: "Claps to swap places and hijack enemy projectiles.", type: "BOOGIE_WOOGIE", cooldown: 150, isPassive: false },
             ult: { name: "Pure Focus", desc: "Becomes immovable and doubles attack speed.", type: "UNSHAKEABLE_FOCUS", cooldown: 600, duration: 300, isPassive: false }
+        }
+    },
+    QUINCY: {
+        name: "Spirit Archer",
+        color: "#1E90FF",
+        hp: 90, mass: 0.9, speed: 4.8, rotationSpeed: 0.12,
+        skills: {
+            atk: { name: "Heilig Pfeil", desc: "Predictive arrows that deal more damage at range.", type: "HEILIG_PFEIL", cooldown: 60, damage: 8, isPassive: false },
+            def: { name: "Hirenkyaku", desc: "Blinks away from danger, leaving a stun trap.", type: "HIRENKYAKU", cooldown: 180, isPassive: false },
+            ult: { name: "Licht Regen", desc: "Rains a cone of piercing light arrows.", type: "LICHT_REGEN", cooldown: 300, damage: 3, isPassive: false }
         }
     }
 };

@@ -56,6 +56,18 @@ export class ParticleSystem {
         }
     }
 
+    spawnShockwave(x, y, color = '#ffffff') {
+        this.particles.push({
+            type: 'shockwave',
+            x: x, y: y,
+            radius: 10,
+            maxRadius: 100,
+            life: 1.0,
+            decay: 0.05,
+            color: color
+        });
+    }
+
     spawnWallImpact(x, y) {
         for (let i = 0; i < 30; i++) {
             this.particles.push({

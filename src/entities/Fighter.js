@@ -487,7 +487,9 @@ export class Fighter {
     }
 
     updateSkills(enemies, timeScale) {
-        if (this.status.stun > 0) return;
+        // Passive updates (DEF/ULT) should run even while stunned
+        // to handle timers like healing or absorption counters.
+        // Physical activities (ATK) are blocked inside the abilities.
 
         const context = { enemies, game: this.game, timeScale };
 
@@ -502,7 +504,8 @@ export class Fighter {
         }
 
         // Check ultimate condition (HP < 50%)
-        if (this.hp < this.maxHp * 0.5 && this.cooldowns.ult <= 0 && this.abilities.ult) {
+        // Divine General (Mahoraga) triggers ULT on attack hit instead
+        if (this.hp < this.maxHp * 0.5 && this.cooldowns.ult <= 0 && this.abilities.ult && this.typeKey !== 'DIVINE_GENERAL') {
             this.abilities.ult.execute(this, context);
         }
 
@@ -514,6 +517,9 @@ export class Fighter {
                 if (this.typeKey === 'SHIELDBEARER') {
                     this.ultWallSlamActive = false;
                     this.mass = this.originalMass;
+                }
+                if (this.typeKey === 'DIVINE_GENERAL') {
+                    this.activeEffects.adaptationAbsorbing = false;
                 }
             }
 

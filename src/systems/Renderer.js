@@ -450,14 +450,14 @@ export class Renderer {
             // Counter-rotate logic to make wheel spin independently
             // "Wheel spins independently (use frameCount * 0.05, counter-rotate fighter angle)"
             // We use fighter.wheelRotation which is updated in Fighter.update()
-            
+
             ctx.save();
             // Counter-rotate fighter angle so wheel stays independent of body rotation, then add spin
             ctx.rotate(-fighter.angle + (fighter.wheelRotation || 0));
 
             // Radius: this.radius + 10
             const wheelRadius = fighter.radius + 10;
-            
+
             // "Draw 8 spokes as lines from radius+3 to radius+18"
             // Wait, radius of what? If wheel is at radius+10, maybe it means from wheel center?
             // "Radius: this.radius + 10" -> This usually means the distance from fighter center to wheel center?
@@ -466,14 +466,14 @@ export class Renderer {
             // "Radius: this.radius + 10" implies the ring is slightly larger than the fighter body.
             // Mahoraga's wheel is usually above the head. But here it's 2D top down.
             // "Use ctx.arc() for the outer ring ... Radius: this.radius + 10" -> Ring AROUND the fighter.
-            
+
             // "Apply golden glow: ctx.shadowBlur = 12, shadowColor = '#FFD700'"
             ctx.shadowBlur = 12;
             ctx.shadowColor = '#FFD700';
 
             // "Line width: 6px outer ring, 3px inner highlight"
             // "Colors: #B8860B (dark gold) and #FFD700 (bright gold)"
-            
+
             // Outer Ring
             ctx.beginPath();
             ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
@@ -495,10 +495,10 @@ export class Renderer {
             // Let's assume relative to Fighter Center (0,0).
             // Fighter radius is ~20. Wheel radius is ~30.
             // Spokes from R+3 (~23) to R+18 (~38). Wheel is at ~30. So spokes cross the ring.
-            
+
             const startR = fighter.radius + 3;
             const endR = fighter.radius + 18; // Note: wheel ring is at fighter.radius + 10.
-            
+
             ctx.lineWidth = 4;
             ctx.lineCap = 'round';
             ctx.strokeStyle = '#B8860B';
@@ -509,7 +509,7 @@ export class Renderer {
                 const sy = Math.sin(angle) * startR;
                 const ex = Math.cos(angle) * endR;
                 const ey = Math.sin(angle) * endR;
-                
+
                 ctx.beginPath();
                 ctx.moveTo(sx, sy);
                 ctx.lineTo(ex, ey);
@@ -523,6 +523,30 @@ export class Renderer {
             }
 
             ctx.restore();
+
+            // --- PERSISTENT ABSORPTION TEXT ---
+            // "should ONLY appears once ULT condition WAS met (<50% HP and triggered)"
+            if (fighter.activeEffects.adaptationActivated) {
+                ctx.save();
+                // Counter-rotate the parent fighter rotation to keep text upright
+                ctx.rotate(-fighter.angle);
+
+                const stored = fighter.activeEffects.displayStoredDamage || 0;
+                const text = `${stored}/15`;
+
+                ctx.fillStyle = "#00BFFF"; // Adaptation Blue
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 3;
+                ctx.font = "bold 20px monospace";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
+                // Float text above the fighter and wheel
+                const textY = -fighter.radius - 40;
+                ctx.strokeText(text, 0, textY);
+                ctx.fillText(text, 0, textY);
+                ctx.restore();
+            }
         });
     }
 }

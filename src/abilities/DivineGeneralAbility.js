@@ -100,7 +100,7 @@ export class DivineGeneralDefAbility extends Ability {
                     const healed = fighter.hp - oldHp;
                     
                     if (healed > 0) {
-                        fighter.game.combatText.heal(fighter.x, fighter.y, Math.ceil(healed));
+                        fighter.game.combatText.healing(fighter.x, fighter.y, Math.ceil(healed));
                         fighter.game.particles.spawn(fighter.x, fighter.y, '#00FF00', 8);
                         logger.log(`${fighter.name} Adapted & Healed ${Math.ceil(healed)} HP`, 'info');
                     }
@@ -158,11 +158,16 @@ export class DivineGeneralUltAbility extends Ability {
 // Re-write DEF ability to handle ULT interaction
 export class DivineGeneralDefAbilityWithUlt extends DivineGeneralDefAbility {
     onDamage(fighter, damage, context) {
+        // Prevent self-damage (e.g. from the wheel visual or any self-inflicted sources if miscalculated)
+        if (context && context.attacker === fighter) {
+             return 0;
+        }
+
         // Check for ULT Invincibility/Absorption
         if (fighter.activeEffects.ultActive && fighter.activeEffects.adaptationAbsorbing) {
             // Absorb damage
-            const absorbed = Math.min(damage, 30); // Max 30 per hit? Or total? "max 30" implies cap. 
-            // Let's assume max 30 TOTAL stored, or max 30 per hit. Prompt: "absorb damage (max 30)". 
+            const absorbed = Math.min(damage, 30); // Max 30 per hit? Or total? "max 30" implies cap.
+            // Let's assume max 30 TOTAL stored, or max 30 per hit. Prompt: "absorb damage (max 30)".
             // Usually means cap on the buff.
             
             fighter.activeEffects.adaptationStoredDamage = (fighter.activeEffects.adaptationStoredDamage || 0) + damage;

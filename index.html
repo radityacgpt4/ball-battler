@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1v1 Fighter Ball - Auto Battler Engine v3 (With Sound)</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <div id="game-container">
@@ -15,17 +17,39 @@
             <canvas id="arena" width="500" height="500"></canvas>
 
             <div id="char-select" class="screen-overlay">
-                <h2 style="margin-top:0">BATTLE SETUP</h2>
-                <div class="select-row">
-                    <div class="player-col" id="p1-col">
-                        <div class="p-title">PLAYER 1</div>
+                <h2 class="setup-title">SELECT YOUR FIGHTER</h2>
+
+                <div class="selection-interface">
+                    <!-- Player 1 Detail Panel -->
+                    <div class="detail-panel p1-details" id="p1-details">
+                        <div class="p-tag p1-tag">PLAYER 1</div>
+                        <div class="detail-content">
+                            <h3 class="detail-name" id="p1-detail-name">---</h3>
+                            <div class="detail-stats" id="p1-detail-stats"></div>
+                            <div class="detail-skills" id="p1-detail-skills"></div>
+                        </div>
                     </div>
-                    <div class="player-col" id="p2-col">
-                        <div class="p-title">PLAYER 2</div>
+
+                    <!-- Central Character Grid -->
+                    <div class="char-grid-container">
+                        <div class="char-grid" id="char-grid"></div>
+                    </div>
+
+                    <!-- Player 2 Detail Panel -->
+                    <div class="detail-panel p2-details" id="p2-details">
+                        <div class="p-tag p2-tag">PLAYER 2</div>
+                        <div class="detail-content">
+                            <h3 class="detail-name" id="p2-detail-name">---</h3>
+                            <div class="detail-stats" id="p2-detail-stats"></div>
+                            <div class="detail-skills" id="p2-detail-skills"></div>
+                        </div>
                     </div>
                 </div>
-                <button id="start-btn">FIGHT!</button>
-                <div class="sound-toggle">Sound enabled by starting</div>
+
+                <div class="start-container">
+                    <div class="sound-toggle">SOUND AUTO-MUTES UNTIL START</div>
+                    <button id="start-btn">ENGAGE BATTLE</button>
+                </div>
             </div>
 
             <div id="end-screen" class="screen-overlay">
@@ -54,18 +78,46 @@
 
         // Initialize the game
         game.init();
-        
+
         // Bind button events
         document.getElementById('start-btn').addEventListener('click', () => {
             game.startMatch();
+            // Also enable sound on start
+            if (game.audio) game.audio.init();
         });
 
         document.getElementById('restart-btn').addEventListener('click', () => {
             game.showSelect();
         });
 
+        // Debug Toggle
+        const debugToggle = document.getElementById('debug-toggle');
+        const debugLogContainer = document.getElementById('debug-log-container');
+
+        debugToggle.addEventListener('click', () => {
+            debugLogContainer.classList.toggle('collapsed');
+            if (debugLogContainer.classList.contains('collapsed')) {
+                debugToggle.textContent = 'Show Debug Log';
+            } else {
+                debugToggle.textContent = 'Hide Debug Log';
+            }
+        });
+
+        // Debug Copy
+        document.getElementById('debug-copy').addEventListener('click', () => {
+            const text = debugLogContent.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const original = document.getElementById('debug-copy').textContent;
+                document.getElementById('debug-copy').textContent = 'Copied!';
+                setTimeout(() => {
+                    document.getElementById('debug-copy').textContent = original;
+                }, 2000);
+            });
+        });
+
         // Expose game instance for debugging (optional)
         window.game = game;
     </script>
 </body>
+
 </html>

@@ -27,23 +27,30 @@ export class DivineGeneralAtkAbility extends Ability {
 
         // Cooldown management handled by fighter update mostly, but we check specific triggers
         if (this.canUse(fighter, context)) {
-            // Auto-attack logic (Melee with short range)
-            const range = fighter.radius + 15;
+            // Orb-based collision: 8 orbs at radius+18, spaced 45° apart
+            const orbRadius = 3; // Visual orb size
+            const orbDistance = fighter.radius + 18;
             let hit = false;
 
             for (const enemy of context.enemies) {
                 if (enemy === fighter || enemy.isDead) continue;
 
-                const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
-                const reach = fighter.radius + 18; // Match the visual wheel tips (R+18)
+                // Check each of the 8 orbs for collision
+                for (let i = 0; i < 8; i++) {
+                    const orbAngle = fighter.angle + (fighter.wheelRotation || 0) + (Math.PI * 2 * i) / 8;
+                    const orbX = fighter.x + Math.cos(orbAngle) * orbDistance;
+                    const orbY = fighter.y + Math.sin(orbAngle) * orbDistance;
 
-                if (dist < reach + enemy.radius) {
-                    if (fighter.cooldowns.atk <= 0) {
-                        this.performAttack(fighter, enemy);
-                        hit = true;
-                        break;
+                    const distToEnemy = Physics.dist(orbX, orbY, enemy.x, enemy.y);
+                    if (distToEnemy < orbRadius + enemy.radius) {
+                        if (fighter.cooldowns.atk <= 0) {
+                            this.performAttack(fighter, enemy);
+                            hit = true;
+                            break;
+                        }
                     }
                 }
+                if (hit) break;
             }
         }
     }
@@ -65,9 +72,8 @@ export class DivineGeneralAtkAbility extends Ability {
         // Apply Damage
         enemy.takeDamage(damage, false, false, fighter);
 
-        // Visuals & Audio
+        // Visuals & Audio (combatText handled by takeDamage)
         audioEngine.playHit();
-        fighter.game.combatText.damage(enemy.x, enemy.y, damage, '#FFD700'); // Gold text
         fighter.game.particles.spawnSlash(fighter.x, fighter.y, enemy.x, enemy.y, '#FFD700', 3);
 
         // Reset Bonus - NERFED: Always 2 damage (fixed)
@@ -102,6 +108,11 @@ export class DivineGeneralDefAbility extends Ability {
     update(fighter, context) {
         if (this.storedDamage > 0) {
             this.healDelayTimer++;
+
+            // Sync with UI cooldown system (counts DOWN from max)
+            fighter.cooldowns.def = this.healDelay - this.healDelayTimer;
+            fighter.maxCooldowns.def = this.healDelay;
+
             if (this.healDelayTimer >= this.healDelay) {
                 // Trigger Heal
                 const healAmount = this.storedDamage * 0.9; // 90%
@@ -120,7 +131,11 @@ export class DivineGeneralDefAbility extends Ability {
                 // Reset
                 this.storedDamage = 0;
                 this.healDelayTimer = 0;
+                fighter.cooldowns.def = 0;
             }
+        } else {
+            // No damage stored - show as ready
+            fighter.cooldowns.def = 0;
         }
     }
 
@@ -176,13 +191,18 @@ export class DivineGeneralDefAbilityWithUlt extends DivineGeneralDefAbility {
     onDamage(fighter, damage, context) {
         // Check for ULT condition:
         // 1. Stance already activated permanently OR
-        // 2. Currently below 50% HP (start absorbing early)
+        // 2. Currently below 50% HP (start absorbing immediately)
         if (fighter.activeEffects.adaptationActivated || fighter.hp < fighter.maxHp * 0.5) {
+            // Activate permanently if not already
+            if (!fighter.activeEffects.adaptationActivated) {
+                fighter.activeEffects.adaptationActivated = true;
+                logger.log(`${fighter.name} ADAPTATION ACTIVATED (HP < 50%)`, 'combat');
+            }
+
             // Absorb damage
-            fighter.activeEffects.adaptationStoredDamage = Math.min(
-                (fighter.activeEffects.adaptationStoredDamage || 0) + damage,
-                15 // Cap: 15dmg
-            );
+            const prevStored = fighter.activeEffects.adaptationStoredDamage || 0;
+            fighter.activeEffects.adaptationStoredDamage = Math.min(prevStored + damage, 15);
+            logger.log(`${fighter.name} absorbed ${Math.ceil(damage)} dmg. Stored: ${Math.ceil(fighter.activeEffects.adaptationStoredDamage)}/15`, 'info');
         }
 
         // Normal behavior

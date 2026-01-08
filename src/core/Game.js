@@ -83,6 +83,10 @@ export class Game {
             item.innerHTML = `
                 <div class="grid-icon" style="background:${data.color}"></div>
                 <div class="grid-name">${data.name}</div>
+                <div class="select-badges">
+                    ${this.p1Type === key ? '<span class="p-badge p1">P1</span>' : ''}
+                    ${this.p2Type === key ? '<span class="p-badge p2">P2</span>' : ''}
+                </div>
             `;
 
             item.onclick = (e) => {

@@ -45,6 +45,7 @@ export const combatTextConfig = {
     ultActivate: true,      // Ultimate ability activation text
     flash: true,            // "FLASH!" teleport damage
     rasengan: true,         // Rasengan hit effects
+    text: true,             // Generic text
 };
 
 /**
@@ -145,5 +146,9 @@ export class CombatTextHelper {
 
     ultActivate(x, y, name) {
         return this.spawn('ultActivate', x, y, name, '#ffffff');
+    }
+
+    text(x, y, content, color) {
+        return this.spawn('text', x, y, content, color);
     }
 }

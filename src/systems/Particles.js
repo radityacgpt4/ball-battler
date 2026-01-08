@@ -56,6 +56,18 @@ export class ParticleSystem {
         }
     }
 
+    spawnShockwave(x, y, color = '#ffffff') {
+        this.particles.push({
+            type: 'shockwave',
+            x: x, y: y,
+            radius: 10,
+            maxRadius: 100,
+            life: 1.0,
+            decay: 0.05,
+            color: color
+        });
+    }
+
     spawnWallImpact(x, y) {
         for (let i = 0; i < 30; i++) {
             this.particles.push({
@@ -77,6 +89,105 @@ export class ParticleSystem {
             decay: 0.04,
             color: '#ff4444'
         });
+    }
+
+    spawnBlackFlash(x, y) {
+        // Core Black Hole Distortion
+        this.particles.push({
+            type: 'shockwave',
+            x: x, y: y,
+            radius: 5,
+            maxRadius: 120,
+            life: 1.0,
+            decay: 0.05,
+            color: '#000000', // Black Core
+            lineWidth: 10
+        });
+
+        // Red Cursed Energy Sparks
+        for (let i = 0; i < 20; i++) {
+            this.particles.push({
+                type: 'bolt',
+                segments: [
+                    { x: x, y: y },
+                    { x: x + (Math.random() - 0.5) * 100, y: y + (Math.random() - 0.5) * 100 }
+                ],
+                life: 0.8,
+                decay: 0.1,
+                color: '#FF0000', // Red Lightning
+                width: 3
+            });
+        }
+
+        // Debris
+        for (let i = 0; i < 15; i++) {
+            this.particles.push({
+                x, y,
+                color: '#000000',
+                vx: (Math.random() - 0.5) * 12,
+                vy: (Math.random() - 0.5) * 12,
+                life: 1.0, decay: 0.04,
+                size: Math.random() * 6 + 2,
+                type: 'dot'
+            });
+        }
+    }
+
+    spawnSuperBlackFlash(x, y) {
+        // Massive Distortion Ring
+        this.particles.push({
+            type: 'shockwave',
+            x: x, y: y,
+            radius: 5,
+            maxRadius: 250,
+            life: 1.5,
+            decay: 0.03,
+            color: '#000000',
+            lineWidth: 25
+        });
+
+        // Glowing red outer ring
+        this.particles.push({
+            type: 'shockwave',
+            x: x, y: y,
+            radius: 10,
+            maxRadius: 200,
+            life: 1.0,
+            decay: 0.05,
+            color: '#FF0000',
+            lineWidth: 5
+        });
+
+        // Thick Red Lightning Bolts
+        for (let i = 0; i < 40; i++) {
+            this.particles.push({
+                type: 'bolt',
+                segments: [
+                    { x: x, y: y },
+                    { x: x + (Math.random() - 0.5) * 200, y: y + (Math.random() - 0.5) * 200 }
+                ],
+                life: 1.2,
+                decay: 0.05,
+                color: '#FF0000',
+                width: 5
+            });
+        }
+
+        // Huge Debris Burst
+        for (let i = 0; i < 40; i++) {
+            this.particles.push({
+                x, y,
+                color: Math.random() < 0.3 ? '#FF0000' : '#000000',
+                vx: (Math.random() - 0.5) * 25,
+                vy: (Math.random() - 0.5) * 25,
+                life: 1.5, decay: 0.02,
+                size: Math.random() * 12 + 4,
+                type: 'dot'
+            });
+        }
+
+        // Screenshake simulated via particles if we had it, but here we just add text
+        this.spawnText(x, y - 50, "MAX BLACK FLASH!!", "#FF0000");
     }
 
     spawnBolt(segments, color, width = 5) {

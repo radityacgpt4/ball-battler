@@ -441,6 +441,105 @@ export class Renderer {
             ctx.closePath();
             ctx.fill();
         });
+
+        // Divine General - Golden 8-Spoke Wheel
+        this.registerAccessory('DIVINE_GENERAL', (ctx, fighter) => {
+            ctx.save();
+            ctx.rotate(-fighter.angle + (fighter.wheelRotation || 0));
+
+            const wheelRadius = fighter.radius + 15;
+
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#FFD700';
+
+            // Outer Ring
+            ctx.beginPath();
+            ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = '#B8860B';
+            ctx.stroke();
+
+            // Inner Highlight
+            ctx.beginPath();
+            ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#FFD700';
+            ctx.stroke();
+
+            const startR = fighter.radius + 3;
+            const endR = fighter.radius + 18;
+
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#B8860B';
+
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const sx = Math.cos(angle) * startR;
+                const sy = Math.sin(angle) * startR;
+                const ex = Math.cos(angle) * endR;
+                const ey = Math.sin(angle) * endR;
+
+                ctx.beginPath();
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
+
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+            if (fighter.hp < fighter.maxHp * 0.5 || fighter.activeEffects.adaptationActivated) {
+                ctx.save();
+                ctx.rotate(-fighter.angle);
+                const stored = fighter.activeEffects.displayStoredDamage || 0;
+                const text = `${stored}/15`;
+                ctx.fillStyle = "#00BFFF";
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 2;
+                ctx.font = "bold 16px monospace";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                const textY = -fighter.radius - 40;
+                ctx.strokeText(text, 0, textY);
+                ctx.fillText(text, 0, textY);
+                ctx.restore();
+            }
+        });
+
+        // Divine Brawler - Fists
+        this.registerAccessory('DIVINE_BRAWLER', (ctx, fighter) => {
+            const fistSize = 10;
+            const fistDist = fighter.radius - 2;
+            const separation = 12;
+
+            ctx.fillStyle = fighter.color;
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+
+            // Right Fist
+            ctx.beginPath();
+            ctx.roundRect(fistDist, -separation - fistSize / 2, fistSize + 4, fistSize, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            // Left Fist
+            ctx.beginPath();
+            ctx.roundRect(fistDist, separation - fistSize / 2, fistSize + 4, fistSize, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            // Knuckle highlights for "tech/fighter" look
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(fistDist + 8, -separation, 2, 0, Math.PI * 2);
+            ctx.arc(fistDist + 8, separation, 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
 }
 

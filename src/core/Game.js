@@ -57,33 +57,93 @@ export class Game {
         this.running = false;
         document.getElementById('char-select').style.display = 'flex';
         document.getElementById('end-screen').style.display = 'none';
+
+        // Default selections if none
+        if (!this.p1Type) this.p1Type = 'SWORD_MASTER';
+        if (!this.p2Type) this.p2Type = 'SNIPER';
+
         this.renderCharSelect();
     }
 
     renderCharSelect() {
         const types = Object.keys(FIGHTER_TYPES);
-        const self = this;
+        const grid = document.getElementById('char-grid');
+        grid.innerHTML = '';
 
-        const createBtns = (col, playerNum) => {
-            col.innerHTML = `<div class="p-title">PLAYER ${playerNum}</div>`;
-            types.forEach(key => {
-                const data = FIGHTER_TYPES[key];
-                const btn = document.createElement('div');
-                btn.className = 'char-btn';
-                const current = playerNum === 1 ? self.p1Type : self.p2Type;
-                if (current === key) btn.classList.add('active');
-                btn.innerHTML = `<span class="char-icon" style="background:${data.color}"></span> P${playerNum} - ${data.name}`;
-                btn.onclick = () => {
-                    if (playerNum === 1) self.p1Type = key;
-                    else self.p2Type = key;
-                    self.renderCharSelect();
-                };
-                col.appendChild(btn);
-            });
-        };
+        types.forEach(key => {
+            const data = FIGHTER_TYPES[key];
+            const item = document.createElement('div');
+            item.className = 'grid-item';
 
-        createBtns(document.getElementById('p1-col'), 1);
-        createBtns(document.getElementById('p2-col'), 2);
+            // Highlight selections
+            if (this.p1Type === key && this.p2Type === key) item.classList.add('selected-both');
+            else if (this.p1Type === key) item.classList.add('selected-p1');
+            else if (this.p2Type === key) item.classList.add('selected-p2');
+
+            item.innerHTML = `
+                <div class="grid-icon" style="background:${data.color}"></div>
+                <div class="grid-name">${data.name}</div>
+            `;
+
+            item.onclick = (e) => {
+                // simple toggle: click selects for P1, right-click (or special modifier) for P2?
+                // Let's do: if left side of button click P1, right side P2? 
+                // Or just alternate? Let's just do left-click P1, right-click P2 for ease of use in dev,
+                // but for "AI automation" maybe a simpler toggle.
+                // Let's use a clear P1/P2 button inside or just click order.
+                // Better: If already P1, move to P2.
+                if (this.p1Type !== key) {
+                    this.p1Type = key;
+                } else {
+                    this.p2Type = key;
+                }
+                this.renderCharSelect();
+            };
+
+            // Right click for P2 selection
+            item.oncontextmenu = (e) => {
+                e.preventDefault();
+                this.p2Type = key;
+                this.renderCharSelect();
+            };
+
+            grid.appendChild(item);
+        });
+
+        this.updateDetailPanel(1, this.p1Type);
+        this.updateDetailPanel(2, this.p2Type);
+    }
+
+    updateDetailPanel(playerNum, type) {
+        const data = FIGHTER_TYPES[type];
+        const prefix = `p${playerNum}`;
+
+        document.getElementById(`${prefix}-detail-name`).innerText = data.name;
+        document.getElementById(`${prefix}-detail-name`).style.color = data.color;
+
+        // Stats
+        const statsEl = document.getElementById(`${prefix}-detail-stats`);
+        statsEl.innerHTML = `
+            <div class="stat-item">HP <span class="stat-val">${data.hp}</span></div>
+            <div class="stat-item">SPD <span class="stat-val">${data.speed}</span></div>
+            <div class="stat-item">MASS <span class="stat-val">${data.mass}</span></div>
+        `;
+
+        // Skills
+        const skillsEl = document.getElementById(`${prefix}-detail-skills`);
+        skillsEl.innerHTML = '';
+
+        ['atk', 'def', 'ult'].forEach(slot => {
+            const skill = data.skills[slot];
+            const div = document.createElement('div');
+            div.className = 'detail-skill-item';
+            div.innerHTML = `
+                <div class="d-skill-title">${slot}</div>
+                <div class="d-skill-name">${skill.name || slot.toUpperCase()}</div>
+                <div class="d-skill-desc">${skill.desc || 'No description available.'}</div>
+            `;
+            skillsEl.appendChild(div);
+        });
     }
 
     startMatch() {
@@ -212,9 +272,9 @@ export class Game {
                 }
             };
 
-            updateCircle('atk', ent.cooldowns.atk, ent.maxCooldowns.atk, ent.skills.atk.type.includes('PASSIVE'));
-            updateCircle('def', ent.cooldowns.def, ent.maxCooldowns.def, ent.skills.def.type.includes('PASSIVE') || ent.skills.def.type === 'SHIELD_DEFLECT');
-            updateCircle('ult', ent.cooldowns.ult, ent.maxCooldowns.ult, false);
+            updateCircle('atk', ent.cooldowns.atk, ent.maxCooldowns.atk, ent.skills.atk.isPassive);
+            updateCircle('def', ent.cooldowns.def, ent.maxCooldowns.def, ent.skills.def.isPassive);
+            updateCircle('ult', ent.cooldowns.ult, ent.maxCooldowns.ult, ent.skills.ult.isPassive);
         });
     }
 
@@ -563,8 +623,15 @@ export class Game {
                 this.handleArenaShrink();
             }
 
+            // Performance profiling (check console for stutter sources)
+            // console.time('entities');
             this.entities.forEach(ent => ent.update(this.entities, this.timeScale));
+            // console.timeEnd('entities');
+
+            // console.time('collisions');
             this.resolveCollisions();
+            // console.timeEnd('collisions');
+
             this.projectiles.forEach(p => p.update(this.timeScale));
             this.updateUI();
             this.checkWinCondition();
@@ -589,9 +656,11 @@ export class Game {
             this.ctx.fillRect(this.arenaBounds.x + this.arenaBounds.width, this.arenaBounds.y, this.width - (this.arenaBounds.x + this.arenaBounds.width), this.arenaBounds.height); // Right
         }
 
+        // console.time('render');
         this.entities.forEach(ent => renderer.drawFighter(this.ctx, ent));
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.particles.updateAndDraw(this.ctx);
+        // console.timeEnd('render');
 
         if (this.running) requestAnimationFrame(this.loop.bind(this));
     }

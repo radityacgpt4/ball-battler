@@ -14,6 +14,8 @@ import { WallSlamAbility } from '../abilities/SpecialAbility.js';
 import { SniperAtkAbility, ClaymoreAbility, SniperUltAbility } from '../abilities/SniperAbility.js';
 import { AxeAtkAbility, BerserkerDefAbility, ExecuteUltAbility } from '../abilities/AxeAbility.js';
 import { BallistaAtkAbility, BallistaDefAbility, BallistaUltAbility } from '../abilities/BallistaAbility.js';
+import { DivineGeneralAtkAbility, DivineGeneralDefAbilityWithUlt, DivineGeneralUltAbility } from '../abilities/DivineGeneralAbility.js';
+import { DivineBrawlerAtkAbility, DivineBrawlerDefAbility, DivineBrawlerUltAbility } from '../abilities/DivineBrawlerAbility.js';
 
 class AbilityRegistryClass {
     constructor() {
@@ -87,6 +89,8 @@ class AbilityRegistryClass {
         this.register('SNIPER_SHOT', SniperAtkAbility);
         this.register('AXE_SWING', AxeAtkAbility);
         this.register('BALLISTA_SHOT', BallistaAtkAbility);
+        this.register('EIGHTFOLD_STRIKE', DivineGeneralAtkAbility);
+        this.register('BLACK_FLASH', DivineBrawlerAtkAbility);
 
         // Defense abilities
         this.register('PARRY_PASSIVE', ParryPassiveAbility);
@@ -98,6 +102,8 @@ class AbilityRegistryClass {
         this.register('CLAYMORE', ClaymoreAbility);
         this.register('BERSERKER_RAGE', BerserkerDefAbility);
         this.register('BARRIER_SHIELD', BallistaDefAbility);
+        this.register('ADAPTATION_HEAL', DivineGeneralDefAbilityWithUlt);
+        this.register('BOOGIE_WOOGIE', DivineBrawlerDefAbility);
 
         // Ultimate abilities
         this.register('DASH_ASSAULT', DashAssaultAbility);
@@ -109,6 +115,8 @@ class AbilityRegistryClass {
         this.register('SNIPER_MODE', SniperUltAbility);
         this.register('EXECUTE', ExecuteUltAbility);
         this.register('SIEGE_MODE', BallistaUltAbility);
+        this.register('ADAPTATION_ULT', DivineGeneralUltAbility);
+        this.register('UNSHAKEABLE_FOCUS', DivineBrawlerUltAbility);
     }
 }
 

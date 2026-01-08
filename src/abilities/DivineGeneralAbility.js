@@ -31,7 +31,8 @@ export class DivineGeneralAtkAbility extends Ability {
             let hit = false;
             
             for (const enemy of context.enemies) {
-                if (Physics.checkCollision(fighter, enemy)) {
+                const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
+                if (dist < fighter.radius + enemy.radius) {
                     // Check cooldown again to be safe
                     if (fighter.cooldowns.atk <= 0) {
                         this.performAttack(fighter, enemy);

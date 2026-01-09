@@ -36,8 +36,8 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 120,
-                damage: 7,
-                dashDistance: 400,
+                damage: 8,
+                dashDistance: 300,
                 dashTimer: 15
             }
         }
@@ -55,7 +55,7 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 90,
                 range: 800,
-                damage: 15,
+                damage: 18,
                 bounces: 3,
                 damageDecayWall: 0.8,
                 damageDecayShield: 0.9
@@ -67,7 +67,7 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 radius: 60,
-                damage: 2,
+                damage: 5,
                 tickRate: 30
             },
             ult: {
@@ -96,7 +96,7 @@ export const FIGHTER_TYPES = {
                 count: 10,
                 damage: 3,
                 projectileSpeed: 15,
-                spreadAmount: 0.1,
+                spreadAmount: 0.15,
                 burstDelay: 2
             },
             def: {
@@ -108,7 +108,7 @@ export const FIGHTER_TYPES = {
                 cooldown: 120,
                 range: 150,
                 dashSpeed: 8,
-                dashTimer: 20
+                dashTimer: 30
             },
             ult: {
                 name: "Frag Grenade",
@@ -176,15 +176,15 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 120,
                 count: 2,
-                damage: 5,
+                damage: 7,
                 delay: 90,
-                zapDuration: 45,
+                zapDuration: 60,
                 zapImmunityDuration: 60,
                 kunaiSpeed: 7,
                 kunaiSpeedVariance: 2,
                 coneAngle: Math.PI,
                 maxDist: 220,
-                maxDistVariance: 50
+                maxDistVariance: 40
             },
             def: {
                 name: "Substitution",
@@ -250,12 +250,12 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 120,
-                damage: 9,
+                damage: 7,
                 count: 5,
                 spreadAngle: 0.5,
                 projectileSpeed: 6,
                 turnSpeed: 0.08,
-                radius: 5
+                radius: 6
             }
         }
     },
@@ -273,10 +273,10 @@ export const FIGHTER_TYPES = {
                 cooldown: 90,
                 damage: 12,
                 stun: 60,
-                projectileSpeed: 20,
+                projectileSpeed: 21,
                 projectileRadius: 5,
                 ultProjectileRadius: 8,
-                recoilForce: 5,
+                recoilForce: 25,
                 laserMaxDist: 800
             },
             def: {
@@ -329,8 +329,8 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 stackThreshold: 0.1,
-                speedBonusPerStack: 0.10,
-                rotBonusPerStack: 0.18
+                speedBonusPerStack: 0.11,
+                rotBonusPerStack: 0.17
             },
             ult: {
                 name: "Execution",
@@ -341,8 +341,8 @@ export const FIGHTER_TYPES = {
                 cooldown: 60,
                 executeRange: 80,
                 executeThreshold: 30,
-                stunDuration: 120,
-                stunDamage: 10,
+                stunDuration: 45,
+                stunDamage: 5,
                 ultVisualDuration: 30,
                 comboRequired: 2
             }
@@ -351,7 +351,7 @@ export const FIGHTER_TYPES = {
     BALLISTA: {
         name: "Ballista",
         color: "#8B4513",
-        hp: 100, mass: 2, speed: 3.5, rotationSpeed: 0.09,
+        hp: 100, mass: 2, speed: 3.5, rotationSpeed: 0.1,
         skills: {
             atk: {
                 name: "Heavy Bolt",
@@ -449,7 +449,7 @@ export const FIGHTER_TYPES = {
                 critMultHigh: 6,
                 critMultMid: 3,
                 critMultLow: 2,
-                hpThresholdHigh: 0.75,
+                hpThresholdHigh: 0.8,
                 hpThresholdMid: 0.5,
                 baseKnockback: 25,
                 knockbackPerMult: 2,
@@ -475,9 +475,9 @@ export const FIGHTER_TYPES = {
                 type: "UNSHAKEABLE_FOCUS",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 600,
-                duration: 300,
-                immovableMass: 20
+                cooldown: 240,
+                duration: 180,
+                immovableMass: 16
             }
         }
     },
@@ -529,8 +529,8 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 300,
-                damage: 3,
-                arrowCount: 12,
+                damage: 5,
+                arrowCount: 8,
                 coneAngle: Math.PI / 3,
                 arrowSpeed: 22,
                 arrowRadius: 3,

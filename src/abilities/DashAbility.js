@@ -1,6 +1,9 @@
 /**
- * Dash Ability
- * Handles dash-based abilities like Sword Master's Dash Assault and Soldier's Retreat
+ * Dash Abilities
+ *
+ * Dash Assault, Retreat, Flash Barrage
+ *
+ * ALL configurable properties are now loaded from fighters.js
  */
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
@@ -10,25 +13,28 @@ import { logger } from '../systems/Logger.js';
 export class DashAssaultAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.damage = config.damage;
+        // All values from config (fighters.js)
+        this.damage = config.damage || 7;
+        this.dashDistance = config.dashDistance || 400;
+        this.dashTimer = config.dashTimer || 15;
     }
 
     execute(fighter, context) {
         const { enemies, game } = context;
 
         fighter.isDashing = true;
-        fighter.dashTimer = 15;
+        fighter.dashTimer = this.dashTimer;
 
         const target = enemies.find(e => e !== fighter && !e.isDead);
         let aimAngle = fighter.angle;
         if (target) aimAngle = Math.atan2(target.y - fighter.y, target.x - fighter.x);
 
         fighter.angle = aimAngle;
-        const dist = 400;
+        const dist = this.dashDistance;
         const destX = fighter.x + Math.cos(aimAngle) * dist;
         const destY = fighter.y + Math.sin(aimAngle) * dist;
 
-        game.particles.spawnSlash(fighter.x, fighter.y, destX, destY, '#ff0000'); // Red Slash
+        game.particles.spawnSlash(fighter.x, fighter.y, destX, destY, '#ff0000');
         audioEngine.playSwordSwing();
 
         if (target && Physics.lineCircleIntersect(fighter.x, fighter.y, destX, destY, target.x, target.y, target.radius + 15)) {
@@ -48,7 +54,10 @@ export class DashAssaultAbility extends Ability {
 export class RetreatAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.range = config.range;
+        // All values from config (fighters.js)
+        this.range = config.range || 150;
+        this.dashSpeed = config.dashSpeed || 8;
+        this.dashTimer = config.dashTimer || 20;
     }
 
     canUse(fighter, context) {
@@ -68,14 +77,13 @@ export class RetreatAbility extends Ability {
         if (!enemy) return;
 
         fighter.isDashing = true;
-        fighter.dashTimer = 20;
+        fighter.dashTimer = this.dashTimer;
 
         const angle = Math.atan2(fighter.y - enemy.y, fighter.x - enemy.x);
-        const dashSpeed = 8;
-        fighter.dx = Math.cos(angle) * dashSpeed;
-        fighter.dy = Math.sin(angle) * dashSpeed;
-        
-        // Soldier Buff: Force aim to enemy (opposite of dash)
+        fighter.dx = Math.cos(angle) * this.dashSpeed;
+        fighter.dy = Math.sin(angle) * this.dashSpeed;
+
+        // Force aim to enemy
         fighter.angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
 
         game.particles.spawn(fighter.x, fighter.y, '#54a0ff', 5);
@@ -96,36 +104,35 @@ export class FlashBarrageAbility extends Ability {
         super(config, slot);
         this.kunaiConfig = kunaiConfig;
         this.ProjectileClass = ProjectileClass;
+        // All values from config (fighters.js)
         this.rasenganDamage = config.rasenganDamage || 12;
+        this.kunaiCount = config.kunaiCount || 2;
+        this.kunaiSpeed = config.kunaiSpeed || 9;
+        this.maxDistBase = config.maxDistBase || 350;
+        this.maxDistRatio = config.maxDistRatio || 0.4;
     }
 
     execute(fighter, context) {
         const { game } = context;
         const Projectile = this.ProjectileClass;
-        const count = 2; // Reduced to 2 as requested
+        const count = this.kunaiCount;
 
         fighter.cooldowns.ult = this.cooldown;
-        // Prevent normal attack from overriding the ult sequence
         fighter.cooldowns.atk = Math.max(fighter.cooldowns.atk, this.kunaiConfig.delay + 10);
 
         fighter.teleportDelayTimer = this.kunaiConfig.delay;
         fighter.kunaiPending = [];
 
-        // Store rasengan damage for use when dash ends
         fighter.pendingRasengan = this.rasenganDamage;
 
-        // Calculate max distance: base 350, but capped at 80% of arena diagonal
-        const baseMaxDist = 350;
         const bounds = game.arenaBounds;
         const arenaDiagonal = Math.hypot(bounds.width, bounds.height);
-        const maxAllowedDist = arenaDiagonal * 0.4; // 80% of half-diagonal (from center)
-        const maxDist = Math.min(baseMaxDist, maxAllowedDist);
+        const maxAllowedDist = arenaDiagonal * this.maxDistRatio;
+        const maxDist = Math.min(this.maxDistBase, maxAllowedDist);
 
-        // Ensure 360 coverage even with low count
         for (let i = 0; i < count; i++) {
-            // ULT: 360 Degree Spread (Evenly spaced)
             const throwAngle = fighter.angle + ((Math.PI * 2) / count) * i;
-            const speed = 9;
+            const speed = this.kunaiSpeed;
 
             const p = new Projectile(
                 fighter,
@@ -137,12 +144,11 @@ export class FlashBarrageAbility extends Ability {
                 game
             );
 
-            // Kunai specific props
             p.isKunai = true;
             p.isUlt = true;
             p.radius = 6;
             p.maxDist = maxDist;
-            
+
             game.projectiles.push(p);
             fighter.kunaiPending.push(p);
             audioEngine.playKunaiThrow();

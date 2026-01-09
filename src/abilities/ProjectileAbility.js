@@ -1,6 +1,9 @@
 /**
- * Projectile Ability
- * Handles burst fire, kunai throws, and grenades
+ * Projectile Abilities
+ *
+ * Burst Fire, Kunai, Grenade, Missile Barrage
+ *
+ * ALL configurable properties are now loaded from fighters.js
  */
 import { Ability } from './Ability.js';
 import { Projectile } from '../entities/Projectile.js';
@@ -11,8 +14,12 @@ import { logger } from '../systems/Logger.js';
 export class BurstFireAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.count = config.count;
-        this.damage = config.damage;
+        // All values from config (fighters.js)
+        this.count = config.count || 10;
+        this.damage = config.damage || 3;
+        this.projectileSpeed = config.projectileSpeed || 15;
+        this.spreadAmount = config.spreadAmount || 0.1;
+        this.burstDelay = config.burstDelay || 2;
     }
 
     update(fighter, context) {
@@ -28,13 +35,13 @@ export class BurstFireAbility extends Ability {
             if (fighter.activeEffects.burstTimer > 0) {
                 fighter.activeEffects.burstTimer -= 1 * timeScale;
             } else {
-                const spread = (Math.random() - 0.5) * 0.1;
+                const spread = (Math.random() - 0.5) * this.spreadAmount;
                 const p = new Projectile(
                     fighter,
                     fighter.x + Math.cos(fighter.angle) * 25,
                     fighter.y + Math.sin(fighter.angle) * 25,
                     fighter.angle + spread,
-                    15,
+                    this.projectileSpeed,
                     this.damage,
                     game
                 );
@@ -43,7 +50,7 @@ export class BurstFireAbility extends Ability {
                 audioEngine.playGunshot();
 
                 fighter.activeEffects.burstCount--;
-                fighter.activeEffects.burstTimer = 2;
+                fighter.activeEffects.burstTimer = this.burstDelay;
             }
         }
     }
@@ -52,11 +59,17 @@ export class BurstFireAbility extends Ability {
 export class KunaiAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.count = config.count;
-        this.damage = config.damage;
-        this.delay = config.delay;
-        this.zapStunDuration = config.zapDuration || 30; // 0.5 second stun
-        this.zapImmunityDuration = 60; // 1 second immunity
+        // All values from config (fighters.js)
+        this.count = config.count || 2;
+        this.damage = config.damage || 5;
+        this.delay = config.delay || 90;
+        this.zapStunDuration = config.zapDuration || 45;
+        this.zapImmunityDuration = config.zapImmunityDuration || 60;
+        this.kunaiSpeed = config.kunaiSpeed || 7;
+        this.kunaiSpeedVariance = config.kunaiSpeedVariance || 2;
+        this.coneAngle = config.coneAngle || Math.PI;
+        this.maxDist = config.maxDist || 220;
+        this.maxDistVariance = config.maxDistVariance || 50;
     }
 
     canUse(fighter, context) {
@@ -71,21 +84,17 @@ export class KunaiAbility extends Ability {
         fighter.teleportDelayTimer = this.delay;
         fighter.kunaiPending = [];
 
-        const coneAngle = Math.PI / 1; // 60 degrees for Normal atk
-
         for (let i = 0; i < count; i++) {
             let throwAngle;
             let speed;
 
             if (isUlt) {
-                // ULT: 360 Degree Spread (Evenly spaced)
                 throwAngle = fighter.angle + ((Math.PI * 2) / count) * i;
                 speed = 9;
             } else {
-                // NORMAL: Random Cone in front
-                const offset = (Math.random() - 0.5) * coneAngle;
+                const offset = (Math.random() - 0.5) * this.coneAngle;
                 throwAngle = fighter.angle + offset;
-                speed = 7 + Math.random() * 2;
+                speed = this.kunaiSpeed + Math.random() * this.kunaiSpeedVariance;
             }
 
             const p = new Projectile(
@@ -98,11 +107,10 @@ export class KunaiAbility extends Ability {
                 game
             );
 
-            // Kunai specific props
             p.isKunai = true;
             p.isUlt = isUlt;
             p.radius = 6;
-            p.maxDist = 220 + Math.random() * 50;
+            p.maxDist = this.maxDist + Math.random() * this.maxDistVariance;
 
             game.projectiles.push(p);
             fighter.kunaiPending.push(p);
@@ -119,49 +127,13 @@ export class KunaiAbility extends Ability {
             const embeddedKunai = fighter.kunaiPending.filter(k => k.isEmbedded && k.active !== false);
 
             if (embeddedKunai.length >= 2) {
-                // Draw electricity and check for hits between pairs
                 for (let i = 0; i < embeddedKunai.length - 1; i++) {
                     const k1 = embeddedKunai[i];
                     const k2 = embeddedKunai[i + 1];
 
-                    // Skip if either kunai is from Ultimate (Rasengan instead)
                     if (k1.isUlt || k2.isUlt) continue;
 
-                    // Skip if either kunai is from Ultimate (Rasengan instead)
-                    if (k1.isUlt || k2.isUlt) {
-                        // Rasengan Effect (Bomb/Swirl) for ULT Kunai
-                        if (Math.random() < 0.3) {
-                            const k = k1.isUlt ? k1 : k2;
-                            game.particles.particles.push({
-                                x: k.x, y: k.y,
-                                vx: (Math.random() - 0.5) * 2,
-                                vy: (Math.random() - 0.5) * 2,
-                                life: 0.5, decay: 0.05,
-                                size: 3, color: '#00BFFF',
-                                type: 'dot'
-                            });
-                        }
-                        continue;
-                    }
-
-                    // Skip if either kunai is from Ultimate (Rasengan instead)
-                    if (k1.isUlt || k2.isUlt) {
-                        // Rasengan Effect (Bomb/Swirl) for ULT Kunai
-                        if (Math.random() < 0.3) {
-                            const k = k1.isUlt ? k1 : k2;
-                            game.particles.particles.push({
-                                x: k.x, y: k.y,
-                                vx: (Math.random() - 0.5) * 2,
-                                vy: (Math.random() - 0.5) * 2,
-                                life: 0.5, decay: 0.05,
-                                size: 3, color: '#00BFFF',
-                                type: 'dot'
-                            });
-                        }
-                        continue;
-                    }
-
-                    // Visual: continuous lightning bolt between kunai (Reduced intensity - 30% thinner)
+                    // Visual: continuous lightning bolt between kunai
                     if (Math.random() < 0.15) {
                         game.particles.spawnBolt([{ x: k1.x, y: k1.y }, { x: k2.x, y: k2.y }], '#00FFFF', 3);
                     }
@@ -169,11 +141,11 @@ export class KunaiAbility extends Ability {
                     // Check if enemies cross the line
                     for (const enemy of enemies) {
                         if (enemy === fighter || enemy.isDead) continue;
-                        if (enemy.kunaiZapImmune > 0) continue; // Prevent repeated stuns
+                        if (enemy.kunaiZapImmune > 0) continue;
 
                         if (Physics.lineCircleIntersect(k1.x, k1.y, k2.x, k2.y, enemy.x, enemy.y, enemy.radius)) {
-                            enemy.applyStatus('STUN', 45); // 0.75s stun
-                            enemy.kunaiZapImmune = this.zapImmunityDuration; // Immunity frames (1s)
+                            enemy.applyStatus('STUN', this.zapStunDuration);
+                            enemy.kunaiZapImmune = this.zapImmunityDuration;
                             game.particles.spawnBolt([{ x: k1.x, y: k1.y }, { x: enemy.x, y: enemy.y }, { x: k2.x, y: k2.y }], '#00FFFF', 3);
                             audioEngine.playZap();
                         }
@@ -198,7 +170,12 @@ export class KunaiAbility extends Ability {
 export class GrenadeAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.damage = config.damage;
+        // All values from config (fighters.js)
+        this.damage = config.damage || 20;
+        this.explosionRadius = config.explosionRadius || 80;
+        this.airTime = config.airTime || 60;
+        this.maxDistance = config.maxDistance || 400;
+        this.radius = config.radius || 6;
     }
 
     execute(fighter, context) {
@@ -207,10 +184,9 @@ export class GrenadeAbility extends Ability {
         let dist = 300;
         if (target) dist = Physics.dist(fighter.x, fighter.y, target.x, target.y);
 
-        dist = Math.min(dist, 400);
+        dist = Math.min(dist, this.maxDistance);
 
-        const airTime = 60;
-        const speed = dist / airTime;
+        const speed = dist / this.airTime;
 
         const p = new Projectile(
             fighter,
@@ -222,8 +198,9 @@ export class GrenadeAbility extends Ability {
             game
         );
 
-        p.radius = 6;
+        p.radius = this.radius;
         p.isGrenade = true;
+        p.explosionRadius = this.explosionRadius;
         p.z = 10;
         p.vz = 15;
 
@@ -239,16 +216,20 @@ export class GrenadeAbility extends Ability {
 export class MissileBarrageAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.count = 5;
-        this.damage = config.damage;
+        // All values from config (fighters.js)
+        this.count = config.count || 5;
+        this.damage = config.damage || 9;
+        this.spreadAngle = config.spreadAngle || 0.5;
+        this.projectileSpeed = config.projectileSpeed || 6;
+        this.turnSpeed = config.turnSpeed || 0.08;
+        this.radius = config.radius || 5;
     }
 
     execute(fighter, context) {
         const { game } = context;
 
         for (let i = 0; i < this.count; i++) {
-            // Spread missiles in an arc
-            const spread = (i - (this.count - 1) / 2) * 0.5; // 0.5 rad spread
+            const spread = (i - (this.count - 1) / 2) * this.spreadAngle;
             const angle = fighter.angle + spread;
 
             const p = new Projectile(
@@ -256,14 +237,14 @@ export class MissileBarrageAbility extends Ability {
                 fighter.x + Math.cos(angle) * 20,
                 fighter.y + Math.sin(angle) * 20,
                 angle,
-                6, // Initial speed
+                this.projectileSpeed,
                 this.damage,
                 game
             );
 
             p.isMissile = true;
-            p.radius = 5;
-            p.turnSpeed = 0.08; // Weak homing
+            p.radius = this.radius;
+            p.turnSpeed = this.turnSpeed;
 
             game.projectiles.push(p);
         }

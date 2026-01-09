@@ -1,6 +1,11 @@
 /**
  * Sniper Abilities
- * Handles Laser Sight, Sniper Shot, and Claymore
+ *
+ * ATK: Sniper Shot - High damage shot with stun
+ * DEF: Claymore - Trap that slows and damages
+ * ULT: Steady Aim - Mode that makes shots unblockable
+ *
+ * ALL configurable properties are now loaded from fighters.js
  */
 import { Ability } from './Ability.js';
 import { Projectile } from '../entities/Projectile.js';
@@ -10,39 +15,42 @@ import { audioEngine } from '../systems/Audio.js';
 export class SniperAtkAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.cooldown = config.cooldown || 90; // 1.5s
+        // All values from config (fighters.js)
+        this.cooldown = config.cooldown || 90;
         this.damage = config.damage || 12;
-        this.stunDuration = config.stun || 60; // 1s
+        this.stunDuration = config.stun || 60;
         this.projectileSpeed = config.projectileSpeed || 20;
+        this.projectileRadius = config.projectileRadius || 5;
+        this.ultProjectileRadius = config.ultProjectileRadius || 8;
+        this.recoilForce = config.recoilForce || 5;
+        this.laserMaxDist = config.laserMaxDist || 800;
+
         this.laserColor = '#ff0000';
     }
 
-    // Passive update to calculate laser sight
     update(fighter, context) {
         const { game } = context;
 
         // Sync laser color with Ult state
         this.laserColor = fighter.activeEffects.ultActive ? '#00ff00' : '#ff0000';
 
-        // Update Laser Sight Data
         if (fighter.cooldowns.atk <= 0) {
             this.updateLaserSight(fighter, game);
             this.checkLaserTrigger(fighter, context);
         } else {
-            fighter.laserDist = 0; // Hide when on cooldown
+            fighter.laserDist = 0;
         }
     }
 
     updateLaserSight(fighter, game) {
         const angle = fighter.angle;
-        // Perform raycast to stop at walls
         const bounds = game.arenaBounds;
         const hit = Physics.rayBoxIntersect(fighter.x, fighter.y, Math.cos(angle), Math.sin(angle), bounds.x, bounds.y, bounds.width, bounds.height);
 
         if (hit) {
             fighter.laserDist = hit.dist;
         } else {
-            fighter.laserDist = 800; // Default max
+            fighter.laserDist = this.laserMaxDist;
         }
         fighter.laserColor = this.laserColor;
     }
@@ -53,20 +61,17 @@ export class SniperAtkAbility extends Ability {
         const dirX = Math.cos(angle);
         const dirY = Math.sin(angle);
 
-        // Check if any enemy is touching the laser line
         for (let enemy of enemies) {
             if (enemy === fighter || enemy.isDead) continue;
 
             const hit = Physics.rayCircleIntersect(fighter.x, fighter.y, dirX, dirY, enemy.x, enemy.y, enemy.radius);
 
             if (hit) {
-                // Ensure no wall in between
                 const distToEnemy = hit.dist;
                 const bounds = game.arenaBounds;
                 const wallHit = Physics.rayBoxIntersect(fighter.x, fighter.y, dirX, dirY, bounds.x, bounds.y, bounds.width, bounds.height);
 
                 if (!wallHit || wallHit.dist > distToEnemy) {
-                    // Trigger Shot!
                     this.execute(fighter, context);
                     break;
                 }
@@ -91,14 +96,12 @@ export class SniperAtkAbility extends Ability {
 
         p.isSniperShot = true;
         p.stunDuration = this.stunDuration;
-        p.radius = 5;
+        p.radius = this.projectileRadius;
 
-        // Check for ULT buff (Sniper Mode)
+        // Check for ULT buff
         if (fighter.activeEffects.ultActive) {
             p.isUnblockable = true;
-            p.damage = this.damage; // Damage stays same, but unblockable
-            p.radius = 8; // Bigger caliber
-            // Note: Ult visual change handled in Projectile.draw or here
+            p.radius = this.ultProjectileRadius;
             this.laserColor = '#00ff00';
         } else {
             this.laserColor = '#ff0000';
@@ -106,27 +109,28 @@ export class SniperAtkAbility extends Ability {
 
         game.projectiles.push(p);
 
-        audioEngine.playGunshot(); // Or a bigger sound
+        audioEngine.playGunshot();
         game.particles.spawn(fighter.x, fighter.y, '#ffffff', 5);
 
         // Recoil
-        // Recoil (Increased 2.5x -> ~5.0)
-        fighter.dx -= Math.cos(fighter.angle) * 5;
-        fighter.dy -= Math.sin(fighter.angle) * 5;
+        fighter.dx -= Math.cos(fighter.angle) * this.recoilForce;
+        fighter.dy -= Math.sin(fighter.angle) * this.recoilForce;
     }
 }
 
 export class ClaymoreAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.cooldown = config.cooldown || 180; // 3 seconds
+        // All values from config (fighters.js)
+        this.cooldown = config.cooldown || 180;
         this.damage = config.damage || 5;
-        this.lifeTime = config.lifeTime || 360; // 6 seconds
-        this.slowDuration = config.slowDuration || 120; // 2 seconds
+        this.lifeTime = config.lifeTime || 360;
+        this.slowDuration = config.slowDuration || 120;
+        this.triggerRadius = config.triggerRadius || 10;
+        this.slideSpeed = config.slideSpeed || 2;
     }
 
     update(fighter, context) {
-        // Auto-drop every 3 seconds if available
         if (this.canUse(fighter, context)) {
             this.execute(fighter, context);
         }
@@ -140,8 +144,8 @@ export class ClaymoreAbility extends Ability {
             fighter,
             fighter.x,
             fighter.y,
-            fighter.angle + Math.PI, // Drop behind
-            2, // Slight slide speed
+            fighter.angle + Math.PI,
+            this.slideSpeed,
             this.damage,
             game
         );
@@ -149,32 +153,32 @@ export class ClaymoreAbility extends Ability {
         p.isClaymore = true;
         p.lifeTime = this.lifeTime;
         p.slowDuration = this.slowDuration;
-        p.radius = 10; // Trigger radius
+        p.radius = this.triggerRadius;
 
         game.projectiles.push(p);
-        audioEngine.playTone(600, 'sine', 0.1, 0.1); // Beep
+        audioEngine.playTone(600, 'sine', 0.1, 0.1);
     }
 }
 
 export class SniperUltAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.duration = config.duration || 300; // 5s maybe? Not specified, assume until toggle or duration
-        // The prompt implies a mode switch: "Change the laser pointer... change the firing projectile"
-        // Let's make it a duration buff
+        // All values from config (fighters.js)
+        this.duration = config.duration || 600;
+        this.cooldown = config.cooldown || 300;
     }
 
     execute(fighter, context) {
         const { game } = context;
 
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = 600; // 10 seconds of Sniper Mode
+        fighter.activeEffects.ultTimer = this.duration;
         fighter.cooldowns.ult = this.cooldown;
 
         game.particles.spawn(fighter.x, fighter.y, '#00ff00', 10);
         audioEngine.playPowerUp();
 
-        // Update Laser Color immediately for visual feedback
+        // Update Laser Color immediately
         if (fighter.abilities.atk instanceof SniperAtkAbility) {
             fighter.abilities.atk.laserColor = '#00ff00';
         }

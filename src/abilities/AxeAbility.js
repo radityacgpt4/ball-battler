@@ -1,6 +1,11 @@
 /**
  * Axeman Abilities
- * Contains specific logic for the Axeman fighter
+ *
+ * ATK: Heavy Swing - Giant axe with bleed on combo
+ * DEF: Berserker Rage - Speed scales with missing HP
+ * ULT: Execution - Instant kill on low HP enemies
+ *
+ * ALL configurable properties are now loaded from fighters.js
  */
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
@@ -10,9 +15,14 @@ import { logger } from '../systems/Logger.js';
 export class AxeAtkAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.range = 65;
-        this.damage = 9;
-        this.bleedDuration = 240; // 4 seconds
+        // All values from config (fighters.js)
+        this.range = config.range || 65;
+        this.damage = config.damage || 9;
+        this.bleedDuration = config.bleedDuration || 240;
+        this.swingCooldown = config.swingCooldown || 15;
+        this.blockedCooldown = config.blockedCooldown || 20;
+        this.comboTimer = config.comboTimer || 90;
+        this.comboThreshold = config.comboThreshold || 2;
     }
 
     update(fighter, context) {
@@ -21,7 +31,6 @@ export class AxeAtkAbility extends Ability {
             fighter.axemanComboTimer--;
             if (fighter.axemanComboTimer <= 0) {
                 fighter.axemanHits = 0;
-                // Optional: visual feedback for combo reset
             }
         }
 
@@ -32,49 +41,48 @@ export class AxeAtkAbility extends Ability {
 
         for (let enemy of enemies) {
             if (enemy === fighter || enemy.isDead) continue;
-            
+
             if (Physics.lineCircleIntersect(fighter.x, fighter.y, tipX, tipY, enemy.x, enemy.y, enemy.radius + 5)) {
-                // FIX: Use attacker position, not weapon tip (tip may extend past enemy, bypassing shield)
+                // Check shield block
                 if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                     if (fighter.cooldowns.atk <= 0) {
                         game.combatText.blocked(enemy.x, enemy.y - enemy.radius);
                         game.particles.spawn(enemy.x, enemy.y, '#ffffff', 5);
                         audioEngine.playBlock();
                         logger.log(`${enemy.name} blocked axe attack from ${fighter.name}`, 'combat');
-                        fighter.cooldowns.atk = 20;
+                        fighter.cooldowns.atk = this.blockedCooldown;
                     }
                     continue;
                 }
 
                 if (fighter.cooldowns.atk <= 0) {
-                    // Hit connect
-                    fighter.cooldowns.atk = 15; // Swing cooldown
-                    
+                    fighter.cooldowns.atk = this.swingCooldown;
+
                     // Damage
                     enemy.takeDamage(this.damage, false, false, fighter);
                     game.particles.spawn(tipX, tipY, '#ff0000', 5);
                     audioEngine.playSwordSwing();
                     audioEngine.playHit();
 
-                    // 1. Change rotation direction rapidly
+                    // Change rotation direction
                     fighter.rotationSpeed *= -1;
-                    
-                    // 2. Track consecutive hits
+
+                    // Track consecutive hits
                     fighter.axemanHits = (fighter.axemanHits || 0) + 1;
-                    fighter.axemanComboTimer = 90; // 1.5 second to land next hit
+                    fighter.axemanComboTimer = this.comboTimer;
 
                     // Show combo hit text
                     game.combatText.combo(fighter.x, fighter.y - 30, fighter.axemanHits);
                     logger.log(`${fighter.name} combo: ${fighter.axemanHits} HIT!`, 'combat');
 
-                    // 3. Bleed condition (If 2 consecutive hits connected)
-                    if (fighter.axemanHits >= 2) {
-                       enemy.applyStatus('BLEED', this.bleedDuration);
-                       game.combatText.bleed(enemy.x, enemy.y - enemy.radius);
-                       game.particles.spawn(enemy.x, enemy.y, '#ff0000', 5);
-                       logger.log(`${enemy.name} is BLEEDING from Axeman combo!`, 'status');
-                   }
-               }
+                    // Bleed condition
+                    if (fighter.axemanHits >= this.comboThreshold) {
+                        enemy.applyStatus('BLEED', this.bleedDuration);
+                        game.combatText.bleed(enemy.x, enemy.y - enemy.radius);
+                        game.particles.spawn(enemy.x, enemy.y, '#ff0000', 5);
+                        logger.log(`${enemy.name} is BLEEDING from Axeman combo!`, 'status');
+                    }
+                }
             }
         }
     }
@@ -83,6 +91,11 @@ export class AxeAtkAbility extends Ability {
 export class BerserkerDefAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
+        // All values from config (fighters.js)
+        this.stackThreshold = config.stackThreshold || 0.1;
+        this.speedBonusPerStack = config.speedBonusPerStack || 0.10;
+        this.rotBonusPerStack = config.rotBonusPerStack || 0.18;
+
         this.initialized = false;
     }
 
@@ -94,20 +107,17 @@ export class BerserkerDefAbility extends Ability {
         }
 
         const missingHpPct = (fighter.maxHp - fighter.hp) / fighter.maxHp;
-        const stacks = Math.floor(missingHpPct / 0.1); // Each 10%
+        const stacks = Math.floor(missingHpPct / this.stackThreshold);
 
         if (stacks > 0) {
-            const speedBonus = 1 + (stacks * 0.10);
-            const rotBonus = 1 + (stacks * 0.18);
+            const speedBonus = 1 + (stacks * this.speedBonusPerStack);
+            const rotBonus = 1 + (stacks * this.rotBonusPerStack);
 
-            // We apply the multiplier to the ORIGINAL stats to avoid compounding infinite growth
             fighter.baseSpeed = fighter.originalBaseSpeed * speedBonus;
-            
-            // For rotation, we need to respect the current direction (sign)
+
             const currentDir = Math.sign(fighter.rotationSpeed) || 1;
             fighter.rotationSpeed = fighter.originalRotationSpeed * rotBonus * currentDir;
 
-            // Log Berserker state change (throttle to avoid spam)
             if (fighter.lastBerserkerStacks !== stacks) {
                 logger.log(`${fighter.name} BERSERKER RAGE! Stacks: ${stacks} (Speed: x${speedBonus.toFixed(2)}, Rot: x${rotBonus.toFixed(2)})`, 'info');
                 fighter.lastBerserkerStacks = stacks;
@@ -117,7 +127,6 @@ export class BerserkerDefAbility extends Ability {
                 logger.log(`${fighter.name} Berserker Rage subsided.`, 'info');
                 fighter.lastBerserkerStacks = 0;
             }
-            // Reset to base
             const currentDir = Math.sign(fighter.rotationSpeed) || 1;
             fighter.baseSpeed = fighter.originalBaseSpeed;
             fighter.rotationSpeed = fighter.originalRotationSpeed * currentDir;
@@ -128,13 +137,20 @@ export class BerserkerDefAbility extends Ability {
 export class ExecuteUltAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.cooldown = config.cooldown || 180;
+        // All values from config (fighters.js)
+        this.cooldown = config.cooldown || 60;
+        this.executeRange = config.executeRange || 80;
+        this.executeThreshold = config.executeThreshold || 30;
+        this.stunDuration = config.stunDuration || 120;
+        this.stunDamage = config.stunDamage || 10;
+        this.ultVisualDuration = config.ultVisualDuration || 30;
+        this.comboRequired = config.comboRequired || 2;
     }
 
     execute(fighter, context) {
         const { enemies, game } = context;
-        const range = fighter.radius + 80; // Execution range
-        const hasCombo = (fighter.axemanHits || 0) >= 2;
+        const range = fighter.radius + this.executeRange;
+        const hasCombo = (fighter.axemanHits || 0) >= this.comboRequired;
 
         // Check if any enemy is in range first
         let targetInRange = false;
@@ -148,13 +164,12 @@ export class ExecuteUltAbility extends Ability {
 
         // Only proceed if combo requirement met AND target in range
         if (!hasCombo || !targetInRange) {
-            return; // No cooldown triggered, silently skip
+            return;
         }
 
-        // Combo ready AND target in range - execute!
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = 30; // 0.5 second visual
-        fighter.cooldowns.ult = this.cooldown; // NOW apply cooldown
+        fighter.activeEffects.ultTimer = this.ultVisualDuration;
+        fighter.cooldowns.ult = this.cooldown;
 
         game.combatText.execute(fighter.x, fighter.y);
         game.particles.spawn(fighter.x, fighter.y, '#ff0000', 10);
@@ -164,7 +179,7 @@ export class ExecuteUltAbility extends Ability {
             if (enemy === fighter || enemy.isDead) return;
             const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
             if (dist <= range + enemy.radius) {
-                if (enemy.hp <= 30) {
+                if (enemy.hp <= this.executeThreshold) {
                     // Instant Kill - FATALITY
                     game.combatText.fatality(enemy.x, enemy.y - enemy.radius);
                     enemy.takeDamage(enemy.maxHp + 999, true, false, fighter);
@@ -173,8 +188,8 @@ export class ExecuteUltAbility extends Ability {
                 } else {
                     // Stun
                     game.combatText.stunned(enemy.x, enemy.y - enemy.radius);
-                    enemy.takeDamage(10, false, false, fighter);
-                    enemy.applyStatus('STUN', 120); // 2 sec
+                    enemy.takeDamage(this.stunDamage, false, false, fighter);
+                    enemy.applyStatus('STUN', this.stunDuration);
                     audioEngine.playHeavyImpact();
                 }
 

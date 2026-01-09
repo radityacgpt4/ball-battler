@@ -52,7 +52,7 @@ export class Projectile {
 
         // Deflection props
         this.isDeflected = false;
-        this.deflectLifetime = 0;
+        this.deflect= 0;
     }
 
     update(timeScale = 1.0) {
@@ -184,16 +184,110 @@ export class Projectile {
                 this.hasExploded = true;
             }
         }
-        else {
+else {
             // Standard Bullet
             const bounds = this.game.arenaBounds;
             if (this.x < bounds.x || this.x > bounds.x + bounds.width || this.y < bounds.y || this.y > bounds.y + bounds.height) {
                 this.active = false;
             }
         }
+
+        // --- QUINCY REISHI ARROW EFFECTS ---
+        if (this.isQuincyArrow && this.active) {
+            // 1. Central Energy Residue (fading blue dust)
+            if (Math.random() < 0.3) {
+                this.game.particles.particles.push({
+                    x: this.x, 
+                    y: this.y,
+                    vx: (Math.random() - 0.5) * 0.5, 
+                    vy: (Math.random() - 0.5) * 0.5,
+                    life: 0.4, decay: 0.08, 
+                    size: Math.random() * 3, 
+                    color: '#00BFFF', 
+                    type: 'dot',
+                    alpha: 0.6
+                });
+            }
+
+            // 2. Spiraling Helix Lines (Reishi strands)
+            const t = Date.now() * 0.025; // Rotation speed
+            const perpAngle = this.angle + Math.PI / 2;
+            const spiralRadius = 6; // Width of the spiral
+
+            // Helix Strand 1
+            const offset1 = Math.sin(t) * spiralRadius;
+            this.game.particles.particles.push({
+                x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset1,
+                y: this.y - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset1,
+                vx: 0, vy: 0, 
+                life: 0.2, decay: 0.1, 
+                size: 1.5, color: '#1E90FF', 
+                type: 'dot' 
+            });
+
+            // Helix Strand 2 (Opposite phase)
+            const offset2 = Math.sin(t + Math.PI) * spiralRadius;
+            this.game.particles.particles.push({
+                x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset2,
+                y: this.y - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset2,
+                vx: 0, vy: 0, 
+                life: 0.2, decay: 0.1, 
+                size: 1.5, color: '#00FFFF', 
+                type: 'dot'
+            });
+        }
     }
 
-    draw(ctx) {
+draw(ctx) {
+        // --- QUINCY ARROW DRAWING ---
+        if (this.isQuincyArrow) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            // 1. Intense Reishi Glow
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00BFFF';
+            
+            // 2. The Arrow Shaft (Pure Energy Beam)
+            // Core (White)
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(-15, -1.5, 30, 3);
+            
+            // Outer Glow (Blue)
+            ctx.strokeStyle = '#00BFFF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-15, 0);
+            ctx.lineTo(15, 0);
+            ctx.stroke();
+
+            // 3. The Cross-Guard (Quincy Cross shape at the back)
+            ctx.strokeStyle = '#1E90FF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            // Upper wing
+            ctx.moveTo(-5, 0);
+            ctx.lineTo(-12, -8);
+            // Lower wing
+            ctx.moveTo(-5, 0);
+            ctx.lineTo(-12, 8);
+            ctx.stroke();
+
+            // 4. Arrow Head (Energy Diamond)
+            ctx.fillStyle = '#E0FFFF';
+            ctx.beginPath();
+            ctx.moveTo(10, 0);
+            ctx.lineTo(15, -3);
+            ctx.lineTo(22, 0); // Tip
+            ctx.lineTo(15, 3);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+            return; 
+        }
+
         if (this.isKunai) {
             ctx.save();
             ctx.translate(this.x, this.y);
@@ -276,11 +370,10 @@ export class Projectile {
             ctx.restore();
         }
         else if (this.isClaymore) {
-            ctx.fillStyle = '#ff6600'; // Orange for high contrast
+            ctx.fillStyle = '#ff6600';
             ctx.beginPath();
             ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
             ctx.fill();
-
             // Blink light
             if (Math.floor(Date.now() / 200) % 2 === 0) {
                 ctx.fillStyle = '#ff0000';
@@ -288,13 +381,43 @@ export class Projectile {
                 ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
                 ctx.fill();
             }
-
-            // Range indicator (faint)
+            // Range indicator
             ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
             ctx.stroke();
+        }
+        else if (this.isGintoTrap) {
+            // Tiny Silver Tube (Capsule shape)
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            
+            // Draw Ginto Tube
+            ctx.fillStyle = '#e0e0e0'; // Silver
+            ctx.strokeStyle = '#a0a0a0';
+            ctx.lineWidth = 1;
+            
+            // Vertical capsule
+            ctx.beginPath();
+            ctx.roundRect(-3, -6, 6, 12, 3);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Energy liquid inside (Blue)
+            ctx.fillStyle = '#00BFFF';
+            ctx.beginPath();
+            ctx.roundRect(-1.5, -3, 3, 6, 1);
+            ctx.fill();
+            
+            // Range indicator (Very faint)
+            ctx.strokeStyle = 'rgba(30, 144, 255, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, 0, 15, 0, Math.PI * 2); // Visual range only
+            ctx.stroke();
+            
+            ctx.restore();
         }
         else if (this.isSniperShot) {
             ctx.save();
@@ -353,7 +476,66 @@ export class Projectile {
 
             ctx.restore();
         }
+        // --- QUINCY GINTO TRAP (DEF SKILL) ---
+        else if (this.isGintoTrap) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            // 1. The Quincy Zeichen (Magic Seal on ground)
+            // Slowly rotate the seal
+            ctx.rotate(Date.now() * 0.002);
+
+            // Glow Effect
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00BFFF';
+            ctx.strokeStyle = '#00BFFF';
+            ctx.lineWidth = 2;
+
+            // Draw 5-pointed Quincy Star (The Trap Radius)
+            ctx.beginPath();
+            const r = this.radius * 1.8; // Visual radius slightly larger than hitbox
+            for (let i = 0; i < 5; i++) {
+                // Outer points
+                const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                
+                // Inner connecting lines (Pentagram style)
+                const nextIndex = (i + 2) % 5;
+                const nextAngle = (Math.PI * 2 * nextIndex) / 5 - Math.PI / 2;
+                ctx.lineTo(Math.cos(nextAngle) * r, Math.sin(nextAngle) * r);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            // 2. The Ginto Tube (Physical Object in Center)
+            // Counter-rotate so the tube stays upright relative to the seal
+            ctx.rotate(-Date.now() * 0.002);
+
+            // Silver Tube Body
+            ctx.fillStyle = '#C0C0C0'; // Silver
+            ctx.shadowColor = '#FFFFFF';
+            ctx.beginPath();
+            ctx.rect(-3, -8, 6, 16); // Small capsule/tube
+            ctx.fill();
+
+            // Liquid Reishi inside (Blue strip)
+            ctx.fillStyle = '#00FFFF';
+            ctx.beginPath();
+            ctx.rect(-1, -6, 2, 12);
+            ctx.fill();
+
+            // Metallic Glint
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(-3, -8, 6, 16);
+
+            ctx.restore();
+        }
         else {
+            // Generic Fallback
             ctx.fillStyle = '#ffff00';
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);

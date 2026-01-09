@@ -1,3 +1,12 @@
+/**
+ * Divine General Abilities
+ *
+ * ATK: Eightfold Strike - 8 orbs act as melee hitboxes
+ * DEF: Adaptation Heal - Stores damage and heals after delay
+ * ULT: Perfect Adaptation - Stores incoming damage for bonus attack
+ *
+ * ALL configurable properties are now loaded from fighters.js
+ */
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { logger } from '../systems/Logger.js';
@@ -7,10 +16,16 @@ import { audioEngine } from '../systems/Audio.js';
 export class DivineGeneralAtkAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.baseDamage = 2;
+        // All values from config (fighters.js)
+        this.baseDamage = config.baseDamage || 2;
+        this.resetTime = config.resetTime || 300;
+        this.orbCount = config.orbCount || 8;
+        this.orbRadius = config.orbRadius || 3;
+        this.orbDistance = config.orbDistance || 18;
+        this.attackCooldown = config.attackCooldown || 12;
+
         this.currentBonus = 0;
         this.lastHitTime = 0;
-        this.resetTime = 300; // 5 seconds @ 60fps
     }
 
     update(fighter, context) {
@@ -25,24 +40,22 @@ export class DivineGeneralAtkAbility extends Ability {
             }
         }
 
-        // Cooldown management handled by fighter update mostly, but we check specific triggers
+        // Orb-based collision
         if (this.canUse(fighter, context)) {
-            // Orb-based collision: 8 orbs at radius+18, spaced 45° apart
-            const orbRadius = 3; // Visual orb size
-            const orbDistance = fighter.radius + 18;
+            const orbDistance = fighter.radius + this.orbDistance;
             let hit = false;
 
             for (const enemy of context.enemies) {
                 if (enemy === fighter || enemy.isDead) continue;
 
-                // Check each of the 8 orbs for collision
-                for (let i = 0; i < 8; i++) {
-                    const orbAngle = fighter.angle + (fighter.wheelRotation || 0) + (Math.PI * 2 * i) / 8;
+                // Check each of the orbs for collision
+                for (let i = 0; i < this.orbCount; i++) {
+                    const orbAngle = fighter.angle + (fighter.wheelRotation || 0) + (Math.PI * 2 * i) / this.orbCount;
                     const orbX = fighter.x + Math.cos(orbAngle) * orbDistance;
                     const orbY = fighter.y + Math.sin(orbAngle) * orbDistance;
 
                     const distToEnemy = Physics.dist(orbX, orbY, enemy.x, enemy.y);
-                    if (distToEnemy < orbRadius + enemy.radius) {
+                    if (distToEnemy < this.orbRadius + enemy.radius) {
                         if (fighter.cooldowns.atk <= 0) {
                             this.performAttack(fighter, enemy);
                             hit = true;
@@ -58,30 +71,69 @@ export class DivineGeneralAtkAbility extends Ability {
     performAttack(fighter, enemy) {
         // Calculate Damage
         let damage = this.baseDamage + this.currentBonus;
+        
+        // Check for Buff (Ult/Stored Damage)
+        const isBuffed = fighter.activeEffects.adaptationStoredDamage > 0;
 
         // Consume ULT absorbed damage if available
-        if (fighter.activeEffects.adaptationStoredDamage > 0) {
+        if (isBuffed) {
             damage += fighter.activeEffects.adaptationStoredDamage;
-            fighter.activeEffects.adaptationStoredDamage = 0; // Consumed
-
-            // Visual for consumed power
-            fighter.game.particles.spawn(fighter.x, fighter.y, '#FFD700', 10);
+            fighter.activeEffects.adaptationStoredDamage = 0;
             logger.log(`${fighter.name} unleashed ADAPTED POWER!`, 'combat');
         }
 
         // Apply Damage
         enemy.takeDamage(damage, false, false, fighter);
 
-        // Visuals & Audio (combatText handled by takeDamage)
+        // Visuals & Audio
         audioEngine.playHit();
-        fighter.game.particles.spawnSlash(fighter.x, fighter.y, enemy.x, enemy.y, '#FFD700', 3);
+        
+        // === RANDOM SLASHING SPECIAL EFFECT (Updated) ===
+        // Config based on buff state
+        const slashColor = isBuffed ? '#00BFFF' : '#FFD700'; // Blue for Adaptation/Ult, Gold for normal
+        const slashThickness = isBuffed ? 8 : 4;
+        const slashCount = 3; // Reduced count (halved)
 
-        // Reset Bonus - NERFED: Always 2 damage (fixed)
+        // Generate slashes ON THE ENEMY
+        for(let i = 0; i < slashCount; i++) {
+            // Center strictly on enemy with small variation
+            const cx = enemy.x + (Math.random() - 0.5) * 40;
+            const cy = enemy.y + (Math.random() - 0.5) * 40;
+            const angle = Math.random() * Math.PI * 2;
+            const len = 30 + Math.random() * 20;
+            
+            fighter.game.particles.spawnSlash(
+                cx - Math.cos(angle) * len, 
+                cy - Math.sin(angle) * len, 
+                cx + Math.cos(angle) * len, 
+                cy + Math.sin(angle) * len, 
+                slashColor, 
+                slashThickness
+            );
+        }
+
+        // Burst of particles
+        if (isBuffed) {
+            // Blue explosion for buffed hit
+            fighter.game.particles.spawn(enemy.x, enemy.y, '#00BFFF', 15);
+            fighter.game.particles.spawnShockwave(enemy.x, enemy.y, '#00BFFF');
+            // Extra sparks
+            for(let k=0; k<5; k++) {
+                fighter.game.particles.spawnBolt([
+                    {x: enemy.x, y: enemy.y},
+                    {x: enemy.x + (Math.random()-0.5)*50, y: enemy.y + (Math.random()-0.5)*50}
+                ], '#00BFFF', 2);
+            }
+        } else {
+            // Normal Gold burst
+            fighter.game.particles.spawn(enemy.x, enemy.y, '#FFD700', 8);
+        }
+
+        // Reset Bonus
         this.currentBonus = 0;
         this.lastHitTime = 0;
 
-        // --- TRIGGER ADAPTATION (ULT) ON HIT (ONLY IF <50% HP) ---
-        // Once activated, it stays activated
+        // Trigger adaptation on hit (only if <50% HP and not already activated)
         if (!fighter.activeEffects.adaptationActivated && fighter.hp < fighter.maxHp * 0.5) {
             const ultAbility = fighter.abilities.ult;
             if (ultAbility) {
@@ -89,8 +141,8 @@ export class DivineGeneralAtkAbility extends Ability {
             }
         }
 
-        // Set Cooldown (0.2s = 12 frames)
-        fighter.cooldowns.atk = 12;
+        // Set Cooldown
+        fighter.cooldowns.atk = this.attackCooldown;
     }
 }
 
@@ -98,24 +150,26 @@ export class DivineGeneralAtkAbility extends Ability {
 export class DivineGeneralDefAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
+        // All values from config (fighters.js)
+        this.healDelay = config.healDelay || 300;
+        this.healPercent = config.healPercent || 0.9;
+
         this.storedDamage = 0;
         this.healDelayTimer = 0;
-        this.healDelay = 300; // 5 seconds
         this.accumulating = false;
     }
 
-    // Passive update to handle the delayed heal
     update(fighter, context) {
         if (this.storedDamage > 0) {
             this.healDelayTimer++;
 
-            // Sync with UI cooldown system (counts DOWN from max)
+            // Sync with UI cooldown system
             fighter.cooldowns.def = this.healDelay - this.healDelayTimer;
             fighter.maxCooldowns.def = this.healDelay;
 
             if (this.healDelayTimer >= this.healDelay) {
                 // Trigger Heal
-                const healAmount = this.storedDamage * 0.9; // 90%
+                const healAmount = this.storedDamage * this.healPercent;
                 if (healAmount > 0) {
                     const oldHp = fighter.hp;
                     fighter.hp = Math.min(fighter.hp + healAmount, fighter.maxHp);
@@ -134,18 +188,12 @@ export class DivineGeneralDefAbility extends Ability {
                 fighter.cooldowns.def = 0;
             }
         } else {
-            // No damage stored - show as ready
             fighter.cooldowns.def = 0;
         }
     }
 
-    // Called when fighter takes damage
     onDamage(fighter, damage, context) {
-        // Track incoming damage
-        // Does NOT reduce damage, just tracks it
         this.storedDamage += damage;
-        // Fixed: Removed healDelayTimer = 0 reset. 
-        // This allows the 5s timer to fulfill even if taking continuous damage.
         return damage;
     }
 }
@@ -154,16 +202,18 @@ export class DivineGeneralDefAbility extends Ability {
 export class DivineGeneralUltAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.duration = 60; // 1 second
+        // All values from config (fighters.js)
+        this.duration = config.duration || 60;
+        this.adaptationMaxStored = config.adaptationMaxStored || 15;
+        this.hpThreshold = config.hpThreshold || 0.5;
     }
 
     execute(fighter, context) {
-        // Proc-ed manually by ATK
         fighter.activeEffects.ultActive = true;
         fighter.activeEffects.ultTimer = 999999; // Practically infinite
 
         // Custom effect state for Divine General
-        fighter.activeEffects.adaptationActivated = true; // NEW: Persistent flag
+        fighter.activeEffects.adaptationActivated = true;
         fighter.activeEffects.adaptationAbsorbing = true;
         fighter.activeEffects.adaptationStoredDamage = 0;
 
@@ -176,37 +226,37 @@ export class DivineGeneralUltAbility extends Ability {
     }
 }
 
-// Re-write DEF ability to handle ULT interaction
+// DEF ability with ULT interaction
 export class DivineGeneralDefAbilityWithUlt extends DivineGeneralDefAbility {
+    constructor(config, slot, ultConfig) {
+        super(config, slot);
+        // Store ULT config for accessing thresholds
+        this.adaptationMaxStored = (ultConfig && ultConfig.adaptationMaxStored) || 15;
+        this.hpThreshold = (ultConfig && ultConfig.hpThreshold) || 0.5;
+    }
+
     update(fighter, context) {
         super.update(fighter, context);
 
-        // --- ABSORBED DAMAGE DECAY REMOVED ---
-        // Stored damage stays until next hit connected
-
-        // --- UI UPDATED EVERY FRAME (Real-time) ---
+        // UI update every frame
         fighter.activeEffects.displayStoredDamage = Math.ceil(fighter.activeEffects.adaptationStoredDamage || 0);
     }
 
     onDamage(fighter, damage, context) {
-        // Check for ULT condition:
-        // 1. Stance already activated permanently OR
-        // 2. Currently below 50% HP (start absorbing immediately)
-        if (fighter.activeEffects.adaptationActivated || fighter.hp < fighter.maxHp * 0.5) {
+        // Check for ULT condition
+        if (fighter.activeEffects.adaptationActivated || fighter.hp < fighter.maxHp * this.hpThreshold) {
             // Activate permanently if not already
             if (!fighter.activeEffects.adaptationActivated) {
                 fighter.activeEffects.adaptationActivated = true;
-                logger.log(`${fighter.name} ADAPTATION ACTIVATED (HP < 50%)`, 'combat');
+                logger.log(`${fighter.name} ADAPTATION ACTIVATED (HP < ${this.hpThreshold * 100}%)`, 'combat');
             }
 
             // Absorb damage
             const prevStored = fighter.activeEffects.adaptationStoredDamage || 0;
-            fighter.activeEffects.adaptationStoredDamage = Math.min(prevStored + damage, 15);
-            logger.log(`${fighter.name} absorbed ${Math.ceil(damage)} dmg. Stored: ${Math.ceil(fighter.activeEffects.adaptationStoredDamage)}/15`, 'info');
+            fighter.activeEffects.adaptationStoredDamage = Math.min(prevStored + damage, this.adaptationMaxStored);
+            logger.log(`${fighter.name} absorbed ${Math.ceil(damage)} dmg. Stored: ${Math.ceil(fighter.activeEffects.adaptationStoredDamage)}/${this.adaptationMaxStored}`, 'info');
         }
 
-        // Normal behavior
-        // "it only stores damage, not perfectly resistant to damage"
         return super.onDamage(fighter, damage, context);
     }
 }

@@ -30,6 +30,95 @@ export class ParticleSystem {
         });
     }
 
+    // UPDATED: Thinner, sharper thunderclap
+    spawnThunderclap(x1, y1, x2, y2, color, thickness = 6) {
+        // Main Beam - Razor sharp
+        this.particles.push({
+            type: 'beam', x1, y1, x2, y2, color,
+            life: 0.8, decay: 0.08, width: thickness
+        });
+        
+        // Inner Core (White hot)
+        this.particles.push({
+            type: 'beam', x1, y1, x2, y2, color: '#ffffff',
+            life: 0.8, decay: 0.08, width: thickness / 2
+        });
+
+        const dist = Physics.dist(x1, y1, x2, y2);
+
+        // 1. Residual Arcs
+        const steps = Math.floor(dist / 40);
+        const dx = (x2 - x1) / steps;
+        const dy = (y2 - y1) / steps;
+
+        for(let i=0; i<steps; i++) {
+            const bx = x1 + dx * i;
+            const by = y1 + dy * i;
+            this.spawnBolt([
+                {x: bx, y: by},
+                {x: bx + (Math.random()-0.5)*60, y: by + (Math.random()-0.5)*60}
+            ], color, 2);
+        }
+
+        // 2. Small Flickering Static
+        const staticCount = Math.floor(dist / 12);
+        for(let i=0; i<staticCount; i++) {
+            const t = Math.random();
+            const px = x1 + (x2 - x1) * t;
+            const py = y1 + (y2 - y1) * t;
+            
+            this.spawnBolt([
+                {x: px, y: py},
+                {x: px + (Math.random()-0.5)*25, y: py + (Math.random()-0.5)*25}
+            ], '#ffffff', 1);
+        }
+    }
+
+    // UPDATED: Distinct Reishi blink
+    spawnHirenkyaku(x, y) {
+        // === BOLD QUINCY BLINK ===
+
+        // 1. Solid Vertical Beam (The "Pillar" of light)
+        this.particles.push({
+            type: 'beam',
+            x1: x, y1: y + 80,
+            x2: x, y2: y - 80,
+            color: '#00BFFF', // Deep Sky Blue (Outer)
+            life: 0.6, decay: 0.05, width: 20
+        });
+
+        // 2. Blinding White Core (Inner)
+        this.particles.push({
+            type: 'beam',
+            x1: x, y1: y + 80,
+            x2: x, y2: y - 80,
+            color: '#FFFFFF', // Pure White
+            life: 0.6, decay: 0.05, width: 8
+        });
+
+        // 3. Ground Impact Ring (Thick)
+        this.particles.push({
+            type: 'shockwave',
+            x: x, y: y,
+            radius: 5, maxRadius: 60,
+            life: 0.5, decay: 0.05,
+            color: '#1E90FF', lineWidth: 8
+        });
+
+        // 4. Rising Reishi Squares (Data effect)
+        for (let i = 0; i < 8; i++) {
+            this.particles.push({
+                x: x + (Math.random() - 0.5) * 30,
+                y: y + (Math.random() - 0.5) * 10, // Start near feet
+                vx: 0, 
+                vy: -8 - Math.random() * 5, // Shoot up very fast
+                life: 0.4, decay: 0.05,
+                size: 4, color: '#FFFFFF', // White sparks
+                type: 'dot'
+            });
+        }
+    }
+
     spawnBeam(x1, y1, x2, y2, color, width = 6) {
         this.particles.push({
             type: 'beam', x1, y1, x2, y2, color,
@@ -66,6 +155,48 @@ export class ParticleSystem {
             decay: 0.05,
             color: color
         });
+    }
+
+    spawnHirenkyaku(x, y) {
+        // Clean "Reishi" Effect: Rising Energy + Shockwave (No massive pillars)
+        
+        // 1. Blue Shockwave Ring
+        this.spawnShockwave(x, y, '#1E90FF');
+
+        // 2. Rising Energy Particles (Reishi flow)
+        for (let i = 0; i < 10; i++) {
+            this.particles.push({
+                x: x + (Math.random() - 0.5) * 25,
+                y: y + (Math.random() - 0.5) * 25,
+                vx: 0, 
+                vy: -3 - Math.random() * 3, // Fast upward movement
+                life: 0.6, decay: 0.08,
+                size: 2, color: '#00BFFF', 
+                type: 'dot'
+            });
+        }
+        
+        // 3. Central Flash
+        this.particles.push({
+            x: x, y: y,
+            vx: 0, vy: 0,
+            life: 0.4, decay: 0.1,
+            size: 15, color: '#E0FFFF',
+            type: 'dot', alpha: 0.8
+        });
+    }
+
+    // Required for Quincy Attacks if missing
+    spawnQuincyArrow(x, y) {
+        this.particles.push({
+            type: 'shockwave', x: x, y: y,
+            radius: 5, maxRadius: 30,
+            life: 0.3, decay: 0.1, color: '#1E90FF'
+        });
+    }
+
+    spawnLichtRegen(x, y) {
+         this.spawnHirenkyaku(x, y); // Reuse the cool effect
     }
 
     spawnWallImpact(x, y) {
@@ -139,11 +270,11 @@ export class ParticleSystem {
             type: 'shockwave',
             x: x, y: y,
             radius: 5,
-            maxRadius: 250,
+            maxRadius: 180,
             life: 1.5,
             decay: 0.03,
             color: '#000000',
-            lineWidth: 25
+            lineWidth: 22
         });
 
         // Glowing red outer ring
@@ -215,6 +346,50 @@ export class ParticleSystem {
         }
 
         this.particles.push({ type: 'bolt', segments: jagged, life: 1.0, decay: 0.08, color: color, width: width });
+    }
+
+    spawnQuincyArrow(x, y) {
+        // Blue energy flash
+        this.spawn(x, y, '#1E90FF', 8);
+        // Sparkles
+        for (let i = 0; i < 6; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            this.particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * 2,
+                vy: Math.sin(angle) * 2,
+                life: 0.6, decay: 0.1,
+                size: 2, color: '#00BFFF', type: 'dot'
+            });
+        }
+    }
+
+    spawnHirenkyaku(x, y) {
+        // Static/Glitch effect for teleport
+        for (let i = 0; i < 10; i++) {
+            this.particles.push({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y + (Math.random() - 0.5) * 20,
+                vx: 0, vy: -1,
+                life: 0.4, decay: 0.1,
+                size: 2, color: '#ffffff', type: 'dot'
+            });
+        }
+        this.spawn(x, y, '#1E90FF', 8);
+    }
+
+    spawnLichtRegen(x, y) {
+        // Upward burst indicating arrow rain launch
+        for (let i = 0; i < 15; i++) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5);
+            this.particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * 6,
+                vy: Math.sin(angle) * 6,
+                life: 0.8, decay: 0.05,
+                size: 3, color: '#00BFFF', type: 'dot'
+            });
+        }
     }
 
     updateAndDraw(ctx) {

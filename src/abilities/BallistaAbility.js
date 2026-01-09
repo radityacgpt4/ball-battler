@@ -1,6 +1,11 @@
 /**
  * Ballista Abilities
- * Heavy hitter ranged fighter with knockback mechanics
+ *
+ * ATK: Heavy Bolt - Piercing bolts that pin enemies
+ * DEF: Gate Barrier - Protective barriers on sides
+ * ULT: Siege Mode - Enhanced volleys
+ *
+ * ALL configurable properties are now loaded from fighters.js
  */
 import { Ability } from './Ability.js';
 import { Projectile } from '../entities/Projectile.js';
@@ -11,8 +16,14 @@ import { logger } from '../systems/Logger.js';
 export class BallistaAtkAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
+        // All values from config (fighters.js)
         this.damage = config.damage || 15;
         this.projectileSpeed = config.projectileSpeed || 16;
+        this.spreadAngle = config.spreadAngle || 0.15;
+        this.boltRadius = config.boltRadius || 8;
+        this.dragDuration = config.dragDuration || 25;
+        this.normalBoltCount = config.normalBoltCount || 2;
+        this.ultBoltCount = config.ultBoltCount || 3;
     }
 
     update(fighter, context) {
@@ -21,24 +32,23 @@ export class BallistaAtkAbility extends Ability {
         if (fighter.cooldowns.atk <= 0) {
             fighter.cooldowns.atk = this.cooldown;
 
-            // Check if ULT is active - fire 3 bolts, otherwise 2
+            // Check if ULT is active
             const isUltActive = fighter.ballistaUltShots > 0;
-            const spreadAngle = 0.15; // ~9 degrees spread
 
             let angles;
             if (isUltActive) {
-                // ULT: 3 bolts in cone
-                angles = [
-                    fighter.angle - spreadAngle,
-                    fighter.angle,
-                    fighter.angle + spreadAngle
-                ];
+                // ULT: more bolts in cone
+                angles = [];
+                for (let i = 0; i < this.ultBoltCount; i++) {
+                    const offset = (i - (this.ultBoltCount - 1) / 2) * this.spreadAngle;
+                    angles.push(fighter.angle + offset);
+                }
                 fighter.ballistaUltShots--;
             } else {
                 // Normal: 2 bolts
                 angles = [
-                    fighter.angle - spreadAngle / 2,
-                    fighter.angle + spreadAngle / 2
+                    fighter.angle - this.spreadAngle / 2,
+                    fighter.angle + this.spreadAngle / 2
                 ];
             }
 
@@ -55,9 +65,9 @@ export class BallistaAtkAbility extends Ability {
 
                 p.isBallistaBolt = true;
                 p.isUltBolt = isUltActive;
-                p.radius = 8;
+                p.radius = this.boltRadius;
                 p.dragTarget = null;
-                p.dragDuration = 25;
+                p.dragDuration = this.dragDuration;
 
                 game.projectiles.push(p);
             });
@@ -71,16 +81,16 @@ export class BallistaAtkAbility extends Ability {
 export class BallistaDefAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
+        // All values from config (fighters.js)
         this.barrierMaxHp = config.barrierMaxHp || 30;
         this.barrierCount = config.barrierCount || 4;
-        this.initialized = false;
-        // Visual arc is ~1.22 rad (~70 degrees).
-        // We use this to determine hit detection to match visual gaps.
         this.arcAngle = config.arcAngle || 1.22;
+        this.shieldRadius = config.shieldRadius || 8;
+
+        this.initialized = false;
     }
 
     update(fighter, context) {
-        // Initialize barriers on first update
         if (!this.initialized) {
             fighter.ballistaBarriers = [];
 
@@ -99,21 +109,12 @@ export class BallistaDefAbility extends Ability {
         }
     }
 
-    /**
-     * Helper to find which barrier (if any) is hit by an angle relative to fighter
-     */
     getBarrierIndex(localAngle) {
         if (!this.initialized) return -1;
 
-        // Normalize angle to -PI to PI
         localAngle = Physics.normalizeAngle(localAngle);
 
-        // Check each barrier
-        // Barriers are at 0, PI/2 (1.57), PI (3.14), -PI/2 (-1.57)
-        // We check if angle is within arcAngle/2 of barrier angle
-
         const halfArc = this.arcAngle / 2;
-        // Angles corresponding to the barriers we created: Right (PI/2), Left (-PI/2)
         const barrierAngles = [Math.PI / 2, -Math.PI / 2];
 
         for (let i = 0; i < barrierAngles.length; i++) {
@@ -129,15 +130,11 @@ export class BallistaDefAbility extends Ability {
     damageBarrier(fighter, barrier, amount) {
         barrier.hp -= amount;
 
-        // Log sparingly? Or always for feedback
-        // logger.log(`${fighter.name} Shield took ${Math.ceil(amount)} dmg.`, 'combat');
-
         const game = fighter.game;
         const barrierWorldAngle = fighter.angle + barrier.angle;
         const effectX = fighter.x + Math.cos(barrierWorldAngle) * (fighter.radius + 15);
         const effectY = fighter.y + Math.sin(barrierWorldAngle) * (fighter.radius + 15);
 
-        // Block Effect
         game.particles.spawn(effectX, effectY, '#D2691E', 4);
 
         if (barrier.hp <= 0 && !barrier.destroyed) {
@@ -152,7 +149,6 @@ export class BallistaDefAbility extends Ability {
     }
 
     getSideName(angle) {
-        // approx check
         angle = Physics.normalizeAngle(angle);
         if (Math.abs(angle) < 0.1) return "FRONT";
         if (Math.abs(angle - Math.PI / 2) < 0.1) return "RIGHT";
@@ -160,13 +156,10 @@ export class BallistaDefAbility extends Ability {
         return "BACK";
     }
 
-    /**
-     * Raycast Hit Detection (for Thundermage etc)
-     */
     getShieldHit(fighter, rayX, rayY, dirX, dirY) {
         if (!fighter.ballistaBarriers) return null;
 
-        const shieldRadius = fighter.radius + 8;
+        const shieldRadius = fighter.radius + this.shieldRadius;
         const hit = Physics.rayCircleIntersect(rayX, rayY, dirX, dirY, fighter.x, fighter.y, shieldRadius);
         if (!hit) return null;
 
@@ -189,9 +182,6 @@ export class BallistaDefAbility extends Ability {
         return null;
     }
 
-    /**
-     * Projectile/Melee Block Detection
-     */
     isBlocked(fighter, attackerX, attackerY, damage = 0) {
         if (!fighter.ballistaBarriers) return false;
 
@@ -202,7 +192,6 @@ export class BallistaDefAbility extends Ability {
         if (index !== -1) {
             const barrier = fighter.ballistaBarriers[index];
             if (!barrier.destroyed) {
-                // Apply damage to shield
                 if (damage > 0) {
                     this.damageBarrier(fighter, barrier, damage);
                 }
@@ -212,19 +201,11 @@ export class BallistaDefAbility extends Ability {
         return false;
     }
 
-    /**
-     * Fallback Damage Handler (Explosions, AoE)
-     */
     onDamage(fighter, amount, context) {
         const { isDoT, attacker } = context;
 
-        // DoT bypasses barriers
         if (isDoT) return amount;
-
-        // If we don't know where damage came from, can't block directionally
         if (!attacker) return amount;
-
-        // If barriers not init
         if (!fighter.ballistaBarriers) return amount;
 
         const angleToAttacker = Math.atan2(attacker.y - fighter.y, attacker.x - fighter.x);
@@ -235,7 +216,6 @@ export class BallistaDefAbility extends Ability {
         if (index !== -1) {
             const barrier = fighter.ballistaBarriers[index];
             if (!barrier.destroyed) {
-                // Absorb damage
                 const absorbed = Math.min(barrier.hp, amount);
                 this.damageBarrier(fighter, barrier, absorbed);
 
@@ -243,7 +223,7 @@ export class BallistaDefAbility extends Ability {
 
                 logger.log(`${fighter.name} Barrier absorbed ${Math.ceil(absorbed)} dmg (Remaining: ${Math.ceil(amount)})`, 'combat');
 
-                if (amount <= 0) return false; // Fully blocked
+                if (amount <= 0) return false;
             }
         }
 
@@ -254,8 +234,11 @@ export class BallistaDefAbility extends Ability {
 export class BallistaUltAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.cooldown = config.cooldown || 150;
+        // All values from config (fighters.js)
+        this.cooldown = config.cooldown || 120;
         this.damage = config.damage || 15;
+        this.ultShots = config.ultShots || 3;
+        this.ultVisualDuration = config.ultVisualDuration || 60;
     }
 
     execute(fighter, context) {
@@ -263,10 +246,10 @@ export class BallistaUltAbility extends Ability {
 
         fighter.cooldowns.ult = this.cooldown;
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = 60; // 1 second buff
+        fighter.activeEffects.ultTimer = this.ultVisualDuration;
 
-        // ULT now buffs ATK - next few shots are enhanced
-        fighter.ballistaUltShots = 3; // 3 enhanced volleys
+        // ULT buffs ATK - next few shots are enhanced
+        fighter.ballistaUltShots = this.ultShots;
 
         game.particles.spawn(fighter.x, fighter.y, '#8B4513', 10);
         audioEngine.playHeavyImpact();

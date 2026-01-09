@@ -498,7 +498,7 @@ canvas {
     }
 
     #game-container {
-        width: 100%; /* Changed from 100vw to prevent scrollbar overflow */
+        width: 100%; 
         margin: 0;
         padding: 0;
     }
@@ -511,7 +511,7 @@ canvas {
 
     /* Allow screen overlay to scroll on mobile */
     .screen-overlay {
-        position: absolute; /* Changed from relative to ensure it covers canvas */
+        position: absolute;
         top: 0;
         left: 0;
         width: 100%;
@@ -551,22 +551,25 @@ canvas {
 
     .char-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, 1fr); /* 4 columns on mobile looks better */
         gap: 8px;
         width: 100%;
-        max-width: 400px; /* Prevent grid from becoming too wide */
+        max-width: 400px;
     }
 
-    .char-btn {
+    /* --- FIXED CLASS NAMES HERE --- */
+    .grid-item {
         aspect-ratio: 1;
         padding: 5px;
+        max-width: none; /* Reset max-width constraint */
     }
 
-    .char-label {
-        font-size: 0.6rem;
+    .grid-name {
+        font-size: 9px; /* Smaller font for mobile */
     }
+    /* ----------------------------- */
 
-    /* Detail panels: horizontal layout on mobile */
+    /* Detail panels: vertical stack on mobile */
     .detail-panel {
         width: 100%;
         flex-shrink: 0;
@@ -600,7 +603,7 @@ canvas {
     /* Start button area */
     .start-container {
         margin-top: 20px;
-        padding-bottom: 40px; /* Space for scrolling */
+        padding-bottom: 60px; /* Extra space for scrolling on phones */
         width: 100%;
     }
 
@@ -616,6 +619,26 @@ canvas {
         height: auto;
         max-width: 100%;
         aspect-ratio: 1/1;
+    }
+    
+    /* Hide header on small mobile to save space, or adjust it */
+    #ui-header {
+        padding: 5px;
+        height: auto;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .hud-card {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .hud-name {
+        font-size: 0.9rem;
+        margin: 0;
     }
 }
 

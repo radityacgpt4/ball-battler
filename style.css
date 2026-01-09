@@ -493,37 +493,77 @@ canvas {
 
 /* Mobile Optimizations */
 @media (max-width: 900px) {
-    #game-container {
-        width: 100vw;
-        margin: 0;
+    body, html {
+        overflow-x: hidden; /* Prevent horizontal scroll */
     }
 
-    /* Make game-wrapper expand for selection screen */
+    #game-container {
+        width: 100%; /* Changed from 100vw to prevent scrollbar overflow */
+        margin: 0;
+        padding: 0;
+    }
+
     #game-wrapper {
         min-height: 100vh;
         height: auto;
+        flex-direction: column;
     }
 
     /* Allow screen overlay to scroll on mobile */
     .screen-overlay {
-        position: relative;
-        height: auto;
-        min-height: 100%;
+        position: absolute; /* Changed from relative to ensure it covers canvas */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
         overflow-y: auto;
-        padding: 15px 10px;
+        padding: 10px;
+        align-items: center;
+        justify-content: flex-start; /* Align to top so scrolling works */
     }
 
     .setup-title {
-        font-size: 1.1rem;
-        letter-spacing: 3px;
-        margin-bottom: 15px;
+        font-size: 1.2rem;
+        letter-spacing: 2px;
+        margin: 20px 0 15px 0;
+        flex-shrink: 0;
     }
 
     .selection-interface {
         flex-direction: column;
         height: auto;
-        gap: 10px;
+        width: 100%;
+        max-width: 100%;
+        gap: 15px;
         overflow: visible;
+    }
+
+    /* Character grid: center of screen on mobile */
+    .char-grid-container {
+        order: -1; /* Move grid to top */
+        width: 100%;
+        height: auto;
+        overflow: visible;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+    }
+
+    .char-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        width: 100%;
+        max-width: 400px; /* Prevent grid from becoming too wide */
+    }
+
+    .char-btn {
+        aspect-ratio: 1;
+        padding: 5px;
+    }
+
+    .char-label {
+        font-size: 0.6rem;
     }
 
     /* Detail panels: horizontal layout on mobile */
@@ -531,6 +571,7 @@ canvas {
         width: 100%;
         flex-shrink: 0;
         max-height: none;
+        min-height: auto;
     }
 
     .detail-content {
@@ -540,173 +581,51 @@ canvas {
 
     .detail-name {
         font-size: 1rem;
+        text-align: center;
     }
 
     .detail-stats {
+        display: flex;
         flex-direction: row;
         flex-wrap: wrap;
-        gap: 8px 15px;
+        justify-content: center;
+        gap: 10px;
+        font-size: 0.8rem;
     }
 
     .detail-skills {
-        gap: 8px;
+        font-size: 0.8rem;
     }
 
-    .d-skill-desc {
-        font-size: 10px;
-    }
-
-    /* Character grid: center of screen on mobile */
-    .char-grid-container {
-        order: -1; /* Move grid to top */
-        max-height: none;
-        height: auto;
-        overflow: visible;
-        padding: 0;
-    }
-
-    .char-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 6px;
-        justify-items: center;
-    }
-
-    .grid-item {
-        max-width: 70px;
-        padding: 6px 4px;
-    }
-
-    .grid-icon {
-        width: 20px;
-        height: 20px;
-        margin-bottom: 4px;
-    }
-
-    .grid-name {
-        font-size: 9px;
-    }
-
-    /* Start button */
+    /* Start button area */
     .start-container {
-        margin-top: 10px;
-        padding: 0 10px;
+        margin-top: 20px;
+        padding-bottom: 40px; /* Space for scrolling */
+        width: 100%;
     }
 
     #start-btn {
-        padding: 14px;
+        width: 100%;
+        padding: 15px;
         font-size: 1rem;
-        letter-spacing: 2px;
-    }
-
-    .sound-toggle {
-        font-size: 9px;
-    }
-
-    /* Header UI */
-    #ui-header {
-        padding: 5px 10px;
-        height: 70px;
-    }
-
-    .hud-name {
-        font-size: 0.9rem;
-        letter-spacing: 1px;
-        margin-bottom: 5px;
-    }
-
-    .skill-node {
-        width: 26px;
-        height: 26px;
-    }
-
-    .skill-inner {
-        width: 20px;
-        height: 20px;
-    }
-
-    .skill-label {
-        font-size: 7px;
-    }
-
-    .skills-container {
-        gap: 8px;
     }
 
     /* Canvas scales down */
     canvas {
         width: 100%;
         height: auto;
-        max-width: 500px;
+        max-width: 100%;
+        aspect-ratio: 1/1;
     }
 }
 
 /* Extra small screens (phones) */
-@media (max-width: 480px) {
+@media (max-width: 400px) {
     .char-grid {
         grid-template-columns: repeat(3, 1fr);
     }
-
-    .grid-item {
-        max-width: 80px;
-    }
-
-    .detail-panel {
-        font-size: 0.9em;
-    }
-
-    .p-tag {
-        padding: 6px;
-        font-size: 10px;
-    }
-}
-
-/* --- MOBILE RESPONSIVENESS FIXES --- */
-@media (max-width: 768px) {
-    .setup-title { font-size: 1.5rem; margin-bottom: 10px; }
-
-    /* Fix: Stack interface vertically to prevent "drowning" */
-    .selection-interface {
-        flex-direction: column;
-        align-items: center;
-        gap: 15px;
-        overflow-y: auto; /* Allow scrolling inside setup if needed */
-        max-height: 65vh;
-        padding-bottom: 20px;
-        width: 100%;
-    }
-
-    /* Fix: Reorder elements for mobile (Grid on top, Details below) */
-    .char-grid-container { order: 1; width: 100%; }
-    .p1-details { order: 2; width: 95%; }
-    .p2-details { order: 3; width: 95%; }
-
-    /* Fix: Make grid denser on mobile */
-    .char-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
-    }
     
-    .char-btn { padding: 4px; }
-    .char-label { font-size: 0.6rem; }
-
-    /* Fix: Compact details panels */
-    .detail-panel {
-        padding: 10px;
-        min-height: auto;
-    }
-    
-    .detail-name { font-size: 1rem; margin-bottom: 5px; }
-    .detail-stats, .detail-skills { font-size: 0.75rem; }
-    
-    /* Fix: Ensure start button is accessible */
-    .start-container {
-        margin-top: 10px;
-        padding-bottom: 30px;
-    }
-    
-    #start-btn {
-        padding: 12px 30px;
+    .setup-title {
         font-size: 1rem;
-        width: 80%;
     }
 }

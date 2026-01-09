@@ -296,7 +296,8 @@ export class Game {
                         if (d < blastRadius + ent.radius) {
                             ent.takeDamage(p.damage, false, false, p.owner);
                             const angle = Math.atan2(ent.y - p.y, ent.x - p.x);
-                            const force = 12;
+                            // Explosion impulse based on mass
+                            const force = 15 / ent.mass;
                             ent.dx += Math.cos(angle) * force;
                             ent.dy += Math.sin(angle) * force;
                             ent.applyStatus('STUN');
@@ -385,10 +386,13 @@ export class Game {
 
                                 // Only knockback if not already being knocked back
                                 if (!ent.pendingBallistaPinned && !p.dragTarget) {
-                                    // Apply knockback velocity in bolt direction (fixed speed)
-                                    const knockbackSpeed = 8;
-                                    ent.dx = Math.cos(p.angle) * knockbackSpeed;
-                                    ent.dy = Math.sin(p.angle) * knockbackSpeed;
+                                    // Apply knockback IMPULSE (Additive)
+                                    // Physics: Force = Mass * Acceleration
+                                    // Heavier targets resist knockback more
+                                    const knockbackForce = 18 / Math.sqrt(ent.mass); 
+                                    
+                                    ent.dx += Math.cos(p.angle) * knockbackForce;
+                                    ent.dy += Math.sin(p.angle) * knockbackForce;
 
                                     // Set pending pin for wall collision
                                     ent.pendingBallistaPinned = { owner: p.owner };
@@ -505,9 +509,10 @@ export class Game {
                         if (attacker.ultWallSlamActive) {
                             const angle = Math.atan2(defender.y - attacker.y, defender.x - attacker.x);
 
-                            const knockbackSpeed = 8; // Fixed knockback speed
-                            defender.dx = Math.cos(angle) * knockbackSpeed;
-                            defender.dy = Math.sin(angle) * knockbackSpeed;
+                            // Wall slam applies massive impulse
+                            const knockbackForce = 25 / Math.sqrt(defender.mass);
+                            defender.dx += Math.cos(angle) * knockbackForce;
+                            defender.dy += Math.sin(angle) * knockbackForce;
 
                             defender.pendingWallSlam = { owner: attacker };
 
@@ -516,10 +521,17 @@ export class Game {
                             }
                         } else {
                             const angle = Math.atan2(defender.y - attacker.y, defender.x - attacker.x);
-                            defender.dx = Math.cos(angle) * totalKnock;
-                            defender.dy = Math.sin(angle) * totalKnock;
+                            // Standard momentum knockback
+                            // Note: totalKnock was calculated based on massRatio in previous lines of this file
+                            // We just ensure it's additive
+                            defender.dx += Math.cos(angle) * totalKnock;
+                            defender.dy += Math.sin(angle) * totalKnock;
                         }
 
+                        // Bounce attacker back slightly
+                        attacker.dx *= -0.5;
+                        attacker.dy *= -0.5;
+                        
                         attacker.wallBounceSpeed = attacker.baseSpeed;
 
                         for (let k = 0; k < 15; k++) {

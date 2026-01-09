@@ -129,6 +129,63 @@ export class ParticleSystem {
         });
     }
 
+    spawnHirenkyaku(x, y) {
+        // Vertical Reishi Pillar (Light Beam)
+        this.particles.push({
+            type: 'beam',
+            x1: x, y1: y + 40,
+            x2: x, y2: y - 40,
+            color: '#1E90FF', // Dodger Blue
+            life: 0.4, decay: 0.1, width: 30
+        });
+        
+        // Inner Core Beam
+        this.particles.push({
+            type: 'beam',
+            x1: x, y1: y + 40,
+            x2: x, y2: y - 40,
+            color: '#ffffff',
+            life: 0.4, decay: 0.1, width: 10
+        });
+
+        // Reishi Shockwave (Flat ring)
+        this.particles.push({
+            type: 'shockwave',
+            x: x, y: y,
+            radius: 10, maxRadius: 70,
+            life: 0.6, decay: 0.08,
+            color: '#00BFFF', lineWidth: 4
+        });
+
+        // Reishi Particles (Square-ish movement feel)
+        for(let i=0; i<12; i++) {
+            const angle = (Math.PI * 2 / 12) * i;
+            const speed = 4 + Math.random() * 4;
+            this.particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 0.5, decay: 0.05,
+                size: 2 + Math.random() * 3,
+                color: '#E0FFFF', // Light Cyan
+                type: 'dot'
+            });
+        }
+    }
+
+    // Required for Quincy Attacks if missing
+    spawnQuincyArrow(x, y) {
+        this.particles.push({
+            type: 'shockwave', x: x, y: y,
+            radius: 5, maxRadius: 30,
+            life: 0.3, decay: 0.1, color: '#1E90FF'
+        });
+    }
+
+    spawnLichtRegen(x, y) {
+         this.spawnHirenkyaku(x, y); // Reuse the cool effect
+    }
+
     spawnWallImpact(x, y) {
         for (let i = 0; i < 30; i++) {
             this.particles.push({

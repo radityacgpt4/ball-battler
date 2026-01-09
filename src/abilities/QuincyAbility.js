@@ -173,7 +173,7 @@ export class QuincyDefAbility extends Ability {
         this.blinkDistance = config.blinkDistance || 150;
         this.trapDuration = config.trapDuration || 180;
         this.trapStunDuration = config.trapStunDuration || 30;
-        this.trapRadius = config.trapRadius || 7;
+        this.trapRadius = config.trapRadius || 1;
     }
 
     update(fighter, context) {

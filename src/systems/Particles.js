@@ -23,11 +23,22 @@ export class ParticleSystem {
         }
     }
 
-    spawnSlash(x1, y1, x2, y2, color, width = 40) {
-        this.particles.push({
-            type: 'slash', x1, y1, x2, y2, color,
-            life: 1.0, decay: 0.08, width: width
-        });
+    spawnSlash(x1, y1, x2, y2, color = '#ffffff', width = 2) {
+        // Create a line particle or series of dots
+        const dist = Math.hypot(x2 - x1, y2 - y1);
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const steps = Math.ceil(dist / 5);
+        
+        for(let i=0; i<steps; i++) {
+            const px = x1 + Math.cos(angle) * (i * 5);
+            const py = y1 + Math.sin(angle) * (i * 5);
+            this.particles.push({
+                x: px, y: py,
+                vx: (Math.random() - 0.5), vy: (Math.random() - 0.5),
+                life: 0.4, decay: 0.1,
+                size: width, color: color, type: 'dot'
+            });
+        }
     }
 
     spawnBeam(x1, y1, x2, y2, color, width = 6) {
@@ -217,7 +228,7 @@ export class ParticleSystem {
         this.particles.push({ type: 'bolt', segments: jagged, life: 1.0, decay: 0.08, color: color, width: width });
     }
 
-        spawnQuincyArrow(x, y) {
+    spawnQuincyArrow(x, y) {
         // Blue energy flash
         this.spawn(x, y, '#1E90FF', 8);
         // Sparkles

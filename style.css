@@ -239,12 +239,13 @@ canvas {
 /* Character Selection Grid */
 .selection-interface {
     display: flex;
-    flex: 1;
-    gap: 15px;
-    /* Increased gap */
-    overflow: hidden;
-    /* Prevent child overflow from breaking parent */
-    padding: 10px 0;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+    gap: 20px;
+    width: 100%;
+    max-width: 1000px;
+    margin-bottom: 20px;
 }
 
 .char-grid-container {
@@ -656,5 +657,56 @@ canvas {
     .p-tag {
         padding: 6px;
         font-size: 10px;
+    }
+}
+
+/* --- MOBILE RESPONSIVENESS FIXES --- */
+@media (max-width: 768px) {
+    .setup-title { font-size: 1.5rem; margin-bottom: 10px; }
+
+    /* Fix: Stack interface vertically to prevent "drowning" */
+    .selection-interface {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        overflow-y: auto; /* Allow scrolling inside setup if needed */
+        max-height: 65vh;
+        padding-bottom: 20px;
+        width: 100%;
+    }
+
+    /* Fix: Reorder elements for mobile (Grid on top, Details below) */
+    .char-grid-container { order: 1; width: 100%; }
+    .p1-details { order: 2; width: 95%; }
+    .p2-details { order: 3; width: 95%; }
+
+    /* Fix: Make grid denser on mobile */
+    .char-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+    
+    .char-btn { padding: 4px; }
+    .char-label { font-size: 0.6rem; }
+
+    /* Fix: Compact details panels */
+    .detail-panel {
+        padding: 10px;
+        min-height: auto;
+    }
+    
+    .detail-name { font-size: 1rem; margin-bottom: 5px; }
+    .detail-stats, .detail-skills { font-size: 0.75rem; }
+    
+    /* Fix: Ensure start button is accessible */
+    .start-container {
+        margin-top: 10px;
+        padding-bottom: 30px;
+    }
+    
+    #start-btn {
+        padding: 12px 30px;
+        font-size: 1rem;
+        width: 80%;
     }
 }

@@ -71,14 +71,14 @@ export class DivineGeneralAtkAbility extends Ability {
     performAttack(fighter, enemy) {
         // Calculate Damage
         let damage = this.baseDamage + this.currentBonus;
+        
+        // Check for Buff (Ult/Stored Damage)
+        const isBuffed = fighter.activeEffects.adaptationStoredDamage > 0;
 
         // Consume ULT absorbed damage if available
-        if (fighter.activeEffects.adaptationStoredDamage > 0) {
+        if (isBuffed) {
             damage += fighter.activeEffects.adaptationStoredDamage;
             fighter.activeEffects.adaptationStoredDamage = 0;
-
-            // Visual for consumed power
-            fighter.game.particles.spawn(fighter.x, fighter.y, '#FFD700', 10);
             logger.log(`${fighter.name} unleashed ADAPTED POWER!`, 'combat');
         }
 
@@ -88,11 +88,17 @@ export class DivineGeneralAtkAbility extends Ability {
         // Visuals & Audio
         audioEngine.playHit();
         
-        // === RANDOM SLASHING SPECIAL EFFECT ===
-        // Generate 4-6 random slashes around the fighter/enemy area
-        for(let i = 0; i < 5; i++) {
-            const cx = fighter.x + (Math.random() - 0.5) * 60;
-            const cy = fighter.y + (Math.random() - 0.5) * 60;
+        // === RANDOM SLASHING SPECIAL EFFECT (Updated) ===
+        // Config based on buff state
+        const slashColor = isBuffed ? '#00BFFF' : '#FFD700'; // Blue for Adaptation/Ult, Gold for normal
+        const slashThickness = isBuffed ? 8 : 4;
+        const slashCount = 3; // Reduced count (halved)
+
+        // Generate slashes ON THE ENEMY
+        for(let i = 0; i < slashCount; i++) {
+            // Center strictly on enemy with small variation
+            const cx = enemy.x + (Math.random() - 0.5) * 40;
+            const cy = enemy.y + (Math.random() - 0.5) * 40;
             const angle = Math.random() * Math.PI * 2;
             const len = 30 + Math.random() * 20;
             
@@ -101,12 +107,27 @@ export class DivineGeneralAtkAbility extends Ability {
                 cy - Math.sin(angle) * len, 
                 cx + Math.cos(angle) * len, 
                 cy + Math.sin(angle) * len, 
-                '#FFD700', 
-                4
+                slashColor, 
+                slashThickness
             );
         }
+
         // Burst of particles
-        fighter.game.particles.spawn(enemy.x, enemy.y, '#FFD700', 10);
+        if (isBuffed) {
+            // Blue explosion for buffed hit
+            fighter.game.particles.spawn(enemy.x, enemy.y, '#00BFFF', 15);
+            fighter.game.particles.spawnShockwave(enemy.x, enemy.y, '#00BFFF');
+            // Extra sparks
+            for(let k=0; k<5; k++) {
+                fighter.game.particles.spawnBolt([
+                    {x: enemy.x, y: enemy.y},
+                    {x: enemy.x + (Math.random()-0.5)*50, y: enemy.y + (Math.random()-0.5)*50}
+                ], '#00BFFF', 2);
+            }
+        } else {
+            // Normal Gold burst
+            fighter.game.particles.spawn(enemy.x, enemy.y, '#FFD700', 8);
+        }
 
         // Reset Bonus
         this.currentBonus = 0;

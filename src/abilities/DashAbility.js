@@ -41,8 +41,8 @@ export class DashAssaultAbility extends Ability {
         const finalY = Math.max(fighter.radius, Math.min(game.height - fighter.radius, destYRaw));
 
         // 2. VISUALS: Thunderclap Flash (Instant)
-        // Main Beam
-        game.particles.spawnThunderclap(startX, startY, finalX, finalY, '#ff4444', 40); // Red Lightning
+        // Main Beam - Reduced thickness for sharper look (40 -> 8)
+        game.particles.spawnThunderclap(startX, startY, finalX, finalY, '#ff4444', 8); 
         game.particles.spawnShockwave(startX, startY, '#ff4444');
         game.particles.spawnShockwave(finalX, finalY, '#ffffff');
         
@@ -64,7 +64,6 @@ export class DashAssaultAbility extends Ability {
                     // Hit Visuals
                     game.particles.spawnSlash(e.x-20, e.y-20, e.x+20, e.y+20, '#ffffff', 5);
                     game.particles.spawnExplosion(e.x, e.y);
-                    game.combatText.criticalHit(e.x, e.y);
                     
                     audioEngine.playHit();
                     logger.log(`${fighter.name} THUNDERCLAP HIT ${e.name}!`, 'combat');

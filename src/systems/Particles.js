@@ -30,8 +30,9 @@ export class ParticleSystem {
         });
     }
 
-    spawnThunderclap(x1, y1, x2, y2, color, thickness = 8) {
-        // Main Beam - Sharp and thin (Default 8)
+    // UPDATED: Thinner, sharper thunderclap
+    spawnThunderclap(x1, y1, x2, y2, color, thickness = 6) {
+        // Main Beam - Razor sharp
         this.particles.push({
             type: 'beam', x1, y1, x2, y2, color,
             life: 0.8, decay: 0.08, width: thickness
@@ -45,7 +46,7 @@ export class ParticleSystem {
 
         const dist = Physics.dist(x1, y1, x2, y2);
 
-        // 1. Large Arcs (Residual)
+        // 1. Residual Arcs
         const steps = Math.floor(dist / 40);
         const dx = (x2 - x1) / steps;
         const dy = (y2 - y1) / steps;
@@ -59,36 +60,46 @@ export class ParticleSystem {
             ], color, 2);
         }
 
-        // 2. Small Flickering Static (Thunderous Effect)
-        const staticCount = Math.floor(dist / 12); // Dense static
+        // 2. Small Flickering Static
+        const staticCount = Math.floor(dist / 12);
         for(let i=0; i<staticCount; i++) {
             const t = Math.random();
             const px = x1 + (x2 - x1) * t;
             const py = y1 + (y2 - y1) * t;
             
-            // Random tiny jagged bolt
             this.spawnBolt([
                 {x: px, y: py},
                 {x: px + (Math.random()-0.5)*25, y: py + (Math.random()-0.5)*25}
             ], '#ffffff', 1);
         }
+    }
 
-        // 3. Electric Sparks
-        const sparkCount = Math.floor(dist / 15);
-        for(let i=0; i<sparkCount; i++) {
-            const t = Math.random();
+    // UPDATED: Distinct Reishi blink
+    spawnHirenkyaku(x, y) {
+        // 1. Blue Shockwave Ring
+        this.spawnShockwave(x, y, '#1E90FF');
+
+        // 2. Rising Energy Particles (Reishi flow)
+        for (let i = 0; i < 10; i++) {
             this.particles.push({
-                x: x1 + (x2 - x1) * t,
-                y: y1 + (y2 - y1) * t,
-                vx: (Math.random() - 0.5) * 8,
-                vy: (Math.random() - 0.5) * 8,
-                life: 0.3 + Math.random() * 0.3,
-                decay: 0.15, // Fast decay for flicker
-                size: 1 + Math.random() * 1.5,
-                color: '#ffffaa',
+                x: x + (Math.random() - 0.5) * 25,
+                y: y + (Math.random() - 0.5) * 25,
+                vx: 0, 
+                vy: -3 - Math.random() * 3, // Fast upward movement
+                life: 0.6, decay: 0.08,
+                size: 2, color: '#00BFFF', 
                 type: 'dot'
             });
         }
+        
+        // 3. Central Flash
+        this.particles.push({
+            x: x, y: y,
+            vx: 0, vy: 0,
+            life: 0.4, decay: 0.1,
+            size: 15, color: '#E0FFFF',
+            type: 'dot', alpha: 0.8
+        });
     }
 
     spawnBeam(x1, y1, x2, y2, color, width = 6) {

@@ -41,7 +41,6 @@ export class DashAssaultAbility extends Ability {
         const finalY = Math.max(fighter.radius, Math.min(game.height - fighter.radius, destYRaw));
 
         // 2. VISUALS: Thunderclap Flash (Instant)
-        // Main Beam - Reduced thickness for sharper look (40 -> 8)
         game.particles.spawnThunderclap(startX, startY, finalX, finalY, '#ff4444', 6); 
         game.particles.spawnShockwave(startX, startY, '#ff4444');
         game.particles.spawnShockwave(finalX, finalY, '#ffffff');

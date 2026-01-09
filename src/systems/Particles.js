@@ -139,11 +139,11 @@ export class ParticleSystem {
             type: 'shockwave',
             x: x, y: y,
             radius: 5,
-            maxRadius: 250,
+            maxRadius: 180,
             life: 1.5,
             decay: 0.03,
             color: '#000000',
-            lineWidth: 25
+            lineWidth: 22
         });
 
         // Glowing red outer ring
@@ -215,6 +215,50 @@ export class ParticleSystem {
         }
 
         this.particles.push({ type: 'bolt', segments: jagged, life: 1.0, decay: 0.08, color: color, width: width });
+    }
+
+        spawnQuincyArrow(x, y) {
+        // Blue energy flash
+        this.spawn(x, y, '#1E90FF', 8);
+        // Sparkles
+        for (let i = 0; i < 6; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            this.particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * 2,
+                vy: Math.sin(angle) * 2,
+                life: 0.6, decay: 0.1,
+                size: 2, color: '#00BFFF', type: 'dot'
+            });
+        }
+    }
+
+    spawnHirenkyaku(x, y) {
+        // Static/Glitch effect for teleport
+        for (let i = 0; i < 10; i++) {
+            this.particles.push({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y + (Math.random() - 0.5) * 20,
+                vx: 0, vy: -1,
+                life: 0.4, decay: 0.1,
+                size: 2, color: '#ffffff', type: 'dot'
+            });
+        }
+        this.spawn(x, y, '#1E90FF', 8);
+    }
+
+    spawnLichtRegen(x, y) {
+        // Upward burst indicating arrow rain launch
+        for (let i = 0; i < 15; i++) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5);
+            this.particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * 6,
+                vy: Math.sin(angle) * 6,
+                life: 0.8, decay: 0.05,
+                size: 3, color: '#00BFFF', type: 'dot'
+            });
+        }
     }
 
     updateAndDraw(ctx) {

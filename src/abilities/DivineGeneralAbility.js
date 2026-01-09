@@ -87,34 +87,26 @@ export class DivineGeneralAtkAbility extends Ability {
 
         // Visuals & Audio
         audioEngine.playHit();
-
-        // --- FLASHY SLASH EFFECT ---
-        // Generate a random angle for the cut "inside" the enemy
-        const cutAngle = Math.random() * Math.PI * 2;
-        const cutLen = enemy.radius * 1.5; // Slightly larger than enemy
-
-        // Calculate start and end points centered on the enemy
-        const sx = enemy.x - Math.cos(cutAngle) * cutLen;
-        const sy = enemy.y - Math.sin(cutAngle) * cutLen;
-        const ex = enemy.x + Math.cos(cutAngle) * cutLen;
-        const ey = enemy.y + Math.sin(cutAngle) * cutLen;
-
-        // Spawn the slash (Translucent Gold/White)
-        // Note: spawnSlash uses the color provided. 'rgba' works if context supports it, 
-        // but hex is safer for your current particle system. Let's use a bright pale gold.
-        fighter.game.particles.spawnSlash(sx, sy, ex, ey, '#FFFACD', 2); 
         
-        // Add a small burst of sparks to emphasize the cut impact
-        for(let i=0; i<3; i++) {
-            const sparkAngle = cutAngle + (Math.random() - 0.5); // Spray along the cut direction
-            fighter.game.particles.particles.push({
-                x: enemy.x, y: enemy.y,
-                vx: Math.cos(sparkAngle) * 4,
-                vy: Math.sin(sparkAngle) * 4,
-                life: 0.3, decay: 0.1,
-                size: 2, color: '#FFD700', type: 'dot'
-            });
+        // === RANDOM SLASHING SPECIAL EFFECT ===
+        // Generate 4-6 random slashes around the fighter/enemy area
+        for(let i = 0; i < 5; i++) {
+            const cx = fighter.x + (Math.random() - 0.5) * 60;
+            const cy = fighter.y + (Math.random() - 0.5) * 60;
+            const angle = Math.random() * Math.PI * 2;
+            const len = 30 + Math.random() * 20;
+            
+            fighter.game.particles.spawnSlash(
+                cx - Math.cos(angle) * len, 
+                cy - Math.sin(angle) * len, 
+                cx + Math.cos(angle) * len, 
+                cy + Math.sin(angle) * len, 
+                '#FFD700', 
+                4
+            );
         }
+        // Burst of particles
+        fighter.game.particles.spawn(enemy.x, enemy.y, '#FFD700', 10);
 
         // Reset Bonus
         this.currentBonus = 0;

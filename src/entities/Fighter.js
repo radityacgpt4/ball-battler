@@ -142,7 +142,7 @@ export class Fighter {
         if (this.activeEffects.evasionTimer > 0) this.activeEffects.evasionTimer = tick(this.activeEffects.evasionTimer);
 
         if (this.isDashing) {
-            this.handleDash(timeScale);
+            this.Dash(timeScale);
         } else {
             // Always allow physics/movement processing (stun now handled inside handleMovement)
             this.handleMovement(timeScale);
@@ -163,68 +163,114 @@ export class Fighter {
     }
 
     handleMovement(timeScale) {
+        // --- 1. TARGET VELOCITY CALCULATION ---
+        let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
+
+        // Apply status modifiers
         let speedMult = this.laserSpeedMult || 1.0;
-        if (this.status.slow > 0) speedMult *= 0.3; // 70% slow (Cumulative)
+        if (this.status.slow > 0) speedMult *= 0.4; // Stronger slow for physics feel
+        if (this.activeEffects.ultActive && this.typeKey === 'SOLDIER') speedMult *= 1.5;
 
-        this.x += this.dx * speedMult * timeScale;
-        this.y += this.dy * speedMult * timeScale;
+        targetSpeed *= speedMult;
 
+        // --- 2. STEERING PHYSICS ---
+        // We do not set DX/DY directly. We apply acceleration towards the target velocity.
+        if (this.status.stun <= 0 && !this.isDead) {
+            const desiredVx = Math.cos(this.angle) * targetSpeed;
+            const desiredVy = Math.sin(this.angle) * targetSpeed;
+
+            // "Grip" Factor: How fast can they change direction?
+            // Heavier units (High Mass) steer slower (Inertia).
+            // Base grip is 0.15 (very snappy) -> divided by mass.
+            const grip = 0.2 / Math.sqrt(this.mass); 
+
+            // Steering Force = (Desired - Current) * Grip
+            const steerX = (desiredVx - this.dx) * grip;
+            const steerY = (desiredVy - this.dy) * grip;
+
+            this.dx += steerX * timeScale;
+            this.dy += steerY * timeScale;
+        }
+
+        // --- 3. DRAG & FRICTION (Anti-Floatiness) ---
+        // Natural decay. If velocity > targetSpeed (from knockback), decay faster.
+        const currentSpeed = Math.hypot(this.dx, this.dy);
+        let drag = 0.95; // Base friction (prevents infinite slide)
+
+        // If flying uncontrollable fast (Knockback), apply stronger Air Resistance
+        if (currentSpeed > targetSpeed * 1.2) {
+            drag = 0.90; 
+        }
+        // If stunned, apply Ground Friction
+        if (this.status.stun > 0) {
+            drag = 0.88;
+        }
+
+        this.dx *= Math.pow(drag, timeScale);
+        this.dy *= Math.pow(drag, timeScale);
+
+        // --- 4. APPLY POSITION ---
+        this.x += this.dx * timeScale;
+        this.y += this.dy * timeScale;
+
+        // --- 5. WALL BOUNCE LOGIC ---
         let bounced = false;
-
         const bounds = this.game.arenaBounds;
-        if (this.x < bounds.x + this.radius) { this.x = bounds.x + this.radius; this.dx = Math.abs(this.dx); bounced = true; }
-        if (this.x > bounds.x + bounds.width - this.radius) { this.x = bounds.x + bounds.width - this.radius; this.dx = -Math.abs(this.dx); bounced = true; }
-        if (this.y < bounds.y + this.radius) { this.y = bounds.y + this.radius; this.dy = Math.abs(this.dy); bounced = true; }
-        if (this.y > bounds.y + bounds.height - this.radius) { this.y = bounds.y + bounds.height - this.radius; this.dy = -Math.abs(this.dy); bounced = true; }
+        const restitution = 0.75; // Bounciness factor (loss of energy on wall hit)
 
-        if (bounced) audioEngine.playBounce();
+        if (this.x < bounds.x + this.radius) { 
+            this.x = bounds.x + this.radius; 
+            this.dx = Math.abs(this.dx) * restitution; 
+            bounced = true; 
+        }
+        else if (this.x > bounds.x + bounds.width - this.radius) { 
+            this.x = bounds.x + bounds.width - this.radius; 
+            this.dx = -Math.abs(this.dx) * restitution; 
+            bounced = true; 
+        }
 
+        if (this.y < bounds.y + this.radius) { 
+            this.y = bounds.y + this.radius; 
+            this.dy = Math.abs(this.dy) * restitution; 
+            bounced = true; 
+        }
+        else if (this.y > bounds.y + bounds.height - this.radius) { 
+            this.y = bounds.y + bounds.height - this.radius; 
+            this.dy = -Math.abs(this.dy) * restitution; 
+            bounced = true; 
+        }
+
+        if (bounced) {
+            // Prevent buzzing against wall
+            if (Math.hypot(this.dx, this.dy) > 1) audioEngine.playBounce();
+            this.handleWallCollisionEffects();
+        }
+    }
+
+    handleWallCollisionEffects() {
         // WALL SLAM Logic (Shieldbearer Ult)
-        if (bounced && this.pendingWallSlam) {
+        if (this.pendingWallSlam) {
             const attacker = this.pendingWallSlam.owner;
             const damage = attacker.skills.ult.damage;
-
             this.takeDamage(damage);
             audioEngine.playHeavyImpact();
-
-            this.status.stun = 30;
-
+            this.status.stun = 45; // Longer stun for physics recovery
             this.game.combatText.wallSlam(this.x, this.y - 30);
             this.game.particles.spawnWallImpact(this.x, this.y);
             logger.log(`${this.name} hit the WALL SLAM!`, 'combat');
-
-            const vAngle = Math.atan2(this.dy, this.dx);
-            this.dx = Math.cos(vAngle) * this.baseSpeed;
-            this.dy = Math.sin(vAngle) * this.baseSpeed;
-
-            if (attacker && !attacker.isDead) {
-                const aAngle = Math.random() * Math.PI * 2;
-                attacker.dx = Math.cos(aAngle) * attacker.baseSpeed;
-                attacker.dy = Math.sin(aAngle) * attacker.baseSpeed;
-                this.game.particles.spawn(attacker.x, attacker.y, '#ffffff', 5);
-            }
-
             this.pendingWallSlam = null;
         }
 
-        // BALLISTA PIN Logic (when knocked into wall by bolt)
-        if (bounced && this.pendingBallistaPinned) {
-            // Stun for 0.5 sec (30 frames)
-            this.status.stun = 30;
-
+        // BALLISTA PIN Logic
+        if (this.pendingBallistaPinned) {
+            this.status.stun = 45;
             audioEngine.playHeavyImpact();
             this.game.particles.spawnWallImpact(this.x, this.y);
-
-            // Reset to normal speed
-            const vAngle = Math.atan2(this.dy, this.dx);
-            this.dx = Math.cos(vAngle) * this.baseSpeed;
-            this.dy = Math.sin(vAngle) * this.baseSpeed;
-
             this.pendingBallistaPinned = null;
         }
 
-        // SHIELDBEARER: Momentum on wall bounce
-        if (bounced && this.typeKey === 'SHIELDBEARER') {
+        // SHIELDBEARER: Momentum
+        if (this.typeKey === 'SHIELDBEARER') {
             const config = this.skills.atk;
             if (this.wallBounceSpeed < config.maxSpeed) {
                 this.wallBounceSpeed = Math.min(this.wallBounceSpeed + config.speedGain, config.maxSpeed);
@@ -232,37 +278,6 @@ export class Fighter {
                 this.game.particles.spawn(this.x, this.y, '#8b5cf6', 5);
                 audioEngine.playSpeedUp();
                 this.spawnSonicBoom();
-                logger.log(`${this.name} SPEED UP! (${this.wallBounceSpeed.toFixed(1)}/${config.maxSpeed})`, 'info');
-            }
-        }
-
-        const speed = Math.hypot(this.dx, this.dy);
-
-        // If STUNNED, apply friction/decay instead of driving velocity
-        if (this.status.stun > 0) {
-            if (speed > 0) {
-                // Apply friction (lower decay to allow sliding/bouncing)
-                this.dx *= 0.88;
-                this.dy *= 0.88;
-                if (speed < 0.1) {
-                    this.dx = 0;
-                    this.dy = 0;
-                }
-            }
-        } else {
-            // RECOVERY: If speed dropped to 0 (e.g. after stun), restart movement
-            if (speed <= 0.1 && !this.isDead) {
-                const restartAngle = Math.random() * Math.PI * 2;
-                this.dx = Math.cos(restartAngle) * this.baseSpeed;
-                this.dy = Math.sin(restartAngle) * this.baseSpeed;
-            } else if (speed > 0) {
-                // Normal movement driving
-                let mod = (this.activeEffects.ultActive && this.typeKey === 'SOLDIER') ? 1.5 : 1.0;
-                if (this.status.slow > 0) mod *= 0.75; // 25% slow
-
-                let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
-                this.dx = (this.dx / speed) * targetSpeed * mod;
-                this.dy = (this.dy / speed) * targetSpeed * mod;
             }
         }
     }

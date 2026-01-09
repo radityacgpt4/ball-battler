@@ -23,21 +23,40 @@ export class ParticleSystem {
         }
     }
 
-    spawnSlash(x1, y1, x2, y2, color = '#ffffff', width = 2) {
-        // Create a line particle or series of dots
-        const dist = Math.hypot(x2 - x1, y2 - y1);
-        const angle = Math.atan2(y2 - y1, x2 - x1);
-        const steps = Math.ceil(dist / 5);
+    spawnSlash(x1, y1, x2, y2, color, width = 40) {
+        this.particles.push({
+            type: 'slash', x1, y1, x2, y2, color,
+            life: 1.0, decay: 0.08, width: width
+        });
+    }
+
+    spawnThunderclap(x1, y1, x2, y2, color, thickness = 15) {
+        // Main Beam
+        this.particles.push({
+            type: 'beam', x1, y1, x2, y2, color,
+            life: 1.0, decay: 0.05, width: thickness
+        });
         
+        // Inner Core (White hot)
+        this.particles.push({
+            type: 'beam', x1, y1, x2, y2, color: '#ffffff',
+            life: 1.0, decay: 0.05, width: thickness / 3
+        });
+
+        // Residual Lightning Arcs along the path
+        const dist = Physics.dist(x1, y1, x2, y2);
+        const steps = Math.floor(dist / 40);
+        const dx = (x2 - x1) / steps;
+        const dy = (y2 - y1) / steps;
+
         for(let i=0; i<steps; i++) {
-            const px = x1 + Math.cos(angle) * (i * 5);
-            const py = y1 + Math.sin(angle) * (i * 5);
-            this.particles.push({
-                x: px, y: py,
-                vx: (Math.random() - 0.5), vy: (Math.random() - 0.5),
-                life: 0.4, decay: 0.1,
-                size: width, color: color, type: 'dot'
-            });
+            const bx = x1 + dx * i;
+            const by = y1 + dy * i;
+            // Random offset lightning
+            this.spawnBolt([
+                {x: bx, y: by},
+                {x: bx + (Math.random()-0.5)*60, y: by + (Math.random()-0.5)*60}
+            ], color, 2);
         }
     }
 

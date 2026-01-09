@@ -86,9 +86,15 @@ export class DivineBrawlerAtkAbility extends Ability {
         // Knockback for Black Flash
         if (isBlackFlash) {
             const angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
-            const force = this.baseKnockback + (finalCritMult * this.knockbackPerMult);
+            // Adjusted force for new physics mass system
+            const rawForce = this.baseKnockback + (finalCritMult * this.knockbackPerMult);
+            const force = rawForce / enemy.mass; // Heavy units resist more
+            
             enemy.dx += Math.cos(angle) * force;
             enemy.dy += Math.sin(angle) * force;
+            
+            // Add stun to guarantee knockback distance travel
+            enemy.applyStatus('STUN', 15);
         }
 
         enemy.takeDamage(damage, false, false, fighter);

@@ -43,8 +43,9 @@ export class ParticleSystem {
             life: 1.0, decay: 0.05, width: thickness / 3
         });
 
-        // Residual Lightning Arcs along the path
         const dist = Physics.dist(x1, y1, x2, y2);
+
+        // 1. Large Arcs (Residual)
         const steps = Math.floor(dist / 40);
         const dx = (x2 - x1) / steps;
         const dy = (y2 - y1) / steps;
@@ -52,11 +53,41 @@ export class ParticleSystem {
         for(let i=0; i<steps; i++) {
             const bx = x1 + dx * i;
             const by = y1 + dy * i;
-            // Random offset lightning
             this.spawnBolt([
                 {x: bx, y: by},
                 {x: bx + (Math.random()-0.5)*60, y: by + (Math.random()-0.5)*60}
             ], color, 2);
+        }
+
+        // 2. Small Flickering Static (Thunderous Effect)
+        const staticCount = Math.floor(dist / 12); // Dense static
+        for(let i=0; i<staticCount; i++) {
+            const t = Math.random();
+            const px = x1 + (x2 - x1) * t;
+            const py = y1 + (y2 - y1) * t;
+            
+            // Random tiny jagged bolt
+            this.spawnBolt([
+                {x: px, y: py},
+                {x: px + (Math.random()-0.5)*25, y: py + (Math.random()-0.5)*25}
+            ], '#ffffff', 1);
+        }
+
+        // 3. Electric Sparks
+        const sparkCount = Math.floor(dist / 15);
+        for(let i=0; i<sparkCount; i++) {
+            const t = Math.random();
+            this.particles.push({
+                x: x1 + (x2 - x1) * t,
+                y: y1 + (y2 - y1) * t,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+                life: 0.3 + Math.random() * 0.3,
+                decay: 0.15, // Fast decay for flicker
+                size: 1 + Math.random() * 1.5,
+                color: '#ffffaa',
+                type: 'dot'
+            });
         }
     }
 

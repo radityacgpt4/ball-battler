@@ -110,3 +110,4 @@ export class CollisionHandler {
         e2.dx -= (j * nx) / m2;
         e2.dy -= (j * ny) / m2;
     }
+}

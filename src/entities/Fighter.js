@@ -163,60 +163,63 @@ export class Fighter {
     }
 
     handleMovement(timeScale) {
-        // --- 1. TARGET VELOCITY CALCULATION ---
+        // --- 1. SETUP & CONFIG ---
         let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
 
         // Apply status modifiers
         let speedMult = this.laserSpeedMult || 1.0;
-        if (this.status.slow > 0) speedMult *= 0.4; // Stronger slow for physics feel
+        if (this.status.slow > 0) speedMult *= 0.5;
         if (this.activeEffects.ultActive && this.typeKey === 'SOLDIER') speedMult *= 1.5;
 
         targetSpeed *= speedMult;
 
-        // --- 2. STEERING PHYSICS ---
-        // We do not set DX/DY directly. We apply acceleration towards the target velocity.
-        if (this.status.stun <= 0 && !this.isDead) {
-            const desiredVx = Math.cos(this.angle) * targetSpeed;
-            const desiredVy = Math.sin(this.angle) * targetSpeed;
-
-            // "Grip" Factor: How fast can they change direction?
-            // Heavier units (High Mass) steer slower (Inertia).
-            // Base grip is 0.15 (very snappy) -> divided by mass.
-            const grip = 0.2 / Math.sqrt(this.mass); 
-
-            // Steering Force = (Desired - Current) * Grip
-            const steerX = (desiredVx - this.dx) * grip;
-            const steerY = (desiredVy - this.dy) * grip;
-
-            this.dx += steerX * timeScale;
-            this.dy += steerY * timeScale;
-        }
-
-        // --- 3. DRAG & FRICTION (Anti-Floatiness) ---
-        // Natural decay. If velocity > targetSpeed (from knockback), decay faster.
-        const currentSpeed = Math.hypot(this.dx, this.dy);
-        let drag = 0.95; // Base friction (prevents infinite slide)
-
-        // If flying uncontrollable fast (Knockback), apply stronger Air Resistance
-        if (currentSpeed > targetSpeed * 1.2) {
-            drag = 0.90; 
-        }
-        // If stunned, apply Ground Friction
-        if (this.status.stun > 0) {
-            drag = 0.88;
-        }
+        // --- 2. PHYSICS STEP: FRICTION ---
+        // We apply drag first. This prevents knockback from lasting forever.
+        // 0.96 is a good balance: slidy enough to feel impacts, grippy enough to not feel like ice.
+        let drag = 0.96; 
+        if (this.status.stun > 0) drag = 0.85; // High friction if stunned (sliding to a halt)
 
         this.dx *= Math.pow(drag, timeScale);
         this.dy *= Math.pow(drag, timeScale);
 
-        // --- 4. APPLY POSITION ---
+        // --- 3. PHYSICS STEP: THE "ENGINE" ---
+        if (this.status.stun <= 0 && !this.isDead) {
+            const currentSpeed = Math.hypot(this.dx, this.dy);
+
+            // Case A: We are stuck/stopped (Speed is ~0)
+            // We need a kickstart. Since characters spin visually, we just pick a semi-random 
+            // direction or keep their last tiny momentum to get them moving again.
+            if (currentSpeed < 0.1) {
+                const angle = Math.random() * Math.PI * 2;
+                const push = 0.5 * timeScale;
+                this.dx += Math.cos(angle) * push;
+                this.dy += Math.sin(angle) * push;
+            } 
+            // Case B: We are moving, but below top speed
+            // Apply gentle acceleration in the CURRENT direction of travel.
+            else if (currentSpeed < targetSpeed) {
+                // Normalize vector
+                const nx = this.dx / currentSpeed;
+                const ny = this.dy / currentSpeed;
+
+                // Acceleration force (Heavy units accelerate slower)
+                const acceleration = (0.3 / Math.sqrt(this.mass)) * timeScale;
+                
+                this.dx += nx * acceleration;
+                this.dy += ny * acceleration;
+            }
+            // Case C: We are flying super fast (Knockback)
+            // Do nothing. Let friction (Step 2) slow us down naturally.
+        }
+
+        // --- 4. APPLY VELOCITY TO POSITION ---
         this.x += this.dx * timeScale;
         this.y += this.dy * timeScale;
 
-        // --- 5. WALL BOUNCE LOGIC ---
+        // --- 5. WALL COLLISION (BOUNCE) ---
         let bounced = false;
         const bounds = this.game.arenaBounds;
-        const restitution = 0.75; // Bounciness factor (loss of energy on wall hit)
+        const restitution = 0.9; // Retain 90% of speed on bounce
 
         if (this.x < bounds.x + this.radius) { 
             this.x = bounds.x + this.radius; 
@@ -241,7 +244,6 @@ export class Fighter {
         }
 
         if (bounced) {
-            // Prevent buzzing against wall
             if (Math.hypot(this.dx, this.dy) > 1) audioEngine.playBounce();
             this.handleWallCollisionEffects();
         }

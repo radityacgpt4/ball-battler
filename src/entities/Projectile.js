@@ -370,11 +370,10 @@ draw(ctx) {
             ctx.restore();
         }
         else if (this.isClaymore) {
-            ctx.fillStyle = '#ff6600'; // Orange for high contrast
+            ctx.fillStyle = '#ff6600';
             ctx.beginPath();
             ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
             ctx.fill();
-
             // Blink light
             if (Math.floor(Date.now() / 200) % 2 === 0) {
                 ctx.fillStyle = '#ff0000';
@@ -382,13 +381,43 @@ draw(ctx) {
                 ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
                 ctx.fill();
             }
-
-            // Range indicator (faint)
+            // Range indicator
             ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
             ctx.stroke();
+        }
+        else if (this.isGintoTrap) {
+            // Tiny Silver Tube (Capsule shape)
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            
+            // Draw Ginto Tube
+            ctx.fillStyle = '#e0e0e0'; // Silver
+            ctx.strokeStyle = '#a0a0a0';
+            ctx.lineWidth = 1;
+            
+            // Vertical capsule
+            ctx.beginPath();
+            ctx.roundRect(-3, -6, 6, 12, 3);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Energy liquid inside (Blue)
+            ctx.fillStyle = '#00BFFF';
+            ctx.beginPath();
+            ctx.roundRect(-1.5, -3, 3, 6, 1);
+            ctx.fill();
+            
+            // Range indicator (Very faint)
+            ctx.strokeStyle = 'rgba(30, 144, 255, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, 0, 15, 0, Math.PI * 2); // Visual range only
+            ctx.stroke();
+            
+            ctx.restore();
         }
         else if (this.isSniperShot) {
             ctx.save();

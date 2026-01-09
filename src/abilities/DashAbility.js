@@ -22,31 +22,62 @@ export class DashAssaultAbility extends Ability {
     execute(fighter, context) {
         const { enemies, game } = context;
 
-        fighter.isDashing = true;
-        fighter.dashTimer = this.dashTimer;
-
+        // 1. Calculate trajectory
         const target = enemies.find(e => e !== fighter && !e.isDead);
         let aimAngle = fighter.angle;
         if (target) aimAngle = Math.atan2(target.y - fighter.y, target.x - fighter.x);
+        
+        fighter.angle = aimAngle; // Face target
+        const startX = fighter.x;
+        const startY = fighter.y;
+        
+        // Calculate max dash distance clamped to walls
+        let moveDist = this.dashDistance;
+        const destXRaw = startX + Math.cos(aimAngle) * moveDist;
+        const destYRaw = startY + Math.sin(aimAngle) * moveDist;
+        
+        // Clamp destination to arena
+        const finalX = Math.max(fighter.radius, Math.min(game.width - fighter.radius, destXRaw));
+        const finalY = Math.max(fighter.radius, Math.min(game.height - fighter.radius, destYRaw));
 
-        fighter.angle = aimAngle;
-        const dist = this.dashDistance;
-        const destX = fighter.x + Math.cos(aimAngle) * dist;
-        const destY = fighter.y + Math.sin(aimAngle) * dist;
+        // 2. VISUALS: Thunderclap Flash (Instant)
+        // Main Beam
+        game.particles.spawnThunderclap(startX, startY, finalX, finalY, '#ff4444', 40); // Red Lightning
+        game.particles.spawnShockwave(startX, startY, '#ff4444');
+        game.particles.spawnShockwave(finalX, finalY, '#ffffff');
+        
+        // Audio
+        audioEngine.playTeleport(); // "Zip" sound
+        audioEngine.playHeavyImpact(); // "Boom" sound
 
-        game.particles.spawnSlash(fighter.x, fighter.y, destX, destY, '#ff0000');
-        audioEngine.playSwordSwing();
+        // 3. COLLISION LOGIC (Instant Line Check)
+        const hitWidth = fighter.radius + 20; // Generous hitbox
+        
+        enemies.forEach(e => {
+            if(e !== fighter && !e.isDead) {
+                if(Physics.lineCircleIntersect(startX, startY, finalX, finalY, e.x, e.y, hitWidth)) {
+                    // HIT!
+                    e.takeDamage(this.damage, false, false, fighter);
+                    e.applyStatus('BLEED', 180);
+                    e.applyStatus('STUN', 30); // Slight stun from impact
+                    
+                    // Hit Visuals
+                    game.particles.spawnSlash(e.x-20, e.y-20, e.x+20, e.y+20, '#ffffff', 5);
+                    game.particles.spawnExplosion(e.x, e.y);
+                    game.combatText.criticalHit(e.x, e.y);
+                    
+                    audioEngine.playHit();
+                    logger.log(`${fighter.name} THUNDERCLAP HIT ${e.name}!`, 'combat');
+                }
+            }
+        });
 
-        if (target && Physics.lineCircleIntersect(fighter.x, fighter.y, destX, destY, target.x, target.y, target.radius + 15)) {
-            target.takeDamage(this.damage, false, false, fighter);
-            target.applyStatus('BLEED');
-            audioEngine.playHit();
-            logger.log(`${fighter.name} Dash Assault HIT ${target.name}!`, 'combat');
-        }
-
-        fighter.x = Math.max(fighter.radius, Math.min(game.width - fighter.radius, destX));
-        fighter.y = Math.max(fighter.radius, Math.min(game.height - fighter.radius, destY));
-
+        // 4. TELEPORT
+        fighter.x = finalX;
+        fighter.y = finalY;
+        
+        // Add recoil/invincibility frames if desired
+        fighter.isDashing = false; // Not "dashing" over time, it was instant
         fighter.cooldowns.ult = this.cooldown;
     }
 }

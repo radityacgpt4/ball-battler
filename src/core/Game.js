@@ -22,6 +22,7 @@ export class Game {
         this.projectiles = [];
         this.particles = new ParticleSystem();
         this.combatText = new CombatTextHelper(this.particles);
+        this.collisionHandler = new CollisionHandler(this);
         this.running = false;
         this.p1Type = 'THUNDER_MAGE';
         this.p2Type = 'SHIELDBEARER';
@@ -172,7 +173,7 @@ export class Game {
         this.entities = [];
         this.projectiles = [];
         this.particles = new ParticleSystem();
-        this.combatText = new CombatTextHelper(this.particles);
+        
 
         this.entities.push(new Fighter(1, 100, 250, this.p1Type, FIGHTER_TYPES, this));
         this.entities.push(new Fighter(2, 400, 250, this.p2Type, FIGHTER_TYPES, this));
@@ -433,151 +434,14 @@ export class Game {
                         // Current logic: if unblockable, we skipped the shield block block.
                         // So we are here.
 
-                        if (!p.isKunai || (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage))) break;
+            if (!p.isKunai || (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage))) break;
                     }
                 }
             }
         }
 
-        // Entities
-        for (let i = 0; i < this.entities.length; i++) {
-            for (let j = i + 1; j < this.entities.length; j++) {
-                let e1 = this.entities[i];
-                let e2 = this.entities[j];
-                if (e1.isDead || e2.isDead) continue;
-                if (e1.isDashing || e2.isDashing) continue;
-
-                let dist = Physics.dist(e1.x, e1.y, e2.x, e2.y);
-                let minDist = e1.radius + e2.radius;
-
-                if (dist < minDist) {
-                    // Static passive (Volt's zap on contact)
-                    if (e1.skills.def.type === 'STATIC_PASSIVE' && e2.status.stun <= 0) {
-                        e2.applyStatus('STUN');
-                        this.particles.spawn(e2.x, e2.y, '#00FFFF', 8);
-                        audioEngine.playZap();
-                        logger.log(`${e1.name} STATIC PASSIVE stunned ${e2.name}!`, 'combat');
-                    }
-                    if (e2.skills.def.type === 'STATIC_PASSIVE' && e1.status.stun <= 0) {
-                        e1.applyStatus('STUN');
-                        this.particles.spawn(e1.x, e1.y, '#00FFFF', 8);
-                        audioEngine.playZap();
-                        logger.log(`${e2.name} STATIC PASSIVE stunned ${e1.name}!`, 'combat');
-                    }
-
-                    // SHIELDBEARER: Momentum Collision
-                    const handleMomentumHit = (attacker, defender) => {
-                        if (attacker.typeKey !== 'SHIELDBEARER') return false;
-
-                        if (defender.collisionImmunity > 0) return false;
-
-                        const config = attacker.skills.atk;
-                        const speedTier = Math.floor((attacker.wallBounceSpeed - attacker.baseSpeed) / config.speedGain);
-
-                        if (speedTier <= 0 && !attacker.ultWallSlamActive) return false;
-
-                        // Calculate potential damage for shield check
-                        let damage = speedTier * config.damagePerTier;
-                        if (attacker.ultWallSlamActive) damage = Math.max(damage, 10);
-
-                        if (defender.isBlockedByShield(attacker.x, attacker.y, damage)) {
-                            logger.log(`${defender.name} blocked momentum slam from ${attacker.name}`, 'combat');
-                            attacker.wallBounceSpeed = attacker.baseSpeed;
-                            const reverseAngle = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
-                            attacker.dx = Math.cos(reverseAngle) * 10;
-                            attacker.dy = Math.sin(reverseAngle) * 10;
-                            this.particles.spawn(
-                                defender.x + Math.cos(defender.angle) * 30,
-                                defender.y + Math.sin(defender.angle) * 30,
-                                '#8b5cf6', 10
-                            );
-                            audioEngine.playBlock();
-                            return true;
-                        }
-
-                        // Damage already calculated above
-                        defender.takeDamage(damage, false, false, attacker);
-                        this.particles.spawn(defender.x, defender.y, '#8b5cf6', 8);
-                        logger.log(`${attacker.name} SLAMMED ${defender.name} for ${damage} dmg (SpeedTier: ${speedTier})`, 'combat');
-                        audioEngine.playHeavyImpact();
-
-                        const massRatio = attacker.mass / defender.mass;
-                        const baseKnock = config.knockback * massRatio;
-                        const speedBonus = speedTier * 5;
-                        let totalKnock = baseKnock + speedBonus;
-
-                        if (attacker.ultWallSlamActive) {
-                            const angle = Math.atan2(defender.y - attacker.y, defender.x - attacker.x);
-
-                            // Wall slam applies massive impulse
-                            const knockbackForce = 25 / Math.sqrt(defender.mass);
-                            defender.dx += Math.cos(angle) * knockbackForce;
-                            defender.dy += Math.sin(angle) * knockbackForce;
-
-                            defender.pendingWallSlam = { owner: attacker };
-
-                            for (let i = 0; i < 10; i++) {
-                                this.particles.spawn(defender.x, defender.y, '#ff4444', 1);
-                            }
-                        } else {
-                            const angle = Math.atan2(defender.y - attacker.y, defender.x - attacker.x);
-                            // Standard momentum knockback
-                            // Note: totalKnock was calculated based on massRatio in previous lines of this file
-                            // We just ensure it's additive
-                            defender.dx += Math.cos(angle) * totalKnock;
-                            defender.dy += Math.sin(angle) * totalKnock;
-                        }
-
-                        // Bounce attacker back slightly
-                        attacker.dx *= -0.5;
-                        attacker.dy *= -0.5;
-                        
-                        attacker.wallBounceSpeed = attacker.baseSpeed;
-
-                        for (let k = 0; k < 15; k++) {
-                            this.particles.spawn(defender.x, defender.y, '#8b5cf6', 1);
-                        }
-
-                        defender.collisionImmunity = 30;
-
-                        return true;
-                    };
-
-                    const hit1 = handleMomentumHit(e1, e2);
-                    const hit2 = handleMomentumHit(e2, e1);
-
-                    // Separation
-                    let angle = Math.atan2(e2.y - e1.y, e2.x - e1.x);
-                    let overlap = (minDist - dist) + 1;
-                    let m1 = e1.mass, m2 = e2.mass;
-                    let r1 = m2 / (m1 + m2), r2 = m1 / (m1 + m2);
-
-                    e1.x -= Math.cos(angle) * overlap * r1;
-                    e1.y -= Math.sin(angle) * overlap * r1;
-                    e2.x += Math.cos(angle) * overlap * r2;
-                    e2.y += Math.sin(angle) * overlap * r2;
-
-                    // Normal elastic collision (only if no special hit happened)
-                    if (!hit1 && !hit2) {
-                        let nx, ny;
-                        if (dist < 0.001) {
-                            // Handle overlap/NaN prevention
-                            nx = 1; ny = 0;
-                        } else {
-                            nx = (e2.x - e1.x) / dist;
-                            ny = (e2.y - e1.y) / dist;
-                        }
-
-                        let p = 2 * (e1.dx * nx + e1.dy * ny - e2.dx * nx - e2.dy * ny) / (m1 + m2);
-                        e1.dx -= p * m2 * nx;
-                        e1.dy -= p * m2 * ny;
-                        e2.dx += p * m1 * nx;
-                        e2.dy += p * m1 * ny;
-                        audioEngine.playHit();
-                    }
-                }
-            }
-        }
+        // Entities - Delegate to Physics System
+        this.collisionHandler.resolveEntityCollisions(this.entities);
     }
 
     checkWinCondition() {

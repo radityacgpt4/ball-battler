@@ -447,7 +447,66 @@ draw(ctx) {
 
             ctx.restore();
         }
+        // --- QUINCY GINTO TRAP (DEF SKILL) ---
+        else if (this.isGintoTrap) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            // 1. The Quincy Zeichen (Magic Seal on ground)
+            // Slowly rotate the seal
+            ctx.rotate(Date.now() * 0.002);
+
+            // Glow Effect
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00BFFF';
+            ctx.strokeStyle = '#00BFFF';
+            ctx.lineWidth = 2;
+
+            // Draw 5-pointed Quincy Star (The Trap Radius)
+            ctx.beginPath();
+            const r = this.radius * 1.8; // Visual radius slightly larger than hitbox
+            for (let i = 0; i < 5; i++) {
+                // Outer points
+                const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                
+                // Inner connecting lines (Pentagram style)
+                const nextIndex = (i + 2) % 5;
+                const nextAngle = (Math.PI * 2 * nextIndex) / 5 - Math.PI / 2;
+                ctx.lineTo(Math.cos(nextAngle) * r, Math.sin(nextAngle) * r);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            // 2. The Ginto Tube (Physical Object in Center)
+            // Counter-rotate so the tube stays upright relative to the seal
+            ctx.rotate(-Date.now() * 0.002);
+
+            // Silver Tube Body
+            ctx.fillStyle = '#C0C0C0'; // Silver
+            ctx.shadowColor = '#FFFFFF';
+            ctx.beginPath();
+            ctx.rect(-3, -8, 6, 16); // Small capsule/tube
+            ctx.fill();
+
+            // Liquid Reishi inside (Blue strip)
+            ctx.fillStyle = '#00FFFF';
+            ctx.beginPath();
+            ctx.rect(-1, -6, 2, 12);
+            ctx.fill();
+
+            // Metallic Glint
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(-3, -8, 6, 16);
+
+            ctx.restore();
+        }
         else {
+            // Generic Fallback
             ctx.fillStyle = '#ffff00';
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);

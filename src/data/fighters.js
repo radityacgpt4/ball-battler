@@ -17,7 +17,7 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 range: 50,
-                damage: 5,
+                damage: 7,
                 procRate: 3,
                 attackCooldown: 20
             },
@@ -35,7 +35,7 @@ export const FIGHTER_TYPES = {
                 type: "DASH_ASSAULT",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 150,
+                cooldown: 120,
                 damage: 7,
                 dashDistance: 400,
                 dashTimer: 15
@@ -435,7 +435,7 @@ export const FIGHTER_TYPES = {
     DIVINE_BRAWLER: {
         name: "Sorcerer Brawler",
         color: "#4B0082",
-        hp: 110, mass: 1.6, speed: 5.4, rotationSpeed: 0.15,
+        hp: 100, mass: 1.6, speed: 5.4, rotationSpeed: 0.15,
         skills: {
             atk: {
                 name: "Black Flash",
@@ -447,8 +447,8 @@ export const FIGHTER_TYPES = {
                 range: 15,
                 hitCountForCrit: 4,
                 critMultHigh: 6,
-                critMultMid: 4,
-                critMultLow: 3,
+                critMultMid: 3,
+                critMultLow: 2,
                 hpThresholdHigh: 0.75,
                 hpThresholdMid: 0.5,
                 baseKnockback: 25,

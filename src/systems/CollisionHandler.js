@@ -78,7 +78,7 @@ export class CollisionHandler {
     }
 
     /**
-     * Apply elastic collision physics
+     * Apply elastic collision physics with restitution (bounciness)
      */
     elasticCollision(e1, e2, dist) {
         const m1 = e1.mass, m2 = e2.mass;
@@ -91,10 +91,22 @@ export class CollisionHandler {
             ny = (e2.y - e1.y) / dist;
         }
 
-        const p = 2 * (e1.dx * nx + e1.dy * ny - e2.dx * nx - e2.dy * ny) / (m1 + m2);
-        e1.dx -= p * m2 * nx;
-        e1.dy -= p * m2 * ny;
-        e2.dx += p * m1 * nx;
-        e2.dy += p * m1 * ny;
+        // Relative velocity
+        const v1n = e1.dx * nx + e1.dy * ny;
+        const v2n = e2.dx * nx + e2.dy * ny;
+        
+        // Skip if moving apart
+        if (v1n - v2n < 0) return;
+
+        // Coefficient of restitution (0.8 = somewhat bouncy, 1.0 = superball)
+        const restitution = 0.85;
+
+        // Impulse scalar
+        const j = -(1 + restitution) * (v1n - v2n) / (1/m1 + 1/m2);
+
+        // Apply impulse
+        e1.dx += (j * nx) / m1;
+        e1.dy += (j * ny) / m1;
+        e2.dx -= (j * nx) / m2;
+        e2.dy -= (j * ny) / m2;
     }
-}

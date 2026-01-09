@@ -30,17 +30,17 @@ export class ParticleSystem {
         });
     }
 
-    spawnThunderclap(x1, y1, x2, y2, color, thickness = 15) {
-        // Main Beam
+    spawnThunderclap(x1, y1, x2, y2, color, thickness = 8) {
+        // Main Beam - Sharp and thin (Default 8)
         this.particles.push({
             type: 'beam', x1, y1, x2, y2, color,
-            life: 1.0, decay: 0.05, width: thickness
+            life: 0.8, decay: 0.08, width: thickness
         });
         
         // Inner Core (White hot)
         this.particles.push({
             type: 'beam', x1, y1, x2, y2, color: '#ffffff',
-            life: 1.0, decay: 0.05, width: thickness / 3
+            life: 0.8, decay: 0.08, width: thickness / 2
         });
 
         const dist = Physics.dist(x1, y1, x2, y2);
@@ -130,47 +130,32 @@ export class ParticleSystem {
     }
 
     spawnHirenkyaku(x, y) {
-        // Vertical Reishi Pillar (Light Beam)
-        this.particles.push({
-            type: 'beam',
-            x1: x, y1: y + 40,
-            x2: x, y2: y - 40,
-            color: '#1E90FF', // Dodger Blue
-            life: 0.4, decay: 0.1, width: 30
-        });
+        // Clean "Reishi" Effect: Rising Energy + Shockwave (No massive pillars)
         
-        // Inner Core Beam
-        this.particles.push({
-            type: 'beam',
-            x1: x, y1: y + 40,
-            x2: x, y2: y - 40,
-            color: '#ffffff',
-            life: 0.4, decay: 0.1, width: 10
-        });
+        // 1. Blue Shockwave Ring
+        this.spawnShockwave(x, y, '#1E90FF');
 
-        // Reishi Shockwave (Flat ring)
-        this.particles.push({
-            type: 'shockwave',
-            x: x, y: y,
-            radius: 10, maxRadius: 70,
-            life: 0.6, decay: 0.08,
-            color: '#00BFFF', lineWidth: 4
-        });
-
-        // Reishi Particles (Square-ish movement feel)
-        for(let i=0; i<12; i++) {
-            const angle = (Math.PI * 2 / 12) * i;
-            const speed = 4 + Math.random() * 4;
+        // 2. Rising Energy Particles (Reishi flow)
+        for (let i = 0; i < 10; i++) {
             this.particles.push({
-                x: x, y: y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 0.5, decay: 0.05,
-                size: 2 + Math.random() * 3,
-                color: '#E0FFFF', // Light Cyan
+                x: x + (Math.random() - 0.5) * 25,
+                y: y + (Math.random() - 0.5) * 25,
+                vx: 0, 
+                vy: -3 - Math.random() * 3, // Fast upward movement
+                life: 0.6, decay: 0.08,
+                size: 2, color: '#00BFFF', 
                 type: 'dot'
             });
         }
+        
+        // 3. Central Flash
+        this.particles.push({
+            x: x, y: y,
+            vx: 0, vy: 0,
+            life: 0.4, decay: 0.1,
+            size: 15, color: '#E0FFFF',
+            type: 'dot', alpha: 0.8
+        });
     }
 
     // Required for Quincy Attacks if missing

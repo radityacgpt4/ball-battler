@@ -259,13 +259,13 @@ export class QuincyUltAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
         // All values from config (fighters.js)
-        this.cooldown = config.cooldown || 300;
-        this.arrowCount = config.arrowCount || 12;
-        this.arrowDamage = config.damage || 3;
+        this.cooldown = config.cooldown || 240;
+        this.arrowCount = config.arrowCount || 5;
+        this.arrowDamage = config.damage || 5;
         this.coneAngle = config.coneAngle || (Math.PI / 3);
         this.arrowSpeed = config.arrowSpeed || 22;
         this.arrowRadius = config.arrowRadius || 3;
-        this.angleVariation = config.angleVariation || 0.1;
+        this.angleVariation = config.angleVariation || 0.15;
     }
 
     update(fighter, context) {

@@ -76,30 +76,47 @@ export class ParticleSystem {
 
     // UPDATED: Distinct Reishi blink
     spawnHirenkyaku(x, y) {
-        // 1. Blue Shockwave Ring
-        this.spawnShockwave(x, y, '#1E90FF');
+        // === BOLD QUINCY BLINK ===
 
-        // 2. Rising Energy Particles (Reishi flow)
-        for (let i = 0; i < 10; i++) {
+        // 1. Solid Vertical Beam (The "Pillar" of light)
+        this.particles.push({
+            type: 'beam',
+            x1: x, y1: y + 80,
+            x2: x, y2: y - 80,
+            color: '#00BFFF', // Deep Sky Blue (Outer)
+            life: 0.6, decay: 0.05, width: 20
+        });
+
+        // 2. Blinding White Core (Inner)
+        this.particles.push({
+            type: 'beam',
+            x1: x, y1: y + 80,
+            x2: x, y2: y - 80,
+            color: '#FFFFFF', // Pure White
+            life: 0.6, decay: 0.05, width: 8
+        });
+
+        // 3. Ground Impact Ring (Thick)
+        this.particles.push({
+            type: 'shockwave',
+            x: x, y: y,
+            radius: 5, maxRadius: 60,
+            life: 0.5, decay: 0.05,
+            color: '#1E90FF', lineWidth: 8
+        });
+
+        // 4. Rising Reishi Squares (Data effect)
+        for (let i = 0; i < 8; i++) {
             this.particles.push({
-                x: x + (Math.random() - 0.5) * 25,
-                y: y + (Math.random() - 0.5) * 25,
+                x: x + (Math.random() - 0.5) * 30,
+                y: y + (Math.random() - 0.5) * 10, // Start near feet
                 vx: 0, 
-                vy: -3 - Math.random() * 3, // Fast upward movement
-                life: 0.6, decay: 0.08,
-                size: 2, color: '#00BFFF', 
+                vy: -8 - Math.random() * 5, // Shoot up very fast
+                life: 0.4, decay: 0.05,
+                size: 4, color: '#FFFFFF', // White sparks
                 type: 'dot'
             });
         }
-        
-        // 3. Central Flash
-        this.particles.push({
-            x: x, y: y,
-            vx: 0, vy: 0,
-            life: 0.4, decay: 0.1,
-            size: 15, color: '#E0FFFF',
-            type: 'dot', alpha: 0.8
-        });
     }
 
     spawnBeam(x1, y1, x2, y2, color, width = 6) {

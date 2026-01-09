@@ -242,8 +242,8 @@ export class Fighter {
         if (this.status.stun > 0) {
             if (speed > 0) {
                 // Apply friction (lower decay to allow sliding/bouncing)
-                this.dx *= 0.98;
-                this.dy *= 0.98;
+                this.dx *= 0.88;
+                this.dy *= 0.88;
                 if (speed < 0.1) {
                     this.dx = 0;
                     this.dy = 0;

@@ -167,7 +167,7 @@ export class Projectile {
             this.vz -= 0.5 * timeScale; // Gravity acceleration for "curved" fall
 
             // Spawn falling trail particles (smaller, less intrusive)
-            if (Math.random() < 0.4) {
+            if (this.z > 0 && Math.random() < 0.4) {
                 this.game.particles.particles.push({
                     x: this.x + (Math.random() - 0.5) * 6,
                     y: this.y - this.z, // Offset visually by z height
@@ -184,12 +184,14 @@ export class Projectile {
             if (this.z <= 0) {
                 this.z = 0;
                 this.isRainingArrow = false; // Stop falling, now act as normal arrow
+                this.dx = 0; // Stop moving horizontally
+                this.dy = 0;
                 this.landedLifeTime = 60; // Disappear after 1 second
 
                 // Impact effect
                 this.game.particles.spawn(this.x, this.y, '#00BFFF', 5);
             }
-            return; // Skip normal movement while falling
+            // Removed 'return' to allow x/y movement while airborne
         }
 
         // Landed Raining Arrow decay
@@ -208,7 +210,7 @@ export class Projectile {
                 // Core bright particles
                 this.game.particles.particles.push({
                     x: this.x - Math.cos(this.angle) * 8,
-                    y: this.y - Math.sin(this.angle) * 8,
+                    y: this.y - this.z - Math.sin(this.angle) * 8,
                     vx: (Math.random() - 0.5) * 2,
                     vy: (Math.random() - 0.5) * 2,
                     life: 0.7, decay: 0.04, // Longer life
@@ -221,7 +223,7 @@ export class Projectile {
             if (Math.random() < 0.7) {
                 this.game.particles.particles.push({
                     x: this.x - Math.cos(this.angle) * 5 + (Math.random() - 0.5) * 12,
-                    y: this.y - Math.sin(this.angle) * 5 + (Math.random() - 0.5) * 12,
+                    y: this.y - this.z - Math.sin(this.angle) * 5 + (Math.random() - 0.5) * 12,
                     vx: (Math.random() - 0.5) * 4,
                     vy: (Math.random() - 0.5) * 4,
                     life: 0.5, decay: 0.03, // Longer life
@@ -282,7 +284,7 @@ export class Projectile {
             if (Math.random() < 0.3) {
                 this.game.particles.particles.push({
                     x: this.x,
-                    y: this.y,
+                    y: this.y - this.z,
                     vx: (Math.random() - 0.5) * 0.5,
                     vy: (Math.random() - 0.5) * 0.5,
                     life: 0.4, decay: 0.08,
@@ -302,7 +304,7 @@ export class Projectile {
             const offset1 = Math.sin(t) * spiralRadius;
             this.game.particles.particles.push({
                 x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset1,
-                y: this.y - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset1,
+                y: this.y - this.z - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset1,
                 vx: 0, vy: 0,
                 life: 0.2, decay: 0.1,
                 size: 1.5, color: '#1E90FF',
@@ -313,7 +315,7 @@ export class Projectile {
             const offset2 = Math.sin(t + Math.PI) * spiralRadius;
             this.game.particles.particles.push({
                 x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset2,
-                y: this.y - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset2,
+                y: this.y - this.z - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset2,
                 vx: 0, vy: 0,
                 life: 0.2, decay: 0.1,
                 size: 1.5, color: '#00FFFF',
@@ -326,45 +328,52 @@ export class Projectile {
         // --- QUINCY ARROW DRAWING ---
         if (this.isQuincyArrow) {
             ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.rotate(this.angle);
+            ctx.translate(this.x, this.y - this.z);
+
+            // If landed (no z height) and is Licht Regen, plant it vertically
+            if (this.isLichtRegen && this.z <= 0) {
+                ctx.rotate(Math.PI / 2);
+            } else {
+                ctx.rotate(this.angle);
+            }
 
             // 1. Intense Reishi Glow
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#00BFFF';
 
-            // 2. The Arrow Shaft (Pure Energy Beam)
+            // 2. The Arrow Shaft (Pure Energy Beam) - REDUCED SIZE 50%
             // Core (White)
             ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(-15, -1.5, 30, 3);
+            // Original: -15, -1.5, 30, 3 -> New: -7.5, -0.75, 15, 1.5
+            ctx.fillRect(-7.5, -0.75, 15, 1.5);
 
             // Outer Glow (Blue)
             ctx.strokeStyle = '#00BFFF';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1; // 2 -> 1
             ctx.beginPath();
-            ctx.moveTo(-15, 0);
-            ctx.lineTo(15, 0);
+            ctx.moveTo(-7.5, 0); // -15 -> -7.5
+            ctx.lineTo(7.5, 0);  // 15 -> 7.5
             ctx.stroke();
 
             // 3. The Cross-Guard (Quincy Cross shape at the back)
             ctx.strokeStyle = '#1E90FF';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1; // 2 -> 1
             ctx.beginPath();
             // Upper wing
-            ctx.moveTo(-5, 0);
-            ctx.lineTo(-12, -8);
+            ctx.moveTo(-2.5, 0);    // -5 -> -2.5
+            ctx.lineTo(-6, -4);     // -12, -8 -> -6, -4
             // Lower wing
-            ctx.moveTo(-5, 0);
-            ctx.lineTo(-12, 8);
+            ctx.moveTo(-2.5, 0);    // -5 -> -2.5
+            ctx.lineTo(-6, 4);      // -12, 8 -> -6, 4
             ctx.stroke();
 
             // 4. Arrow Head (Energy Diamond)
             ctx.fillStyle = '#E0FFFF';
             ctx.beginPath();
-            ctx.moveTo(10, 0);
-            ctx.lineTo(15, -3);
-            ctx.lineTo(22, 0); // Tip
-            ctx.lineTo(15, 3);
+            ctx.moveTo(5, 0);       // 10 -> 5
+            ctx.lineTo(7.5, -1.5);  // 15, -3 -> 7.5, -1.5
+            ctx.lineTo(11, 0);      // 22 -> 11
+            ctx.lineTo(7.5, 1.5);   // 15, 3 -> 7.5, 1.5
             ctx.closePath();
             ctx.fill();
 

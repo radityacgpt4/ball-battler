@@ -530,7 +530,7 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 300,
                 damage: 6,
-                arrowCount: 4,
+                arrowCount: 6,
                 stunDuration: 30, // 0.5 sec stun per arrow
                 arrowSpeed: 18, // Falling speed
                 arrowRadius: 2,

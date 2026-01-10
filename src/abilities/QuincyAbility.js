@@ -301,16 +301,25 @@ export class QuincyUltAbility extends Ability {
                         // Random spread around target position
                         const offsetX = (Math.random() - 0.5) * this.rainSpread;
                         const offsetY = (Math.random() - 0.5) * this.rainSpread;
-                        const spawnX = target.x + offsetX;
-                        const spawnY = target.y + offsetY;
+                        const destX = target.x + offsetX;
+                        const destY = target.y + offsetY;
 
-                        // Arrows fall straight down (angle = PI/2 = down)
+                        // Calculate trajectory
+                        const dist = Physics.dist(fighter.x, fighter.y, destX, destY);
+                        const angle = Math.atan2(destY - fighter.y, destX - fighter.x);
+
+                        // Physics: Time to land should match gravity arc
+                        // z(t) = v0*t - 0.5*g*t^2. Land at t=60 if v0=15, g=0.5
+                        const airTime = 60;
+                        const speed = dist / airTime;
+
+                        // Projectile starts at fighter
                         const p = new Projectile(
                                 fighter,
-                                spawnX,
-                                spawnY,
-                                Math.PI / 2, // Pointing downward visually
-                                0, // No horizontal speed
+                                fighter.x,
+                                fighter.y,
+                                angle,
+                                speed,
                                 this.arrowDamage,
                                 game
                         );
@@ -322,11 +331,12 @@ export class QuincyUltAbility extends Ability {
                         p.piercing = true;
                         p.hitList = [];
                         p.stunDuration = this.stunDuration;
+                        p.destX = destX; // Store for debug/logic if needed
 
-                        // Vertical movement properties (like grenade arc)
-                        // Higher start + slower fall = slower animation
-                        p.z = this.rainHeight + 50 + (i * 20); // Stagger them out significantly
-                        p.vz = -12; // Slower falling speed (was 18)
+                        // Vertical movement properties (curved arc)
+                        // Start low, shoot up
+                        p.z = 10;
+                        p.vz = 15 + (Math.random() * 2); // Slight variation in height
 
                         game.projectiles.push(p);
                 }

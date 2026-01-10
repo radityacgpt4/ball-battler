@@ -29,7 +29,7 @@ export class Fighter {
 
         this.dx = (Math.random() < 0.5 ? -1 : 1) * this.baseSpeed;
         this.dy = (Math.random() < 0.5 ? -1 : 1) * this.baseSpeed;
-        this.angle = 0;
+        this.angle = Math.random() * Math.PI * 2;
         this.isDead = false;
 
         this.skills = stats.skills;

@@ -338,7 +338,8 @@ export class QuincyUltAbility extends Ability {
                         // Vertical movement properties (curved arc)
                         // Start low, shoot up
                         p.z = 10;
-                        p.vz = 15 + (Math.random() * 2); // Slight variation in height
+                        // Exact physics solution for landing at t=40
+                        p.vz = 0.25 * airTime - 10 / airTime;
 
                         game.projectiles.push(p);
                 }

@@ -1,6 +1,11 @@
 /**
  * Raycast Ability
- * Handles Thunder Mage's lightning attacks
+ *
+ * ATK: Lightning Bolt - Chain lightning with bounces
+ * ULT: Double Zap - Fire two lightning bolts
+ * Laser: Continuous beam attack
+ *
+ * ALL configurable properties are now loaded from fighters.js
  */
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
@@ -10,17 +15,14 @@ import { logger } from '../systems/Logger.js';
 export class RaycastAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.range = config.range;
-        this.damage = config.damage;
-        this.bounces = config.bounces;
+        // All values from config (fighters.js)
+        this.range = config.range || 800;
+        this.damage = config.damage || 15;
+        this.bounces = config.bounces || 3;
+        this.damageDecayWall = config.damageDecayWall || 0.8;
+        this.damageDecayShield = config.damageDecayShield || 0.9;
     }
 
-    /**
-     * ROBUST RAYCAST SYSTEM
-     * - Properly handles wall bounces, enemy hits, and shield deflections
-     * - Shield deflection transfers ownership (deflected ray can hit original caster)
-     * - Points array captures full path for visual
-     */
     execute(fighter, context, angleOffset = 0, isUlt = false) {
         const { enemies, game } = context;
         const MAX_BOUNCES = this.bounces;
@@ -30,7 +32,6 @@ export class RaycastAbility extends Ability {
         let dirX = Math.cos(fighter.angle + angleOffset);
         let dirY = Math.sin(fighter.angle + angleOffset);
 
-        // Normalize direction
         const dirLen = Math.hypot(dirX, dirY);
         dirX /= dirLen;
         dirY /= dirLen;
@@ -43,7 +44,6 @@ export class RaycastAbility extends Ability {
         if (!isUlt) audioEngine.playZap();
 
         for (let bounce = 0; bounce <= MAX_BOUNCES; bounce++) {
-            // Find closest hit among walls, enemies, and shields
             let closest = { dist: Infinity, type: null, data: null, x: 0, y: 0 };
 
             // Check wall
@@ -53,12 +53,11 @@ export class RaycastAbility extends Ability {
                 closest = { dist: wallHit.dist, type: 'wall', data: wallHit, x: wallHit.x, y: wallHit.y };
             }
 
-            // Check each enemy
+            // Check enemies
             for (let enemy of enemies) {
                 if (enemy === rayOwner || enemy.isDead) continue;
                 if (hitEntities.has(enemy)) continue;
 
-                // Check shield first (shield is outside body)
                 const shieldHit = enemy.getShieldHit(rayX, rayY, dirX, dirY);
                 if (shieldHit && shieldHit.dist < closest.dist) {
                     closest = {
@@ -70,10 +69,8 @@ export class RaycastAbility extends Ability {
                     };
                 }
 
-                // Check body (only if shield didn't block from this direction)
                 const bodyHit = Physics.rayCircleIntersect(rayX, rayY, dirX, dirY, enemy.x, enemy.y, enemy.radius);
                 if (bodyHit && bodyHit.dist < closest.dist) {
-                    // Only count body hit if ray origin isn't blocked by shield
                     if (!enemy.isBlockedByShield(rayX, rayY)) {
                         closest = {
                             dist: bodyHit.dist,
@@ -86,26 +83,22 @@ export class RaycastAbility extends Ability {
                 }
             }
 
-            // No hit found (shouldn't happen in bounded arena)
             if (closest.type === null) {
                 points.push({ x: rayX + dirX * 1000, y: rayY + dirY * 1000 });
                 break;
             }
 
-            // Add hit point to path
             points.push({ x: closest.x, y: closest.y });
 
-            // Process hit
             if (closest.type === 'enemy') {
                 closest.data.takeDamage(currentDamage, false, false, fighter);
                 game.particles.spawnExplosion(closest.x, closest.y);
                 audioEngine.playHit();
                 logger.log(`${rayOwner.name} Zap Hit ${closest.data.name} for ${currentDamage} dmg`, 'combat');
                 hitEntities.add(closest.data);
-                break; // Ray stops
+                break;
 
             } else if (closest.type === 'wall') {
-                // Wall bounce
                 game.particles.spawn(closest.x, closest.y, '#00FFFF', 5);
                 audioEngine.playBounce();
                 const reflected = Physics.reflect(dirX, dirY, closest.data.nx, closest.data.ny);
@@ -113,16 +106,14 @@ export class RaycastAbility extends Ability {
                 dirY = reflected.dy;
                 rayX = closest.x + closest.data.nx * 2;
                 rayY = closest.y + closest.data.ny * 2;
-                currentDamage *= 0.8;
+                currentDamage *= this.damageDecayWall;
 
             } else if (closest.type === 'shield') {
-                // Shield deflection - transfers ownership!
                 const enemy = closest.data.enemy;
                 game.particles.spawn(closest.x, closest.y, '#8b5cf6', 15);
                 audioEngine.playBlock();
                 logger.log(`${enemy.name} DEFLECTED lightning from ${rayOwner.name}! Ownership transferred!`, 'warn');
 
-                // Big spark effect
                 for (let i = 0; i < 8; i++) {
                     const sparkAngle = Math.random() * Math.PI * 2;
                     game.particles.particles.push({
@@ -140,17 +131,14 @@ export class RaycastAbility extends Ability {
                 rayX = closest.x + closest.data.nx * 5;
                 rayY = closest.y + closest.data.ny * 5;
 
-                // IMPORTANT: Transfer ownership so ray can hit original caster
                 rayOwner = enemy;
                 hitEntities.add(enemy);
-                currentDamage *= 0.9;
+                currentDamage *= this.damageDecayShield;
             }
         }
 
-        // Draw the complete bolt path
         game.particles.spawnBolt(points, '#00FFFF');
 
-        // Only reset cooldown if this is a normal attack, not an Ult proc
         if (!isUlt) {
             fighter.cooldowns.atk = this.cooldown;
         }
@@ -167,17 +155,16 @@ export class DoubleZapAbility extends Ability {
     constructor(config, slot, raycastConfig) {
         super(config, slot);
         this.raycastConfig = raycastConfig;
+        this.angleSpread = config.angleSpread || 0.15;
     }
 
     execute(fighter, context) {
         const { game } = context;
 
-        // Create temporary raycast ability for the double zap
         const raycast = new RaycastAbility(this.raycastConfig, 'atk');
 
-        // Fire two rays at angles
-        raycast.execute(fighter, context, -0.15, true);
-        raycast.execute(fighter, context, 0.15, true);
+        raycast.execute(fighter, context, -this.angleSpread, true);
+        raycast.execute(fighter, context, this.angleSpread, true);
 
         audioEngine.playThunder();
         fighter.cooldowns.ult = this.cooldown;
@@ -189,12 +176,19 @@ export class DoubleZapAbility extends Ability {
 export class LaserAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.duration = 180; // 3 seconds firing (1.5x increase)
-        this.chargeTime = 150; // 2.5 seconds charging
+        // All values from config (fighters.js)
+        this.duration = config.duration || 180;
+        this.chargeTime = config.chargeTime || 150;
         this.damage = config.damage || 1;
-        this.range = 2000; // Guaranteed to touch edge regardless of arena size
+        this.range = config.range || 2000;
+        this.rotationSlow = config.rotationSlow || 0.1;
+        this.speedSlow = config.speedSlow || 0.25;
+        this.beamWidth = config.beamWidth || 20;
+        this.coreWidth = config.coreWidth || 8;
+        this.tickRate = config.tickRate || 3;
+        this.slowDuration = config.slowDuration || 45;
 
-        this.state = 'IDLE'; // IDLE, CHARGING, FIRING
+        this.state = 'IDLE';
         this.timer = 0;
         this.originalRotation = 0;
         this.hitBuffer = new Set();
@@ -204,24 +198,20 @@ export class LaserAbility extends Ability {
         this.state = 'CHARGING';
         this.timer = this.chargeTime;
 
-        // Reset cooldown to 0 so the gap between FIRE-END and FIRE-START is exactly chargeTime
         fighter.cooldowns.atk = 0;
 
-        // Save original rotation for slowing during firing
         this.originalRotation = fighter.rotationSpeed;
 
-        audioEngine.playPowerUp(); // Charge sound
-        // context.game.particles.spawn(fighter.x, fighter.y, '#00ffff', 5);
+        audioEngine.playPowerUp();
     }
 
     update(fighter, context) {
-        // Interrupt logic: Stun breaks the channel
+        // Interrupt on stun
         if ((this.state === 'CHARGING' || this.state === 'FIRING') && fighter.status.stun > 0) {
             this.state = 'IDLE';
             fighter.rotationSpeed = this.originalRotation;
-            fighter.laserSpeedMult = 1.0; // Restore speed
+            fighter.laserSpeedMult = 1.0;
             this.hitBuffer.clear();
-            // Start cooldown only after beam ends/interrupts to maintain the 2.5s gap
             fighter.cooldowns.atk = 1;
             return;
         }
@@ -229,13 +219,11 @@ export class LaserAbility extends Ability {
         if (this.state === 'CHARGING') {
             this.timer--;
 
-            // Charging Visuals Data (Renderer will handle the dash/oval)
             const chargeRatio = 1 - (this.timer / this.chargeTime);
             fighter.laserState = 'CHARGING';
             fighter.laserChargeRatio = chargeRatio;
 
             const { game } = context;
-            // Pulsing gathering effect (Particles are fine in update)
             if (this.timer % 10 === 0) {
                 game.particles.particles.push({
                     x: fighter.x + (Math.random() - 0.5) * 40,
@@ -252,15 +240,13 @@ export class LaserAbility extends Ability {
                 fighter.laserState = 'FIRING';
                 this.timer = this.duration;
 
-                // Slow rotation ONLY while firing (90% reduction)
-                fighter.rotationSpeed = this.originalRotation * 0.1;
-                // Reduce movement speed by 75%
-                fighter.laserSpeedMult = 0.25;
+                fighter.rotationSpeed = this.originalRotation * this.rotationSlow;
+                fighter.laserSpeedMult = this.speedSlow;
 
                 if (typeof audioEngine.playLaser === 'function') {
-                    audioEngine.playLaser(); // Fire sound
+                    audioEngine.playLaser();
                 } else {
-                    audioEngine.playZap(); // Fallback to avoid hang
+                    audioEngine.playZap();
                 }
                 this.hitBuffer.clear();
             }
@@ -269,24 +255,20 @@ export class LaserAbility extends Ability {
             fighter.laserState = 'FIRING';
             this.timer--;
 
-            // Scan every frame
             this.scanBeam(fighter, context);
 
-            // Apply damage ticks (every 3 frames = 0.05s, increased damage speed)
-            if (this.timer % 3 === 0) {
+            if (this.timer % this.tickRate === 0) {
                 this.applyBufferedDamage(fighter, context);
             }
 
             if (this.timer <= 0) {
                 this.state = 'IDLE';
-                fighter.rotationSpeed = this.originalRotation; // Revert
-                fighter.laserSpeedMult = 1.0; // Restore speed
+                fighter.rotationSpeed = this.originalRotation;
+                fighter.laserSpeedMult = 1.0;
                 this.hitBuffer.clear();
-                // Cooldown set to small value to trigger next execute via canUse check
                 fighter.cooldowns.atk = 1;
             }
         } else if (this.canUse(fighter, context)) {
-            // Auto-fire
             this.execute(fighter, context);
         }
     }
@@ -300,24 +282,20 @@ export class LaserAbility extends Ability {
 
         let closest = { dist: this.range, type: null, data: null };
 
-        // Check Wall
         const bounds = game.arenaBounds;
         const wallHit = Physics.rayBoxIntersect(rayX, rayY, dirX, dirY, bounds.x, bounds.y, bounds.width, bounds.height);
         if (wallHit && wallHit.dist < closest.dist) {
             closest = { dist: wallHit.dist, type: 'wall', data: wallHit };
         }
 
-        // Check Enemies
         for (let enemy of enemies) {
             if (enemy === fighter || enemy.isDead) continue;
 
-            // Shield check
             const shieldHit = enemy.getShieldHit(rayX, rayY, dirX, dirY);
             if (shieldHit && shieldHit.dist < closest.dist) {
                 closest = { dist: shieldHit.dist, type: 'shield', data: { enemy, ...shieldHit } };
             }
 
-            // Body check
             const bodyHit = Physics.rayCircleIntersect(rayX, rayY, dirX, dirY, enemy.x, enemy.y, enemy.radius);
             if (bodyHit && bodyHit.dist < closest.dist) {
                 if (!enemy.isBlockedByShield(rayX, rayY)) {
@@ -329,24 +307,18 @@ export class LaserAbility extends Ability {
         const hitX = rayX + dirX * closest.dist;
         const hitY = rayY + dirY * closest.dist;
 
-        // Draw Kamehameha Beam
-        // Slightly thinner than before (20px instead of 30px)
-        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ff4400', 20);
-        // Inner core
-        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffff00', 8);
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ff4400', this.beamWidth);
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffff00', this.coreWidth);
 
-        // Spiral Effect (Visible sine waves crossing the beam)
+        // Spiral Effect
         const beamDist = closest.dist;
-        const step = 25; // More particles for better effect
+        const step = 25;
         const time = Date.now() * 0.012;
 
         for (let d = 0; d < beamDist; d += step) {
-            const ratio = d / beamDist;
-            // Two oscillating sine waves to simulate a 2D spiral
             const offset1 = Math.sin(time + d * 0.05) * 12;
             const offset2 = Math.sin(time + d * 0.05 + Math.PI) * 12;
 
-            // Transform offsets to be perpendicular to the beam direction (dirX, dirY)
             const perpX = -dirY;
             const perpY = dirX;
 
@@ -355,7 +327,7 @@ export class LaserAbility extends Ability {
                     x: fighter.x + dirX * d + perpX * off,
                     y: fighter.y + dirY * d + perpY * off,
                     vx: 0, vy: 0,
-                    life: 0.6, decay: 0.06, // Lasts 10 frames
+                    life: 0.6, decay: 0.06,
                     size: 2 + Math.random() * 2,
                     color: '#ffcc00', type: 'dot'
                 });
@@ -367,9 +339,8 @@ export class LaserAbility extends Ability {
             }
         }
 
-        // Buffer the hit
         if (closest.type === 'enemy') {
-            closest.data.applyStatus('SLOW', 45); // Heavier slow impact (longer duration + effect implementation)
+            closest.data.applyStatus('SLOW', this.slowDuration);
             this.hitBuffer.add(closest.data);
             this.lastHitPos = { x: hitX, y: hitY };
         } else if (closest.type === 'shield') {
@@ -388,10 +359,8 @@ export class LaserAbility extends Ability {
                 const enemy = target.data.enemy;
                 if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ffffff', 5);
                 audioEngine.playBlock();
-                // To avoid spamming logs every frame, only log periodically or on first hit
                 if (Math.random() < 0.1) logger.log(`${enemy.name} is blocking Laser`, 'info');
             } else {
-                // Enemy
                 target.takeDamage(this.damage, false, false, fighter);
                 if (this.lastHitPos) context.game.particles.spawn(this.lastHitPos.x, this.lastHitPos.y, '#ff4400', 3);
             }

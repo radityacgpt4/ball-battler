@@ -1,5 +1,8 @@
 /**
  * Fighter Configuration Data
+ *
+ * ALL ability properties are configured here for easy balancing.
+ * Each skill config contains ALL adjustable parameters used by its ability class.
  */
 export const FIGHTER_TYPES = {
     SWORD_MASTER: {
@@ -7,9 +10,36 @@ export const FIGHTER_TYPES = {
         color: "#ff6b6b",
         hp: 100, mass: 1.0, speed: 4.5, rotationSpeed: 0.15,
         skills: {
-            atk: { name: "Melee Slash", desc: "Fast melee strikes with a high proc rate.", type: "MELEE_PASSIVE", range: 50, damage: 5, procRate: 3, isPassive: true },
-            def: { name: "Parry", desc: "17% chance to block and negate incoming damage.", type: "PARRY_PASSIVE", chance: 0.17, isPassive: true },
-            ult: { name: "Dash Assault", desc: "A powerful lunge that deals heavy damage.", type: "DASH_ASSAULT", cooldown: 150, damage: 7, isPassive: false }
+            atk: {
+                name: "Melee Slash",
+                desc: "Fast melee strikes with a high proc rate.",
+                type: "MELEE_PASSIVE",
+                isPassive: true,
+                // Configurable properties
+                range: 50,
+                damage: 7,
+                procRate: 3,
+                attackCooldown: 20
+            },
+            def: {
+                name: "Parry",
+                desc: "17% chance to block and negate incoming damage.",
+                type: "PARRY_PASSIVE",
+                isPassive: true,
+                // Configurable properties
+                chance: 0.17
+            },
+            ult: {
+                name: "Dash Assault",
+                desc: "A powerful lunge that deals heavy damage.",
+                type: "DASH_ASSAULT",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                damage: 8,
+                dashDistance: 300,
+                dashTimer: 15
+            }
         }
     },
     THUNDER_MAGE: {
@@ -17,9 +47,38 @@ export const FIGHTER_TYPES = {
         color: "#4ecdc4",
         hp: 100, mass: 2.0, speed: 4, rotationSpeed: 0.12,
         skills: {
-            atk: { name: "Lightning Bolt", desc: "Chain lightning that bounces between enemies.", type: "RAYCAST", cooldown: 90, range: 800, damage: 15, bounces: 3, isPassive: false },
-            def: { name: "Static Field", desc: "Deals damage to nearby enemies passively.", type: "STATIC_PASSIVE", isPassive: true },
-            ult: { name: "Double Zap", desc: "Fires two lightning bolts simultaneously.", type: "DOUBLE_ZAP", cooldown: 160, isPassive: false }
+            atk: {
+                name: "Lightning Bolt",
+                desc: "Chain lightning that bounces between enemies.",
+                type: "RAYCAST",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 90,
+                range: 800,
+                damage: 18,
+                bounces: 3,
+                damageDecayWall: 0.8,
+                damageDecayShield: 0.9
+            },
+            def: {
+                name: "Static Field",
+                desc: "Deals damage to nearby enemies passively.",
+                type: "STATIC_PASSIVE",
+                isPassive: true,
+                // Configurable properties
+                radius: 60,
+                damage: 5,
+                tickRate: 30
+            },
+            ult: {
+                name: "Double Zap",
+                desc: "Fires two lightning bolts simultaneously.",
+                type: "DOUBLE_ZAP",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 160,
+                angleSpread: 0.15
+            }
         }
     },
     SOLDIER: {
@@ -27,9 +86,43 @@ export const FIGHTER_TYPES = {
         color: "#54a0ff",
         hp: 100, mass: 1.2, speed: 4, rotationSpeed: 0.12,
         skills: {
-            atk: { name: "Burst Fire", desc: "Fires a rapid 10-shot burst of bullets.", type: "BURST_FIRE", cooldown: 100, count: 10, damage: 3, isPassive: false },
-            def: { name: "Tactical Retreat", desc: "Dashes backward to gain distance from enemies.", type: "RETREAT", cooldown: 120, range: 150, isPassive: false },
-            ult: { name: "Frag Grenade", desc: "Throws a grenade dealing massive AOE damage.", type: "GRENADE", cooldown: 60, damage: 20, isPassive: false }
+            atk: {
+                name: "Burst Fire",
+                desc: "Fires a rapid 10-shot burst of bullets.",
+                type: "BURST_FIRE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 100,
+                count: 10,
+                damage: 3,
+                projectileSpeed: 15,
+                spreadAmount: 0.15,
+                burstDelay: 2
+            },
+            def: {
+                name: "Tactical Retreat",
+                desc: "Dashes backward to gain distance from enemies.",
+                type: "RETREAT",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                range: 150,
+                dashSpeed: 8,
+                dashTimer: 30
+            },
+            ult: {
+                name: "Frag Grenade",
+                desc: "Throws a grenade dealing massive AOE damage.",
+                type: "GRENADE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 60,
+                damage: 20,
+                explosionRadius: 80,
+                airTime: 60,
+                maxDistance: 400,
+                radius: 6
+            }
         }
     },
     SHIELDBEARER: {
@@ -37,9 +130,37 @@ export const FIGHTER_TYPES = {
         color: "#8b5cf6",
         hp: 100, mass: 1.8, speed: 4, rotationSpeed: 0.10,
         skills: {
-            atk: { name: "Momentum Strike", desc: "Damage increases with movement speed.", type: "MOMENTUM_PASSIVE", maxSpeed: 8, speedGain: 1, damagePerTier: 5, knockback: 12, isPassive: true },
-            def: { name: "Greatshield", desc: "Blocks all projectiles from a wide front arc.", type: "SHIELD_DEFLECT", arcAngle: Math.PI * 0.65, isPassive: true },
-            ult: { name: "Wall Slam", desc: "Smashes enemies into walls for bonus damage.", type: "WALL_SLAM", cooldown: 120, damage: 10, isPassive: false }
+            atk: {
+                name: "Momentum Strike",
+                desc: "Damage increases with movement speed.",
+                type: "MOMENTUM_PASSIVE",
+                isPassive: true,
+                // Configurable properties
+                maxSpeed: 8,
+                speedGain: 1,
+                damagePerTier: 5,
+                knockback: 12
+            },
+            def: {
+                name: "Greatshield",
+                desc: "Blocks all projectiles from a wide front arc.",
+                type: "SHIELD_DEFLECT",
+                isPassive: true,
+                // Configurable properties
+                arcAngle: Math.PI * 0.65,
+                shieldRadius: 8
+            },
+            ult: {
+                name: "Wall Slam",
+                desc: "Smashes enemies into walls for bonus damage.",
+                type: "WALL_SLAM",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                damage: 10,
+                stunDuration: 60,
+                wallBonusDamage: 15
+            }
         }
     },
     NINJA: {
@@ -47,9 +168,46 @@ export const FIGHTER_TYPES = {
         color: "#ffd700",
         hp: 100, mass: 1.0, speed: 5, rotationSpeed: 0.16,
         skills: {
-            atk: { name: "Flying Raijin", desc: "Throws marked kunai and teleports to them.", type: "KUNAI_MARK", cooldown: 120, count: 2, damage: 5, delay: 90, zapDuration: 45, isPassive: false },
-            def: { name: "Substitution", desc: "Briefly becomes invincible and boosts speed.", type: "EVASION", cooldown: 102, duration: 12, isPassive: false },
-            ult: { name: "Flash Barrage", desc: "A series of high-speed teleportation strikes.", type: "FLASH_BARRAGE", cooldown: 180, rasenganDamage: 12, isPassive: false }
+            atk: {
+                name: "Flying Raijin",
+                desc: "Throws marked kunai and teleports to them.",
+                type: "KUNAI_MARK",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                count: 2,
+                damage: 7,
+                delay: 90,
+                zapDuration: 60,
+                zapImmunityDuration: 60,
+                kunaiSpeed: 7,
+                kunaiSpeedVariance: 2,
+                coneAngle: Math.PI,
+                maxDist: 220,
+                maxDistVariance: 40
+            },
+            def: {
+                name: "Substitution",
+                desc: "Briefly becomes invincible and boosts speed.",
+                type: "EVASION",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 102,
+                duration: 12
+            },
+            ult: {
+                name: "Flash Barrage",
+                desc: "A series of high-speed teleportation strikes.",
+                type: "FLASH_BARRAGE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 180,
+                rasenganDamage: 12,
+                kunaiCount: 2,
+                kunaiSpeed: 9,
+                maxDistBase: 350,
+                maxDistRatio: 0.4
+            }
         }
     },
     CYBORG: {
@@ -57,9 +215,48 @@ export const FIGHTER_TYPES = {
         color: "#c0c0c0",
         hp: 75, mass: 1.4, speed: 4.5, rotationSpeed: 0.10,
         skills: {
-            atk: { name: "Plasma Laser", desc: "Fires a continuous high-damage laser beam.", type: "LASER_BEAM", cooldown: 120, duration: 60, damage: 1, range: 360, isPassive: false },
-            def: { name: "Energy Shield", desc: "Passive shield that regenerates over time.", type: "FORCE_FIELD", maxShield: 75, regenRate: 0.033, isPassive: true },
-            ult: { name: "Missile Swarm", desc: "Launches a volley of homing missiles.", type: "MISSILE_BARRAGE", cooldown: 120, damage: 9, isPassive: false }
+            atk: {
+                name: "Plasma Laser",
+                desc: "Fires a continuous high-damage laser beam.",
+                type: "LASER_BEAM",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                duration: 180,
+                chargeTime: 150,
+                damage: 1,
+                range: 2000,
+                rotationSlow: 0.1,
+                speedSlow: 0.25,
+                beamWidth: 20,
+                coreWidth: 8,
+                tickRate: 3,
+                slowDuration: 45
+            },
+            def: {
+                name: "Energy Shield",
+                desc: "Passive shield that regenerates over time.",
+                type: "FORCE_FIELD",
+                isPassive: true,
+                // Configurable properties
+                maxShield: 75,
+                regenRate: 0.033,
+                regenTickFrames: 30
+            },
+            ult: {
+                name: "Missile Swarm",
+                desc: "Launches a volley of homing missiles.",
+                type: "MISSILE_BARRAGE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                damage: 7,
+                count: 5,
+                spreadAngle: 0.5,
+                projectileSpeed: 6,
+                turnSpeed: 0.08,
+                radius: 6
+            }
         }
     },
     SNIPER: {
@@ -67,9 +264,43 @@ export const FIGHTER_TYPES = {
         color: "#556b2f",
         hp: 100, mass: 1.1, speed: 4.2, rotationSpeed: 0.08,
         skills: {
-            atk: { name: "Sniper Shot", desc: "High damage shot that stuns the target.", type: "SNIPER_SHOT", cooldown: 90, damage: 12, stun: 60, projectileSpeed: 25, isPassive: false },
-            def: { name: "Claymore", desc: "Places a trap that slows and damages enemies.", type: "CLAYMORE", cooldown: 180, damage: 5, lifeTime: 360, slowDuration: 120, isPassive: false },
-            ult: { name: "Steady Aim", desc: "Passively increases projectile speed and crit chance.", type: "SNIPER_MODE", cooldown: 300, isPassive: true }
+            atk: {
+                name: "Sniper Shot",
+                desc: "High damage shot that stuns the target.",
+                type: "SNIPER_SHOT",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 90,
+                damage: 12,
+                stun: 60,
+                projectileSpeed: 21,
+                projectileRadius: 5,
+                ultProjectileRadius: 8,
+                recoilForce: 25,
+                laserMaxDist: 800
+            },
+            def: {
+                name: "Claymore",
+                desc: "Places a trap that slows and damages enemies.",
+                type: "CLAYMORE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 180,
+                damage: 5,
+                lifeTime: 360,
+                slowDuration: 120,
+                triggerRadius: 10,
+                slideSpeed: 2
+            },
+            ult: {
+                name: "Steady Aim",
+                desc: "Passively increases projectile speed and crit chance.",
+                type: "SNIPER_MODE",
+                isPassive: true,
+                // Configurable properties
+                cooldown: 300,
+                duration: 600
+            }
         }
     },
     AXEMAN: {
@@ -77,19 +308,88 @@ export const FIGHTER_TYPES = {
         color: "#800000",
         hp: 100, mass: 1.5, speed: 4.2, rotationSpeed: 0.13,
         skills: {
-            atk: { name: "Heavy Swing", desc: "Wields a giant axe with massive knockback.", type: "AXE_SWING", isPassive: true },
-            def: { name: "Berserker Rage", desc: "Takes reduced damage but loses HP over time.", type: "BERSERKER_RAGE", isPassive: true },
-            ult: { name: "Execution", desc: "Instantly kills low HP enemies.", type: "EXECUTE", cooldown: 60, isPassive: true }
+            atk: {
+                name: "Heavy Swing",
+                desc: "Wields a giant axe with massive knockback.",
+                type: "AXE_SWING",
+                isPassive: true,
+                // Configurable properties
+                range: 65,
+                damage: 9,
+                bleedDuration: 240,
+                swingCooldown: 15,
+                blockedCooldown: 20,
+                comboTimer: 90,
+                comboThreshold: 2
+            },
+            def: {
+                name: "Berserker Rage",
+                desc: "Takes reduced damage but loses HP over time.",
+                type: "BERSERKER_RAGE",
+                isPassive: true,
+                // Configurable properties
+                stackThreshold: 0.1,
+                speedBonusPerStack: 0.11,
+                rotBonusPerStack: 0.17
+            },
+            ult: {
+                name: "Execution",
+                desc: "Instantly kills low HP enemies.",
+                type: "EXECUTE",
+                isPassive: true,
+                // Configurable properties
+                cooldown: 60,
+                executeRange: 80,
+                executeThreshold: 30,
+                stunDuration: 45,
+                stunDamage: 5,
+                ultVisualDuration: 30,
+                comboRequired: 2
+            }
         }
     },
     BALLISTA: {
         name: "Ballista",
         color: "#8B4513",
-        hp: 100, mass: 2, speed: 3.5, rotationSpeed: 0.09,
+        hp: 100, mass: 2, speed: 3.5, rotationSpeed: 0.1,
         skills: {
-            atk: { name: "Heavy Bolt", desc: "Piercing bolts that pin enemies to walls.", type: "BALLISTA_SHOT", cooldown: 90, damage: 15, projectileSpeed: 16, isPassive: false },
-            def: { name: "Gate Barrier", desc: "Summons a series of protective barriers.", type: "BARRIER_SHIELD", barrierMaxHp: 30, barrierCount: 4, arcAngle: 1.22, isPassive: true },
-            ult: { name: "Siege Mode", desc: "Doubles fire rate but disables movement.", type: "SIEGE_MODE", cooldown: 120, damage: 15, isPassive: false }
+            atk: {
+                name: "Heavy Bolt",
+                desc: "Piercing bolts that pin enemies to walls.",
+                type: "BALLISTA_SHOT",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 90,
+                damage: 15,
+                projectileSpeed: 16,
+                spreadAngle: 0.15,
+                boltRadius: 8,
+                dragDuration: 25,
+                normalBoltCount: 2,
+                ultBoltCount: 3
+            },
+            def: {
+                name: "Gate Barrier",
+                desc: "Summons a series of protective barriers.",
+                type: "BARRIER_SHIELD",
+                isPassive: true,
+                // Configurable properties
+                barrierMaxHp: 30,
+                barrierCount: 4,
+                arcAngle: 1.22,
+                shieldRadius: 8
+            },
+            ult: {
+                name: "Siege Mode",
+                desc: "Doubles fire rate but disables movement.",
+                type: "SIEGE_MODE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                damage: 15,
+                ultShots: 3,
+                ultVisualDuration: 60
+            }
         }
     },
     DIVINE_GENERAL: {
@@ -97,19 +397,88 @@ export const FIGHTER_TYPES = {
         color: "#ffffff",
         hp: 100, mass: 1.3, speed: 4.8, rotationSpeed: 0.18,
         skills: {
-            atk: { name: "Mahoraga Wheel", desc: "8 orbs act as melee hitboxes with large range.", type: "EIGHTFOLD_STRIKE", isPassive: true },
-            def: { name: "Healing Stance", desc: "Stores 90% of damage taken and heals it after 5s.", type: "ADAPTATION_HEAL", isPassive: false },
-            ult: { name: "Perfect Adaptation", desc: "Stores incoming damage to boost the next attack.", type: "ADAPTATION_ULT", cooldown: 180, isPassive: true }
+            atk: {
+                name: "Mahoraga Wheel",
+                desc: "8 orbs act as melee hitboxes with large range.",
+                type: "EIGHTFOLD_STRIKE",
+                isPassive: true,
+                // Configurable properties
+                baseDamage: 2,
+                resetTime: 300,
+                orbCount: 8,
+                orbRadius: 3,
+                orbDistance: 18,
+                attackCooldown: 12
+            },
+            def: {
+                name: "Healing Stance",
+                desc: "Stores 90% of damage taken and heals it after 5s.",
+                type: "ADAPTATION_HEAL",
+                isPassive: false,
+                // Configurable properties
+                healDelay: 300,
+                healPercent: 0.9
+            },
+            ult: {
+                name: "Perfect Adaptation",
+                desc: "Stores incoming damage to boost the next attack.",
+                type: "ADAPTATION_ULT",
+                isPassive: true,
+                // Configurable properties
+                cooldown: 180,
+                duration: 60,
+                adaptationMaxStored: 15,
+                hpThreshold: 0.5
+            }
         }
     },
     DIVINE_BRAWLER: {
         name: "Sorcerer Brawler",
         color: "#4B0082",
-        hp: 110, mass: 1.6, speed: 5.4, rotationSpeed: 0.15,
+        hp: 100, mass: 1.6, speed: 5.4, rotationSpeed: 0.15,
         skills: {
-            atk: { name: "Black Flash", desc: "Every 4th hit deals up to 6x damage based on HP.", type: "BLACK_FLASH", damage: 5, isPassive: true },
-            def: { name: "Boogie Woogie", desc: "Claps to swap places and hijack enemy projectiles.", type: "BOOGIE_WOOGIE", cooldown: 150, isPassive: false },
-            ult: { name: "Pure Focus", desc: "Becomes immovable and doubles attack speed.", type: "UNSHAKEABLE_FOCUS", cooldown: 600, duration: 300, isPassive: false }
+            atk: {
+                name: "Black Flash",
+                desc: "Every 4th hit deals up to 6x damage based on HP.",
+                type: "BLACK_FLASH",
+                isPassive: true,
+                // Configurable properties
+                damage: 5,
+                range: 15,
+                hitCountForCrit: 4,
+                critMultHigh: 6,
+                critMultMid: 3,
+                critMultLow: 2,
+                hpThresholdHigh: 0.8,
+                hpThresholdMid: 0.5,
+                baseKnockback: 12,
+                knockbackPerMult: 0,
+                baseAttackCooldown: 20,
+                focusAttackCooldown: 10
+            },
+            def: {
+                name: "Boogie Woogie",
+                desc: "Claps to swap places and hijack enemy projectiles.",
+                type: "BOOGIE_WOOGIE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 150,
+                projectileCooldown: 120,
+                fallbackCooldown: 240,
+                detectionRadius: 100,
+                approachThreshold: 0.7,
+                deflectLifetime: 180
+            },
+            ult: {
+                name: "Pure Focus",
+                desc: "Becomes immovable and doubles attack speed.",
+                type: "UNSHAKEABLE_FOCUS",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 240,
+                duration: 180,
+                immovableMass: 16
+            }
         }
     },
     QUINCY: {
@@ -117,9 +486,56 @@ export const FIGHTER_TYPES = {
         color: "#1E90FF",
         hp: 90, mass: 0.9, speed: 4.8, rotationSpeed: 0.12,
         skills: {
-            atk: { name: "Heilig Pfeil", desc: "Predictive arrows that deal more damage at range.", type: "HEILIG_PFEIL", cooldown: 60, damage: 8, isPassive: false },
-            def: { name: "Hirenkyaku", desc: "Blinks away from danger, leaving a stun trap.", type: "HIRENKYAKU", cooldown: 180, isPassive: false },
-            ult: { name: "Licht Regen", desc: "Rains a cone of piercing light arrows.", type: "LICHT_REGEN", cooldown: 300, damage: 3, isPassive: false }
+            atk: {
+                name: "Heilig Pfeil",
+                desc: "Predictive arrows that deal more damage at range.",
+                type: "HEILIG_PFEIL",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 60,
+                damage: 8,
+                projectileSpeed: 20,
+                perfectLockSpeed: 25,
+                lockChargeRate: 3,
+                lockDecayRate: 0.92,
+                perfectLockThreshold: 100,
+                alignmentThreshold: 0.3,
+                predictionFrames: 20,
+                farRangeThreshold: 280,
+                closeRangeThreshold: 120,
+                farDamageMultiplier: 1.5,
+                closeDamageMultiplier: 0.6,
+                lockBonusMultiplier: 1.3,
+                normalRadius: 4,
+                perfectRadius: 6
+            },
+            def: {
+                name: "Hirenkyaku",
+                desc: "Blinks away from danger, leaving a stun trap.",
+                type: "HIRENKYAKU",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 180,
+                dangerRadius: 100,
+                blinkDistance: 150,
+                trapDuration: 180,
+                trapStunDuration: 30,
+                trapRadius: 15
+            },
+            ult: {
+                name: "Licht Regen",
+                desc: "Rains a cone of piercing light arrows.",
+                type: "LICHT_REGEN",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 300,
+                damage: 5,
+                arrowCount: 8,
+                coneAngle: Math.PI / 3,
+                arrowSpeed: 22,
+                arrowRadius: 3,
+                angleVariation: 0.1
+            }
         }
     }
 };

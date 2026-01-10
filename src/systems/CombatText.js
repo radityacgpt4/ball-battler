@@ -111,6 +111,10 @@ export class CombatTextHelper {
         return this.spawn('comboHits', x, y, `${hits} HIT!`, '#ff6b6b');
     }
 
+    criticalHit(x, y) {
+        return this.spawn('criticalHit', x, y, 'CRITICAL!', '#ff0000');
+    }
+
     execute(x, y) {
         return this.spawn('execute', x, y, 'EXECUTE!', '#ff0000');
     }

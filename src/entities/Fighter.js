@@ -242,8 +242,8 @@ export class Fighter {
         if (this.status.stun > 0) {
             if (speed > 0) {
                 // Apply friction (lower decay to allow sliding/bouncing)
-                this.dx *= 0.98;
-                this.dy *= 0.98;
+                this.dx *= 0.88;
+                this.dy *= 0.88;
                 if (speed < 0.1) {
                     this.dx = 0;
                     this.dy = 0;
@@ -294,21 +294,39 @@ export class Fighter {
                     return;
                 }
 
-                // === Visual: Parallel Lines ===
-                const dx = next.x - current.x;
-                const dy = next.y - current.y;
-                const dist = Math.hypot(dx, dy);
-                let nx = 0, ny = 0;
-                if (dist > 0) { nx = -dy / dist; ny = dx / dist; }
-                const offset = 8; // Parallel distance
+                // === Visual: Flying Raijin Lightning ===
+                // 1. Afterimage at start
+                this.game.particles.particles.push({
+                    x: current.x, y: current.y,
+                    vx: 0, vy: 0,
+                    life: 0.3, decay: 0.1,
+                    size: this.radius, color: '#ffd700', type: 'dot', alpha: 0.5
+                });
 
-                this.game.particles.spawnSlash(current.x, current.y, next.x, next.y, '#ffd700', 12); // Main Yellow
+                // 2. Lightning Bolt Trail (Lore Accurate)
+                this.game.particles.spawnBolt([
+                    {x: current.x, y: current.y}, 
+                    {x: next.x, y: next.y}
+                ], '#ffd700', 8); // Thick yellow bolt
+                
+                // Secondary white core for brightness
+                this.game.particles.spawnBolt([
+                    {x: current.x, y: current.y}, 
+                    {x: next.x, y: next.y}
+                ], '#ffffff', 3);
+
                 if (this.pendingRasengan) {
-                    // Parallel Blue Dash
-                    this.game.particles.spawnSlash(current.x + nx * offset, current.y + ny * offset, next.x + nx * offset, next.y + ny * offset, '#00BFFF', 6);
+                    // Blue Rasengan trail woven in
+                    this.game.particles.spawnBolt([
+                        {x: current.x, y: current.y}, 
+                        {x: next.x, y: next.y}
+                    ], '#00BFFF', 4);
                 }
 
-                this.game.particles.spawn(next.x, next.y, '#ffd700', 5);
+                // 3. Flash at destination
+                this.game.particles.spawn(next.x, next.y, '#ffd700', 12); // Explosion of sparks
+                this.game.particles.spawnShockwave(next.x, next.y, '#ffd700'); // Ring effect
+                
                 audioEngine.playTeleport();
 
                 this.x = next.x;

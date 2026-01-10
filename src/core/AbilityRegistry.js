@@ -92,6 +92,7 @@ class AbilityRegistryClass {
         this.register('BALLISTA_SHOT', BallistaAtkAbility);
         this.register('EIGHTFOLD_STRIKE', DivineGeneralAtkAbility);
         this.register('BLACK_FLASH', DivineBrawlerAtkAbility);
+        this.register('HEILIG_PFEIL', QuincyAtkAbility);
 
         // Defense abilities
         this.register('PARRY_PASSIVE', ParryPassiveAbility);
@@ -105,6 +106,7 @@ class AbilityRegistryClass {
         this.register('BARRIER_SHIELD', BallistaDefAbility);
         this.register('ADAPTATION_HEAL', DivineGeneralDefAbilityWithUlt);
         this.register('BOOGIE_WOOGIE', DivineBrawlerDefAbility);
+        this.register('HIRENKYAKU', QuincyDefAbility);
 
         // Ultimate abilities
         this.register('DASH_ASSAULT', DashAssaultAbility);
@@ -118,10 +120,6 @@ class AbilityRegistryClass {
         this.register('SIEGE_MODE', BallistaUltAbility);
         this.register('ADAPTATION_ULT', DivineGeneralUltAbility);
         this.register('UNSHAKEABLE_FOCUS', DivineBrawlerUltAbility);
-
-        // Quincy abilities
-        this.register('HEILIG_PFEIL', QuincyAtkAbility);
-        this.register('HIRENKYAKU', QuincyDefAbility);
         this.register('LICHT_REGEN', QuincyUltAbility);
     }
 }

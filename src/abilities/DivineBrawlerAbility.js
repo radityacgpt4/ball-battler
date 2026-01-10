@@ -1,3 +1,12 @@
+/**
+ * Divine Brawler Abilities (Aoi Todo - Sorcerer Brawler)
+ *
+ * ATK: Black Flash - Every 4th hit deals massive crit damage
+ * DEF: Boogie Woogie - Swaps positions with enemy, hijacks projectiles
+ * ULT: Unshakeable Focus - Becomes immovable, doubles attack speed
+ *
+ * ALL configurable properties are now loaded from fighters.js
+ */
 import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
@@ -7,18 +16,25 @@ import { logger } from '../systems/Logger.js';
 export class DivineBrawlerAtkAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.hitCounter = 0;
-        this.critMult = config.critMult || 5;
-        this.baseDamage = config.damage || 4;
+        // All values from config (fighters.js)
+        this.baseDamage = config.damage || 5;
+        this.range = config.range || 15;
+        this.hitCountForCrit = config.hitCountForCrit || 4;
+        this.critMultHigh = config.critMultHigh || 6;
+        this.critMultMid = config.critMultMid || 4;
+        this.critMultLow = config.critMultLow || 3;
+        this.hpThresholdHigh = config.hpThresholdHigh || 0.75;
+        this.hpThresholdMid = config.hpThresholdMid || 0.5;
+        this.baseKnockback = config.baseKnockback || 25;
+        this.knockbackPerMult = config.knockbackPerMult || 2;
+        this.baseAttackCooldown = config.baseAttackCooldown || 20;
+        this.focusAttackCooldown = config.focusAttackCooldown || 10;
 
-        // No cooldown on passive, but we track hit rate limits via main loop if needed
-        // For melee passive, cooldown usually dictates hit frequency
+        this.hitCounter = 0;
     }
 
-    // Called via update loop (Auto-Attack)
     update(fighter, context) {
-        // Melee logic: Check distance
-        const range = fighter.radius + 15;
+        const meleeRange = fighter.radius + this.range;
         let hit = false;
 
         if (fighter.cooldowns.atk > 0) return;
@@ -27,7 +43,7 @@ export class DivineBrawlerAtkAbility extends Ability {
             if (enemy === fighter || enemy.isDead) continue;
 
             const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
-            if (dist < range + enemy.radius) {
+            if (dist < meleeRange + enemy.radius) {
                 this.performAttack(fighter, enemy);
                 hit = true;
                 break;
@@ -41,28 +57,25 @@ export class DivineBrawlerAtkAbility extends Ability {
         let isBlackFlash = false;
         let finalCritMult = 1;
 
-        // Black Flash Logic (Every 4th hit)
-        if (this.hitCounter >= 4) {
+        // Black Flash Logic (Every Nth hit based on config)
+        if (this.hitCounter >= this.hitCountForCrit) {
             const hpPercent = fighter.hp / fighter.maxHp;
 
-            // Scaling based on HP left:
-            // > 75% -> 6x
-            // 50-75% -> 4x
-            // < 50% -> 3x
-            if (hpPercent > 0.75) {
-                finalCritMult = 6;
-            } else if (hpPercent >= 0.5) {
-                finalCritMult = 4;
+            // Scaling based on HP left
+            if (hpPercent > this.hpThresholdHigh) {
+                finalCritMult = this.critMultHigh;
+            } else if (hpPercent >= this.hpThresholdMid) {
+                finalCritMult = this.critMultMid;
             } else {
-                finalCritMult = 3;
+                finalCritMult = this.critMultLow;
             }
 
             damage *= finalCritMult;
             isBlackFlash = true;
             this.hitCounter = 0;
 
-            // Visuals: Red/Black Lightning
-            if (finalCritMult === 6) {
+            // Visuals
+            if (finalCritMult === this.critMultHigh) {
                 fighter.game.particles.spawnSuperBlackFlash(enemy.x, enemy.y);
             } else {
                 fighter.game.particles.spawnBlackFlash(enemy.x, enemy.y);
@@ -70,13 +83,10 @@ export class DivineBrawlerAtkAbility extends Ability {
             logger.log(`${fighter.name} land a BLACK FLASH (${finalCritMult}x)!`, 'combat');
         }
 
-        // Apply Damage
-        // Increased knockback for Black Flash handled by game physics? 
-        // We can manually add impulse if needed, but high damage usually feels heavy.
-        // Let's add manual impulse for Black Flash
+        // Knockback for Black Flash - FIXED LOGIC
         if (isBlackFlash) {
             const angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
-            const forceVal = 12; // Base force
+            const forceVal = 12; // Standardized Force
             const speed = forceVal / enemy.mass;
             enemy.dx += Math.cos(angle) * speed;
             enemy.dy += Math.sin(angle) * speed;
@@ -90,11 +100,10 @@ export class DivineBrawlerAtkAbility extends Ability {
             fighter.game.particles.spawn(enemy.x, enemy.y, '#4B0082', 5);
         }
 
-        // Reset CD (Attack speed)
-        // If ULT is active (Unshakeable Focus), CD is halved
-        let cd = 20; // ~3 hits/sec baseline
+        // Attack cooldown (halved during focus)
+        let cd = this.baseAttackCooldown;
         if (fighter.activeEffects.focusActive) {
-            cd = 10;
+            cd = this.focusAttackCooldown;
         }
         fighter.cooldowns.atk = cd;
     }
@@ -104,8 +113,12 @@ export class DivineBrawlerAtkAbility extends Ability {
 export class DivineBrawlerDefAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.projectileCooldown = 120;  // 2s CD when dodging projectiles
-        this.fallbackCooldown = 240;    // 4s CD for fallback swap
+        // All values from config (fighters.js)
+        this.projectileCooldown = config.projectileCooldown || 120;
+        this.fallbackCooldown = config.fallbackCooldown || 240;
+        this.detectionRadius = config.detectionRadius || 100;
+        this.approachThreshold = config.approachThreshold || 0.7;
+        this.deflectLifetime = config.deflectLifetime || 180;
     }
 
     update(fighter, context) {
@@ -119,57 +132,50 @@ export class DivineBrawlerDefAbility extends Ability {
         const approachingProjectile = this.findApproachingProjectile(fighter, context.game);
 
         if (approachingProjectile) {
-            // Swap to dodge the projectile!
             this.execute(fighter, { enemy, game: context.game, triggeredByProjectile: true });
             fighter.cooldowns.def = this.projectileCooldown;
             fighter.maxCooldowns.def = this.projectileCooldown;
             return;
         }
 
-        // Priority 2: Fallback - swap anyway if cooldown allows
-        // Use a separate internal timer for fallback
+        // Priority 2: Fallback swap
         if (!fighter._fallbackSwapTimer) fighter._fallbackSwapTimer = 0;
         fighter._fallbackSwapTimer++;
 
         if (fighter._fallbackSwapTimer >= this.fallbackCooldown) {
             this.execute(fighter, { enemy, game: context.game, triggeredByProjectile: false });
-            fighter.cooldowns.def = this.projectileCooldown; // Short CD after any swap
+            fighter.cooldowns.def = this.projectileCooldown;
             fighter.maxCooldowns.def = this.projectileCooldown;
             fighter._fallbackSwapTimer = 0;
         }
     }
 
     findApproachingProjectile(fighter, game) {
-        const detectionRadius = 100; // How close projectile must be
-        const approachThreshold = 0.7; // Dot product threshold (facing towards fighter)
-
         for (const p of game.projectiles) {
-            if (p.owner === fighter) continue; // Ignore own projectiles
+            if (p.owner === fighter) continue;
             if (!p.active) continue;
-            if (p.isClaymore || p.isGintoTrap) continue; // Ignore traps
+            if (p.isClaymore || p.isGintoTrap) continue;
 
             const dist = Math.hypot(p.x - fighter.x, p.y - fighter.y);
-            if (dist > detectionRadius) continue;
+            if (dist > this.detectionRadius) continue;
 
             // Check if projectile is moving towards fighter
             const speed = Math.hypot(p.dx, p.dy);
-            if (speed < 1) continue; // Ignore stationary
+            if (speed < 1) continue;
 
             const toFighterX = fighter.x - p.x;
             const toFighterY = fighter.y - p.y;
             const toFighterDist = Math.hypot(toFighterX, toFighterY);
 
-            // Normalize
             const normToFighterX = toFighterX / toFighterDist;
             const normToFighterY = toFighterY / toFighterDist;
             const normDx = p.dx / speed;
             const normDy = p.dy / speed;
 
-            // Dot product: if positive and high, projectile is heading towards fighter
             const dot = normDx * normToFighterX + normDy * normToFighterY;
 
-            if (dot > approachThreshold) {
-                return p; // Found an approaching projectile!
+            if (dot > this.approachThreshold) {
+                return p;
             }
         }
         return null;
@@ -183,7 +189,7 @@ export class DivineBrawlerDefAbility extends Ability {
         const oldX = fighter.x;
         const oldY = fighter.y;
 
-        // Visuals Pre-Swap (Disappear)
+        // Visuals Pre-Swap
         context.game.particles.spawn(fighter.x, fighter.y, '#4B0082', 10);
         context.game.particles.spawn(enemy.x, enemy.y, '#FF0000', 10);
 
@@ -193,13 +199,13 @@ export class DivineBrawlerDefAbility extends Ability {
         enemy.x = oldX;
         enemy.y = oldY;
 
-        // 2. PROJECTILE HIJACK (The "Hit Yourself" trick)
+        // 2. PROJECTILE HIJACK
         let hijackedCount = 0;
         context.game.projectiles.forEach(p => {
             if (p.owner === enemy) {
-                p.owner = fighter; // Hijack ownership
+                p.owner = fighter;
                 p.isDeflected = true;
-                p.deflectLifetime = 180;
+                p.deflectLifetime = this.deflectLifetime;
                 p.isHijacked = true;
                 hijackedCount++;
             }
@@ -222,8 +228,10 @@ export class DivineBrawlerDefAbility extends Ability {
 export class DivineBrawlerUltAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
+        // All values from config (fighters.js)
         this.duration = config.duration || 300;
         this.cooldown = config.cooldown || 600;
+        this.immovableMass = config.immovableMass || 20;
     }
 
     execute(fighter, context) {
@@ -231,9 +239,9 @@ export class DivineBrawlerUltAbility extends Ability {
         fighter.activeEffects.focusActive = true;
         fighter.activeEffects.focusTimer = this.duration;
 
-        // Massive Mass Increase (Immovable)
+        // Massive Mass Increase
         fighter.originalMass = fighter.mass;
-        fighter.mass = 20.0; // Unmoveable object
+        fighter.mass = this.immovableMass;
 
         // Visuals
         audioEngine.playPowerUp();
@@ -262,7 +270,7 @@ export class DivineBrawlerUltAbility extends Ability {
 
             if (fighter.activeEffects.focusTimer <= 0) {
                 fighter.activeEffects.focusActive = false;
-                fighter.mass = fighter.originalMass || 1.6; // Revert mass
+                fighter.mass = fighter.originalMass || 1.6;
                 logger.log(`${fighter.name}'s Focus fades.`, 'info');
             }
         }

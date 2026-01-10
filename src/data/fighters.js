@@ -119,7 +119,7 @@ export const FIGHTER_TYPES = {
                 cooldown: 60,
                 damage: 20,
                 explosionRadius: 80,
-                airTime: 60,
+                airTime: 45,
                 maxDistance: 400,
                 radius: 6
             }
@@ -494,8 +494,8 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 60,
                 damage: 8,
-                projectileSpeed: 20,
-                perfectLockSpeed: 25,
+                projectileSpeed: 18,
+                perfectLockSpeed: 20,
                 lockChargeRate: 3,
                 lockDecayRate: 0.92,
                 perfectLockThreshold: 100,

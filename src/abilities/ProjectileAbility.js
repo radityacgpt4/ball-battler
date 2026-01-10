@@ -204,6 +204,10 @@ export class GrenadeAbility extends Ability {
         p.z = 10;
         p.vz = 15;
 
+        // Store destination for hit indicator (cosmetic only)
+        p.destX = fighter.x + Math.cos(fighter.angle) * dist;
+        p.destY = fighter.y + Math.sin(fighter.angle) * dist;
+
         game.projectiles.push(p);
         audioEngine.playGrenadeThrow();
 

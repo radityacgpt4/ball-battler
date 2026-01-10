@@ -491,16 +491,28 @@ export class Game {
                 if (dist < minDist) {
                     // Static passive (Volt's zap on contact)
                     if (e1.skills.def.type === 'STATIC_PASSIVE' && e2.status.stun <= 0) {
+                        const dmg = e1.skills.def.damage || 5;
+                        e2.takeDamage(dmg, false, false, e1);
                         e2.applyStatus('STUN');
+
+                        // Visuals
+                        this.particles.spawnBolt([{ x: e1.x, y: e1.y }, { x: e2.x, y: e2.y }], '#00FFFF', 4);
                         this.particles.spawn(e2.x, e2.y, '#00FFFF', 8);
+
                         audioEngine.playZap();
-                        logger.log(`${e1.name} STATIC PASSIVE stunned ${e2.name}!`, 'combat');
+                        logger.log(`${e1.name} STATIC PASSIVE zapped ${e2.name} for ${dmg} dmg!`, 'combat');
                     }
                     if (e2.skills.def.type === 'STATIC_PASSIVE' && e1.status.stun <= 0) {
+                        const dmg = e2.skills.def.damage || 5;
+                        e1.takeDamage(dmg, false, false, e2);
                         e1.applyStatus('STUN');
+
+                        // Visuals
+                        this.particles.spawnBolt([{ x: e2.x, y: e2.y }, { x: e1.x, y: e1.y }], '#00FFFF', 4);
                         this.particles.spawn(e1.x, e1.y, '#00FFFF', 8);
+
                         audioEngine.playZap();
-                        logger.log(`${e2.name} STATIC PASSIVE stunned ${e1.name}!`, 'combat');
+                        logger.log(`${e2.name} STATIC PASSIVE zapped ${e1.name} for ${dmg} dmg!`, 'combat');
                     }
 
                     // SHIELDBEARER: Momentum Collision
@@ -539,28 +551,11 @@ export class Game {
                         logger.log(`${attacker.name} SLAMMED ${defender.name} for ${damage} dmg (SpeedTier: ${speedTier})`, 'combat');
                         audioEngine.playHeavyImpact();
 
-                        const massRatio = attacker.mass / defender.mass;
-                        const baseKnock = config.knockback * massRatio;
-                        const speedBonus = speedTier * 5;
-                        let totalKnock = baseKnock + speedBonus;
-
                         if (attacker.ultWallSlamActive) {
-                            const angle = Math.atan2(defender.y - attacker.y, defender.x - attacker.x);
-
-                            const knockbackForce = 12; // Base knockback force
-                            const kSpeed = knockbackForce / defender.mass;
-                            defender.dx = Math.cos(angle) * kSpeed;
-                            defender.dy = Math.sin(angle) * kSpeed;
-
                             defender.pendingWallSlam = { owner: attacker };
-
                             for (let i = 0; i < 10; i++) {
                                 this.particles.spawn(defender.x, defender.y, '#ff4444', 1);
                             }
-                        } else {
-                            const angle = Math.atan2(defender.y - attacker.y, defender.x - attacker.x);
-                            defender.dx = Math.cos(angle) * totalKnock;
-                            defender.dy = Math.sin(angle) * totalKnock;
                         }
 
                         attacker.wallBounceSpeed = attacker.baseSpeed;
@@ -569,9 +564,10 @@ export class Game {
                             this.particles.spawn(defender.x, defender.y, '#8b5cf6', 1);
                         }
 
-                        defender.collisionImmunity = 30;
-
-                        return true;
+                        // We used to return 'true' to skip physics and set velocity manually.
+                        // Now we return 'false' so the standard elastic collision (bump) happens below,
+                        // which naturally handles mass-based knockback.
+                        return false;
                     };
 
                     const hit1 = handleMomentumHit(e1, e2);

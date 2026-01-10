@@ -203,34 +203,36 @@ export class Projectile {
             }
         }
 
-        // Quincy Arrow - Spirit Trail (Reishi Particles) - ENHANCED
+        // Quincy Arrow - Spirit Trail (Reishi Particles) - PIXELATED STYLE
         if (this.isQuincyArrow && this.active) {
-            // Spawn trailing spirit particles every frame - INCREASED FREQUENCY & SIZE
-            if (Math.random() < 0.95) {
-                // Core bright particles
+            // Spawn crisp pixel blocks instead of glowing clouds
+            if (this.game.frameAccumulator % 2 === 0) { // Every other frame for discrete look
+                // 1. Center Trail (The "Data Stream")
                 this.game.particles.particles.push({
-                    x: this.x - Math.cos(this.angle) * 8,
-                    y: this.y - this.z - Math.sin(this.angle) * 8,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: (Math.random() - 0.5) * 2,
-                    life: 0.7, decay: 0.04, // Longer life
-                    size: this.isPerfectShot ? 6 : 5, // Bigger
-                    color: '#E0FFFF',
-                    type: 'square'
+                    x: this.x - Math.cos(this.angle) * 12,
+                    y: this.y - this.z - Math.sin(this.angle) * 12,
+                    vx: 0, vy: 0,
+                    life: 0.3, decay: 0.1, // Quick vanish
+                    size: 4, // Fixed pixel size
+                    color: '#00BFFF',
+                    type: 'square',
+                    alpha: 1.0 // No transparency fade at start
                 });
-            }
-            // Outer glow particles (MORE FREQUENT & BIGGER)
-            if (Math.random() < 0.7) {
-                this.game.particles.particles.push({
-                    x: this.x - Math.cos(this.angle) * 5 + (Math.random() - 0.5) * 12,
-                    y: this.y - this.z - Math.sin(this.angle) * 5 + (Math.random() - 0.5) * 12,
-                    vx: (Math.random() - 0.5) * 4,
-                    vy: (Math.random() - 0.5) * 4,
-                    life: 0.5, decay: 0.03, // Longer life
-                    size: this.isPerfectShot ? 8 : 6, // Bigger
-                    color: '#1E90FF',
-                    type: 'square'
-                });
+
+                // 2. Occasional "Glitch" Pixels
+                if (Math.random() < 0.3) {
+                    const offset = (Math.random() < 0.5 ? -1 : 1) * 8;
+                    const perpAngle = this.angle + Math.PI / 2;
+                    this.game.particles.particles.push({
+                        x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset,
+                        y: this.y - this.z - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset,
+                        vx: 0, vy: 0,
+                        life: 0.2, decay: 0.1,
+                        size: 2, // Smaller pixel
+                        color: '#E0FFFF',
+                        type: 'square'
+                    });
+                }
             }
         }
 
@@ -279,52 +281,36 @@ export class Projectile {
         }
 
         // --- QUINCY REISHI ARROW EFFECTS ---
-        if (this.isQuincyArrow && this.active) {
-            // 1. Central Energy Residue (fading blue dust)
-            if (Math.random() < 0.3) {
-                this.game.particles.particles.push({
-                    x: this.x,
-                    y: this.y - this.z,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5,
-                    life: 0.4, decay: 0.08,
-                    size: Math.random() * 3,
-                    color: '#00BFFF',
-                    type: 'dot',
-                    alpha: 0.6
-                });
-            }
-
-            // 2. Spiraling Helix Lines (Reishi strands)
-            const t = Date.now() * 0.025; // Rotation speed
-            const perpAngle = this.angle + Math.PI / 2;
-            const spiralRadius = 6; // Width of the spiral
-
-            // Helix Strand 1
-            const offset1 = Math.sin(t) * spiralRadius;
-            this.game.particles.particles.push({
-                x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset1,
-                y: this.y - this.z - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset1,
-                vx: 0, vy: 0,
-                life: 0.2, decay: 0.1,
-                size: 1.5, color: '#1E90FF',
-                type: 'dot'
-            });
-
-            // Helix Strand 2 (Opposite phase)
-            const offset2 = Math.sin(t + Math.PI) * spiralRadius;
-            this.game.particles.particles.push({
-                x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset2,
-                y: this.y - this.z - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset2,
-                vx: 0, vy: 0,
-                life: 0.2, decay: 0.1,
-                size: 1.5, color: '#00FFFF',
-                type: 'dot'
-            });
-        }
+        // --- QUINCY REISHI ARROW EFFECTS ---
+        // (Removed to maintain clean pixel-y style)
     }
 
     draw(ctx) {
+        // --- HIT INDICATORS (Cosmetic Landing Zone Preview) ---
+        // Grenade: Faint red-filled circle at explosion zone
+        if (this.isGrenade && this.z > 0 && this.destX !== undefined) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 50, 50, 0.15)';
+            ctx.beginPath();
+            ctx.arc(this.destX, this.destY, this.explosionRadius, 0, Math.PI * 2);
+            ctx.fill();
+            // Subtle ring outline
+            ctx.strokeStyle = 'rgba(255, 50, 50, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Licht Regen Arrow: Blue stroke ring at landing spot
+        if (this.isLichtRegen && this.z > 0 && this.destX !== undefined) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(30, 144, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.destX, this.destY, 18, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
         // --- QUINCY ARROW DRAWING ---
         if (this.isQuincyArrow) {
             ctx.save();

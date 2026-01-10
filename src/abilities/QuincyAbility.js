@@ -310,7 +310,7 @@ export class QuincyUltAbility extends Ability {
 
                         // Physics: Time to land should match gravity arc
                         // z(t) = v0*t - 0.5*g*t^2. Land at t=60 if v0=15, g=0.5
-                        const airTime = 60;
+                        const airTime = 40;
                         const speed = dist / airTime;
 
                         // Projectile starts at fighter
@@ -331,7 +331,9 @@ export class QuincyUltAbility extends Ability {
                         p.piercing = true;
                         p.hitList = [];
                         p.stunDuration = this.stunDuration;
-                        p.destX = destX; // Store for debug/logic if needed
+                        // Store destination for hit indicator (cosmetic only)
+                        p.destX = destX;
+                        p.destY = destY;
 
                         // Vertical movement properties (curved arc)
                         // Start low, shoot up

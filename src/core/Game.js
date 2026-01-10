@@ -355,7 +355,7 @@ export class Game {
                 continue;
             }
 
-            if (!p.isGrenade) {
+            if (!p.isGrenade && !p.isFugaArrow && !p.isGroundBurn && !p.isWorldSlash) {
                 for (let ent of this.entities) {
                     if (ent === p.owner || ent.isDead) continue;
                     if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
@@ -475,7 +475,122 @@ export class Game {
                     }
                 }
             }
+
+
+            // --- KING OF CURSES COLLISIONS ---
+            if (p.isFugaArrow && p.active) {
+                for (let ent of this.entities) {
+                    if (ent === p.owner || ent.isDead) continue;
+                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
+                        // Hit enemy
+                        ent.takeDamage(p.damage, false, false, p.owner);
+
+                        // Apply Burn Stack
+                        // Safety: If burn duration expired, reset stacks to 0 before applying new one
+                        if (ent.status.burn <= 0) ent.status.burnStacks = 0;
+
+                        if (!ent.status.burnStacks) ent.status.burnStacks = 0;
+                        if (ent.status.burnStacks < (p.maxStacks || 3)) {
+                            ent.status.burnStacks++;
+                        }
+                        ent.applyStatus('BURN', p.burnDuration || 180);
+                        logger.log(`${ent.name} BURNED by Fuga! (${ent.status.burnStacks} stacks)`, 'combat');
+
+                        this.spawnGroundBurn(ent.x, ent.y, p.owner);
+
+                        this.particles.spawnExplosion(p.x, p.y);
+                        audioEngine.playExplosion();
+                        p.active = false;
+                        break;
+                    }
+                }
+            }
+
+            if (p.isGroundBurn && p.active) {
+                // Ground Burn Hazard - disappears when struck, applies burn and adds timer
+                for (let ent of this.entities) {
+                    if (ent === p.owner || ent.isDead) continue;
+                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < (p.radius || 30) + ent.radius) {
+                        // Apply burn stack
+                        if (!ent.status.burnStacks) ent.status.burnStacks = 0;
+                        if (ent.status.burnStacks < 3) {
+                            ent.status.burnStacks++;
+                        }
+
+                        // ADD to burn timer (not refresh)
+                        const burnAddTime = 120; // 2 seconds added
+                        if (!ent.status.burn) ent.status.burn = 0;
+                        ent.status.burn += burnAddTime;
+                        // Cap burn duration to prevent infinite stacking
+                        if (ent.status.burn > 360) ent.status.burn = 360; // Max 6 seconds
+
+                        logger.log(`${ent.name} stepped in Ground Burn! (${ent.status.burnStacks} stacks, +${burnAddTime / 60}s burn)`, 'combat');
+
+                        // Explosion effect and deactivate
+                        this.particles.spawn(p.x, p.y, '#FF4500', 8);
+                        this.particles.spawn(p.x, p.y, '#FFD700', 5);
+                        audioEngine.playExplosion();
+
+                        p.active = false;
+                        break;
+                    }
+                }
+            }
+
+            if (p.isWorldSlash && p.active) {
+                // Deflect enemy projectiles
+                for (let j = this.projectiles.length - 1; j >= 0; j--) {
+                    const other = this.projectiles[j];
+                    if (other === p || !other.active) continue;
+                    if (other.owner === p.owner) continue; // Don't deflect own projectiles
+                    if (other.isGroundBurn) continue; // Don't deflect ground burns
+
+                    if (Physics.dist(p.x, p.y, other.x, other.y) < (p.radius || 40) + (other.radius || 4)) {
+                        // Deflect the projectile
+                        other.owner = p.owner;
+                        other.hitList = [];
+
+                        // Reverse and redirect
+                        const speed = Math.hypot(other.dx, other.dy);
+                        other.dx = Math.cos(p.angle) * speed * 1.2;
+                        other.dy = Math.sin(p.angle) * speed * 1.2;
+                        other.angle = p.angle;
+
+                        other.isDeflected = true;
+                        other.deflectLifetime = 180;
+
+                        // Visual effect
+                        this.particles.spawn(other.x, other.y, '#DC143C', 6);
+                        audioEngine.playBlock();
+                        logger.log(`World Cutting Slash DEFLECTED projectile!`, 'combat');
+                    }
+                }
+
+                // Hit entities
+                for (let ent of this.entities) {
+                    if (ent === p.owner || ent.isDead) continue;
+                    // Wide hitbox check
+                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < (p.radius || 40) + ent.radius) {
+                        // Drag Logic
+                        if (p.dragTarget) {
+                            // Pull entity towards projectile center + forward motion
+                            ent.dx = p.dx * (p.dragStrength || 0.3) + (p.x - ent.x) * 0.1;
+                            ent.dy = p.dy * (p.dragStrength || 0.3) + (p.y - ent.y) * 0.1;
+                        }
+
+                        // Damage once per enemy
+                        if (!p.hitList) p.hitList = [];
+                        if (!p.hitList.includes(ent.id)) {
+                            ent.takeDamage(p.damage, true, false, p.owner); // Unblockable
+                            p.hitList.push(ent.id);
+                            this.particles.spawnSlash(ent.x, ent.y, ent.x + (Math.random() - 0.5) * 20, ent.y + (Math.random() - 0.5) * 20, '#DC143C', 30);
+                            audioEngine.playSlash();
+                        }
+                    }
+                }
+            }
         }
+
 
         // Entities
         for (let i = 0; i < this.entities.length; i++) {
@@ -623,8 +738,6 @@ export class Game {
         if (this.isMatchOver) {
             this.finishTimer++;
             // Wait 120 frames (approx 2s at 60fps, but effectively longer due to timescale)
-            // We want real-time waiting, so if timescale is 0.2, we need fewer ticks or check real time
-            // Let's just count frames, at 0.2 scale it looks cool.
             if (this.finishTimer > 150) {
                 this.running = false;
                 const alive = this.entities.filter(e => !e.isDead);
@@ -650,6 +763,16 @@ export class Game {
             this.timeScale = 0.2; // SLOW MOTION
             audioEngine.playWin();
         }
+    }
+
+    spawnGroundBurn(x, y, owner) {
+        // Create a stationary "projectile" that acts as a hazard
+        const p = new Projectile(owner, x, y, 0, 0, 1, this);
+        p.isGroundBurn = true;
+        p.lifeTime = 240; // 4 seconds (buffed from 2)
+        p.radius = 30; // Bigger AoE (buffed from 15)
+        p.maxLifeTime = 240; // For visual fade
+        this.projectiles.push(p);
     }
 
     loop(currentTime) {

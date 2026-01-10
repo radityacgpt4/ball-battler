@@ -17,6 +17,7 @@ import { BallistaAtkAbility, BallistaDefAbility, BallistaUltAbility } from '../a
 import { DivineGeneralAtkAbility, DivineGeneralDefAbilityWithUlt, DivineGeneralUltAbility } from '../abilities/DivineGeneralAbility.js';
 import { DivineBrawlerAtkAbility, DivineBrawlerDefAbility, DivineBrawlerUltAbility } from '../abilities/DivineBrawlerAbility.js';
 import { QuincyAtkAbility, QuincyDefAbility, QuincyUltAbility } from '../abilities/QuincyAbility.js';
+import { KingOfCursesAtkAbility, KingOfCursesDefAbility, KingOfCursesUltAbility } from '../abilities/KingOfCursesAbility.js';
 
 class AbilityRegistryClass {
     constructor() {
@@ -93,6 +94,7 @@ class AbilityRegistryClass {
         this.register('EIGHTFOLD_STRIKE', DivineGeneralAtkAbility);
         this.register('BLACK_FLASH', DivineBrawlerAtkAbility);
         this.register('HEILIG_PFEIL', QuincyAtkAbility);
+        this.register('DISMANTLE_SLASH', KingOfCursesAtkAbility);
 
         // Defense abilities
         this.register('PARRY_PASSIVE', ParryPassiveAbility);
@@ -107,6 +109,7 @@ class AbilityRegistryClass {
         this.register('ADAPTATION_HEAL', DivineGeneralDefAbilityWithUlt);
         this.register('BOOGIE_WOOGIE', DivineBrawlerDefAbility);
         this.register('HIRENKYAKU', QuincyDefAbility);
+        this.register('DOMAIN_EXPANSION', KingOfCursesDefAbility);
 
         // Ultimate abilities
         this.register('DASH_ASSAULT', DashAssaultAbility);
@@ -121,6 +124,7 @@ class AbilityRegistryClass {
         this.register('ADAPTATION_ULT', DivineGeneralUltAbility);
         this.register('UNSHAKEABLE_FOCUS', DivineBrawlerUltAbility);
         this.register('LICHT_REGEN', QuincyUltAbility);
+        this.register('WORLD_SLASH_MODE', KingOfCursesUltAbility);
     }
 }
 

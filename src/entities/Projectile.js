@@ -280,9 +280,52 @@ export class Projectile {
             }
         }
 
-        // --- QUINCY REISHI ARROW EFFECTS ---
-        // --- QUINCY REISHI ARROW EFFECTS ---
-        // (Removed to maintain clean pixel-y style)
+        // --- KING OF CURSES LOGIC ---
+        if (this.isFugaArrow) {
+            const travel = Math.hypot(this.x - (this.startX || this.x), this.y - (this.startY || this.y));
+
+            // Check max range or wall hit (manual wall check if not covered by standard bullet logic?)
+            // Standard logic above checks bounds but just kills it. We want to spawn ground burn.
+            const bounds = this.game.arenaBounds;
+            let hitWall = false;
+            if (this.x < bounds.x || this.x > bounds.x + bounds.width || this.y < bounds.y || this.y > bounds.y + bounds.height) {
+                hitWall = true;
+            }
+
+            if (travel >= (this.maxDistance || 300) || hitWall) {
+                this.active = false;
+                // Spawn Ground Burn
+                this.game.spawnGroundBurn(this.x, this.y, this.owner);
+                this.game.particles.spawnExplosion(this.x, this.y); // Fire effect
+                audioEngine.playExplosion();
+            }
+        }
+
+        if (this.isGroundBurn) {
+            this.lifeTime -= 1 * timeScale;
+            if (this.lifeTime <= 0) {
+                this.active = false;
+            }
+            // Logic for applying burn is in Game.js collision
+        }
+
+        if (this.isWorldSlash) {
+            // "Drag opponent along the projectile path"
+            // This is best handled in collision (Game.js), constantly resetting enemy position while overlapping?
+            // Or here, we can find overlapping enemies and pull them.
+            // But collision logic is in Game.js. We'll handle drag there.
+
+            // Visual particles for the slash
+            if (Math.random() < 0.3) {
+                this.game.particles.particles.push({
+                    x: this.x + (Math.random() - 0.5) * 40,
+                    y: this.y + (Math.random() - 0.5) * 40,
+                    vx: 0, vy: 0,
+                    life: 0.3, decay: 0.1,
+                    size: 3, color: '#DC143C', type: 'square'
+                });
+            }
+        }
     }
 
     draw(ctx) {
@@ -311,6 +354,176 @@ export class Projectile {
             ctx.stroke();
             ctx.restore();
         }
+
+        // --- KING OF CURSES DRAWING ---
+        if (this.isFugaArrow) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            // Outer flame glow
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#FF4500';
+
+            // Main arrow body (bigger)
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.moveTo(18, 0); // Bigger tip
+            ctx.lineTo(-12, 8);
+            ctx.lineTo(-8, 0);
+            ctx.lineTo(-12, -8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Inner hot core
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.moveTo(12, 0);
+            ctx.lineTo(-4, 4);
+            ctx.lineTo(-4, -4);
+            ctx.closePath();
+            ctx.fill();
+
+            // Flame trail (animated flickering)
+            const time = Date.now() / 50;
+            ctx.fillStyle = '#FF4500';
+            for (let i = 0; i < 5; i++) {
+                const flicker = Math.sin(time + i * 1.5) * 3;
+                const trailX = -15 - i * 6;
+                const trailY = flicker;
+                const size = 6 - i;
+                ctx.beginPath();
+                ctx.arc(trailX, trailY, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Sparks
+            ctx.fillStyle = '#FFFF00';
+            for (let i = 0; i < 3; i++) {
+                const sparkX = -10 - Math.random() * 20;
+                const sparkY = (Math.random() - 0.5) * 12;
+                ctx.beginPath();
+                ctx.arc(sparkX, sparkY, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+            // Spawn trailing fire particles in game
+            if (Math.random() < 0.4 && this.game) {
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 15,
+                    y: this.y - Math.sin(this.angle) * 15,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2 - 1,
+                    life: 0.5,
+                    decay: 0.05,
+                    size: 4 + Math.random() * 3,
+                    color: Math.random() > 0.5 ? '#FF4500' : '#FFD700',
+                    type: 'dot'
+                });
+            }
+
+            return;
+        }
+
+        if (this.isWorldSlash) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            const slashWidth = this.radius || 40; // Uses the radius property for width
+
+            // Glow effect
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = '#DC143C';
+
+            // Main slash crescent (single forward arc)
+            ctx.strokeStyle = '#DC143C';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+
+            ctx.beginPath();
+            // Draw a single clean crescent moving forward
+            ctx.moveTo(0, -slashWidth);
+            ctx.quadraticCurveTo(slashWidth * 0.4, 0, 0, slashWidth);
+            ctx.stroke();
+
+            // Inner bright edge
+            ctx.strokeStyle = '#FF6B6B';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, -slashWidth * 0.85);
+            ctx.quadraticCurveTo(slashWidth * 0.3, 0, 0, slashWidth * 0.85);
+            ctx.stroke();
+
+            // Core white flash
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, -slashWidth * 0.7);
+            ctx.quadraticCurveTo(slashWidth * 0.2, 0, 0, slashWidth * 0.7);
+            ctx.stroke();
+
+            ctx.restore();
+            return;
+        }
+
+        if (this.isGroundBurn) {
+            ctx.save();
+
+            // Calculate fade based on remaining lifetime
+            const fadeRatio = this.lifeTime / (this.maxLifeTime || 240);
+            ctx.globalAlpha = 0.4 + fadeRatio * 0.4;
+
+            // Outer glow ring
+            const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+            gradient.addColorStop(0, 'rgba(255, 200, 50, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.5)');
+            gradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Animated flame tongues
+            const time = Date.now() / 100;
+            ctx.fillStyle = '#FF4500';
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2 + time * 0.3;
+                const flicker = Math.sin(time * 2 + i) * 5;
+                const flameLen = (this.radius * 0.6) + flicker;
+                const fx = this.x + Math.cos(angle) * flameLen;
+                const fy = this.y + Math.sin(angle) * flameLen;
+
+                ctx.beginPath();
+                ctx.arc(fx, fy, 4 + Math.random() * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Central hot core
+            ctx.fillStyle = '#FFFF00';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#FF4500';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 8 + Math.sin(time * 3) * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sparks/Embers rising
+            ctx.fillStyle = '#FFAA00';
+            for (let i = 0; i < 3; i++) {
+                const sparkX = this.x + (Math.random() - 0.5) * this.radius;
+                const sparkY = this.y + (Math.random() - 0.5) * this.radius - Math.random() * 10;
+                ctx.beginPath();
+                ctx.arc(sparkX, sparkY, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+            return;
+        }
+
         // --- QUINCY ARROW DRAWING ---
         if (this.isQuincyArrow) {
             ctx.save();

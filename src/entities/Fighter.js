@@ -115,6 +115,38 @@ export class Fighter {
             }
         }
 
+        // BURN Logic (King of Curses) - fixed 2 dmg/sec (stacks increase duration, not damage)
+        if (this.status.burn > 0) {
+            this.status.burn = tick(this.status.burn);
+            if (this.status.burn <= 0) {
+                this.status.burnStacks = 0;
+            }
+            if (typeof this.status.burnTick === 'undefined') this.status.burnTick = 0;
+            this.status.burnTick += 1 * timeScale;
+
+            // Tick every 0.5 seconds (30 frames) - deals fixed 1 dmg per tick = 2 dmg/sec
+            if (this.status.burnTick >= 30) {
+                this.takeDamage(1, false, true); // Fixed 1 damage per tick
+                this.game.particles.spawn(this.x, this.y, '#FF4500', 3);
+                this.status.burnTick = 0;
+            }
+
+            // Burning particle effect on fighter (constant while burning)
+            if (Math.random() < 0.15) {
+                this.game.particles.particles.push({
+                    x: this.x + (Math.random() - 0.5) * this.radius * 1.5,
+                    y: this.y + (Math.random() - 0.5) * this.radius,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: -1 - Math.random() * 2, // Rise up
+                    life: 0.4,
+                    decay: 0.03,
+                    size: 3 + Math.random() * 3,
+                    color: Math.random() > 0.5 ? '#FF4500' : '#FFD700',
+                    type: 'dot'
+                });
+            }
+        }
+
         // Ninja Teleport Trigger
         if (this.teleportDelayTimer > 0) {
             this.teleportDelayTimer = tick(this.teleportDelayTimer);
@@ -153,6 +185,23 @@ export class Fighter {
             if (this.typeKey === 'SOLDIER' && this.activeEffects.burstCount > 0) {
                 rot *= 0.2;
             }
+
+            // King of Curses: Slow rotation by 60% when facing opponent (aiming mechanic)
+            if (this.typeKey === 'KING_OF_CURSES') {
+                const opponent = allEntities.find(e => e !== this && !e.isDead);
+                if (opponent) {
+                    const angleToOpponent = Math.atan2(opponent.y - this.y, opponent.x - this.x);
+                    let angleDiff = Math.abs(this.angle - angleToOpponent);
+                    // Normalize angle difference to [0, PI]
+                    while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
+
+                    // If facing opponent (within ~45 degrees), slow rotation
+                    if (angleDiff < Math.PI / 4) {
+                        rot *= 0.4; // 60% slow
+                    }
+                }
+            }
+
             this.angle += rot;
         }
 
@@ -165,6 +214,12 @@ export class Fighter {
     handleMovement(timeScale) {
         let speedMult = this.laserSpeedMult || 1.0;
         if (this.status.slow > 0) speedMult *= 0.3; // 70% slow (Cumulative)
+
+        // Domain slow (20% reduction)
+        if (this.status.domainSlow > 0) {
+            speedMult *= 0.8;
+            this.status.domainSlow--;
+        }
 
         this.x += this.dx * speedMult * timeScale;
         this.y += this.dy * speedMult * timeScale;
@@ -259,6 +314,12 @@ export class Fighter {
                 // Normal movement driving
                 let mod = (this.activeEffects.ultActive && this.typeKey === 'SOLDIER') ? 1.5 : 1.0;
                 if (this.status.slow > 0) mod *= 0.75; // 25% slow
+
+                // Burn Slow (10% per stack)
+                if (this.status.burn > 0) {
+                    const burnSlow = (this.status.burnStacks || 1) * 0.1;
+                    mod *= (1 - burnSlow);
+                }
 
                 let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
                 targetSpeed *= mod;
@@ -631,6 +692,10 @@ export class Fighter {
             }
             this.status.slow = duration || 30;
         }
+        if (type === 'BURN') {
+            this.status.burn = duration || 180;
+            if (!this.status.burnStacks) this.status.burnStacks = 1;
+        }
     }
 
     draw(ctx) {
@@ -1000,6 +1065,47 @@ export class Fighter {
             ctx.textAlign = "center";
             ctx.strokeText(`🛡️${Math.ceil(this.shieldHp)}`, 0, -this.radius - 15);
             ctx.fillText(`🛡️${Math.ceil(this.shieldHp)}`, 0, -this.radius - 15);
+            ctx.restore();
+        }
+
+        // Cursed Shield Visual (King of Curses)
+        if (this.cursedShield > 0) {
+            ctx.save();
+            // Pulsing/Sinister effect
+            const pulse = (Math.sin(Date.now() / 200) + 1) * 0.5; // 0 to 1
+            ctx.globalAlpha = 0.4 + pulse * 0.2;
+
+            // Dark Red / Crimson jagged aura
+            ctx.strokeStyle = '#DC143C';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            // Jagged circle
+            const shieldRadius = this.radius + 8;
+            for (let i = 0; i <= 360; i += 10) {
+                const angle = i * Math.PI / 180;
+                const r = shieldRadius + (Math.random() * 4 - 2); // Jitter
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(220, 20, 60, 0.15)';
+            ctx.fill();
+
+            ctx.restore();
+
+            // Shield HP UI
+            ctx.save();
+            ctx.fillStyle = "#DC143C";
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 2;
+            ctx.font = "bold 12px monospace";
+            ctx.textAlign = "center";
+            ctx.strokeText(`👹${Math.ceil(this.cursedShield)}`, 0, -this.radius - 15);
+            ctx.fillText(`👹${Math.ceil(this.cursedShield)}`, 0, -this.radius - 15);
             ctx.restore();
         }
 

@@ -538,5 +538,47 @@ export const FIGHTER_TYPES = {
                 rainSpread: 120 // How far arrows spread around target
             }
         }
+    },
+    KING_OF_CURSES: {
+        name: "King of Curses",
+        color: "#DC143C", // Crimson/Blood Red
+        hp: 100, mass: 1.5, speed: 5.0, rotationSpeed: 0.16,
+        skills: {
+            atk: {
+                name: "Cleave",
+                desc: "Relentless cuts that shred enemies within the Domain.",
+                type: "DISMANTLE_SLASH",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 6, // 10 hits per second (10 DPS)
+                damage: 1,
+                range: 125
+            },
+            def: {
+                name: "Domain Expansion: Malevolent Shrine",
+                desc: "A domain that slows and stuns enemies who stay too long.",
+                type: "DOMAIN_EXPANSION",
+                isPassive: true,
+                // Configurable properties
+                domainRadius: 125, // Diameter 250
+                slowAmount: 0.2, // 20% slow
+                stunDelay: 60, // 1 second before stun
+                stunDuration: 60 // 1 second stun
+            },
+            ult: {
+                name: "World Cutting Slash",
+                desc: "Transforms attack into a dimension-cutting slash.",
+                type: "WORLD_SLASH_MODE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                duration: 600,
+                slashDamage: 9,
+                slashSpeed: 21,
+                slashFireRate: 60,
+                slashWidth: 90, // Parabolic width
+                dragStrength: 0.2 // Drag factor
+            }
+        }
     }
 };

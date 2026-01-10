@@ -63,11 +63,27 @@ export class Renderer {
         // Draw HP text
         this.drawHPText(ctx, fighter);
 
+        // Burn stack indicator (independent of rotation, like Divine General)
+        if (fighter.status.burn > 0 && fighter.status.burnStacks > 0) {
+            ctx.save();
+            const text = `🔥x${fighter.status.burnStacks}`;
+            ctx.fillStyle = "#FF4500";
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 2;
+            ctx.font = "bold 16px monospace";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const textY = -fighter.radius - 40;
+            ctx.strokeText(text, 0, textY);
+            ctx.fillText(text, 0, textY);
+            ctx.restore();
+        }
+
         ctx.restore();
     }
 
     /**
-     * Draw status effect indicators (stun, slow, knockback)
+     * Draw status effect indicators (stun, slow, knockback, burn)
      */
     drawStatusEffects(ctx, fighter) {
         if (fighter.status.stun > 0) {
@@ -83,6 +99,21 @@ export class Renderer {
             ctx.beginPath();
             ctx.arc(0, 0, fighter.radius + 2, 0, Math.PI * 2);
             ctx.fill();
+        }
+
+        // BURN effect - orange/red pulsing glow and stack indicator
+        if (fighter.status.burn > 0 && fighter.status.burnStacks > 0) {
+            const pulse = (Math.sin(Date.now() / 150) + 1) * 0.3;
+            ctx.save();
+            ctx.globalAlpha = 0.4 + pulse;
+            ctx.strokeStyle = '#FF4500';
+            ctx.lineWidth = 2 + fighter.status.burnStacks;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#FF4500';
+            ctx.beginPath();
+            ctx.arc(0, 0, fighter.radius + 4, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
         }
 
         if (fighter.beingPushed) {
@@ -610,6 +641,63 @@ export class Renderer {
             }
 
             ctx.restore();
+        });
+
+        // King of Curses - Domain Expansion Visual
+        this.registerAccessory('KING_OF_CURSES', (ctx, fighter) => {
+            // Domain Expansion Visual (always active)
+            if (fighter.domainActive) {
+                const radius = fighter.domainRadius || 150;
+
+                ctx.save();
+
+                // Pulsing effect - slowed down from 300 to 600, reduced intensity from 0.15 to 0.1
+                const pulse = (Math.sin(Date.now() / 600) + 1) * 0.1;
+                ctx.globalAlpha = 0.35 + pulse;
+
+                // Dark semi-transparent red fill
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+                gradient.addColorStop(0, 'rgba(50, 0, 0, 0.4)');
+                gradient.addColorStop(0.7, 'rgba(139, 0, 0, 0.3)');
+                gradient.addColorStop(1, 'rgba(220, 20, 60, 0.1)');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Jagged edge (force-field like)
+                ctx.globalAlpha = 0.6 + pulse;
+                ctx.strokeStyle = '#DC143C';
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#DC143C';
+
+                ctx.beginPath();
+                const segments = 36;
+                for (let i = 0; i <= segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    // Jagged variation - reduced from 8 to 3, and slowed down oscillation
+                    const jag = Math.sin(i * 3 + Date.now() / 400) * 3;
+                    const r = radius + jag;
+                    if (i === 0) {
+                        ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                    } else {
+                        ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                    }
+                }
+                ctx.closePath();
+                ctx.stroke();
+
+                // Inner dark ring
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius * 0.85, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.restore();
+            }
         });
     }
 }

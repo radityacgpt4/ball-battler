@@ -155,6 +155,19 @@ export class AudioEngine {
         setTimeout(() => this.playTone(554, 'triangle', 0.2, 0.5), 150);
         setTimeout(() => this.playTone(659, 'triangle', 0.4, 0.5), 300);
     }
+
+    playSlash() {
+        // Sharper, more metallic slash sound
+        this.playNoise(0.1, 0.4, 4000); // Quick sharp whish
+        this.playTone(1200, 'sawtooth', 0.15, 0.3, 400); // High metallic cut
+        this.playTone(2000, 'sine', 0.05, 0.2); // Extremely high-pitch shimmer
+    }
+
+    playCleaveHit() {
+        // Very short, sharp cutting sound for rapid ticks
+        this.playNoise(0.05, 0.2, 5000); // High-frequency clip
+        this.playTone(1500, 'sawtooth', 0.04, 0.1, 800); // Tiny sharp cut
+    }
 }
 
 // Singleton instance

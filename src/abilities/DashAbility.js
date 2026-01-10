@@ -26,44 +26,44 @@ export class DashAssaultAbility extends Ability {
         const target = enemies.find(e => e !== fighter && !e.isDead);
         let aimAngle = fighter.angle;
         if (target) aimAngle = Math.atan2(target.y - fighter.y, target.x - fighter.x);
-        
+
         fighter.angle = aimAngle; // Face target
         const startX = fighter.x;
         const startY = fighter.y;
-        
+
         // Calculate max dash distance clamped to walls
         let moveDist = this.dashDistance;
         const destXRaw = startX + Math.cos(aimAngle) * moveDist;
         const destYRaw = startY + Math.sin(aimAngle) * moveDist;
-        
+
         // Clamp destination to arena
         const finalX = Math.max(fighter.radius, Math.min(game.width - fighter.radius, destXRaw));
         const finalY = Math.max(fighter.radius, Math.min(game.height - fighter.radius, destYRaw));
 
         // 2. VISUALS: Thunderclap Flash (Instant)
-        game.particles.spawnThunderclap(startX, startY, finalX, finalY, '#ff4444', 6); 
+        game.particles.spawnThunderclap(startX, startY, finalX, finalY, '#ff4444', 6);
         game.particles.spawnShockwave(startX, startY, '#ff4444');
         game.particles.spawnShockwave(finalX, finalY, '#ffffff');
-        
+
         // Audio
         audioEngine.playTeleport(); // "Zip" sound
         audioEngine.playHeavyImpact(); // "Boom" sound
 
         // 3. COLLISION LOGIC (Instant Line Check)
         const hitWidth = fighter.radius + 20; // Generous hitbox
-        
+
         enemies.forEach(e => {
-            if(e !== fighter && !e.isDead) {
-                if(Physics.lineCircleIntersect(startX, startY, finalX, finalY, e.x, e.y, hitWidth)) {
+            if (e !== fighter && !e.isDead) {
+                if (Physics.lineCircleIntersect(startX, startY, finalX, finalY, e.x, e.y, hitWidth)) {
                     // HIT!
                     e.takeDamage(this.damage, false, false, fighter);
                     e.applyStatus('BLEED', 180);
                     e.applyStatus('STUN', 30); // Slight stun from impact
-                    
+
                     // Hit Visuals
-                    game.particles.spawnSlash(e.x-20, e.y-20, e.x+20, e.y+20, '#ffffff', 5);
+                    game.particles.spawnSlash(e.x - 20, e.y - 20, e.x + 20, e.y + 20, '#ffffff', 5);
                     game.particles.spawnExplosion(e.x, e.y);
-                    
+
                     audioEngine.playHit();
                     logger.log(`${fighter.name} THUNDERCLAP HIT ${e.name}!`, 'combat');
                 }
@@ -71,11 +71,16 @@ export class DashAssaultAbility extends Ability {
         });
 
         // 4. TELEPORT
-        fighter.x = finalX;
-        fighter.y = finalY;
-        
-        // Add recoil/invincibility frames if desired
-        fighter.isDashing = false; // Not "dashing" over time, it was instant
+        // Add a tiny random jitter to prevent exact 0-distance overlaps which cause physics explosions
+        const jitter = (Math.random() - 0.5) * 2;
+        fighter.x = finalX + jitter;
+        fighter.y = finalY + jitter;
+
+        // Reset velocity to baseSpeed in the direction of the dash to prevent "old momentum" physics bugs
+        fighter.dx = Math.cos(aimAngle) * fighter.baseSpeed;
+        fighter.dy = Math.sin(aimAngle) * fighter.baseSpeed;
+
+        fighter.isDashing = false;
         fighter.cooldowns.ult = this.cooldown;
     }
 }

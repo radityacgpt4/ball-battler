@@ -465,7 +465,7 @@ export const FIGHTER_TYPES = {
                 cooldown: 150,
                 projectileCooldown: 120,
                 fallbackCooldown: 240,
-                detectionRadius: 100,
+                detectionRadius: 120,
                 approachThreshold: 0.7,
                 deflectLifetime: 180
             },
@@ -520,21 +520,22 @@ export const FIGHTER_TYPES = {
                 blinkDistance: 150,
                 trapDuration: 180,
                 trapStunDuration: 30,
-                trapRadius: 15
+                trapRadius: 8
             },
             ult: {
                 name: "Licht Regen",
-                desc: "Rains a cone of piercing light arrows.",
+                desc: "Rains piercing arrows from above.",
                 type: "LICHT_REGEN",
                 isPassive: false,
                 // Configurable properties
                 cooldown: 300,
-                damage: 5,
-                arrowCount: 8,
-                coneAngle: Math.PI / 3,
-                arrowSpeed: 22,
-                arrowRadius: 3,
-                angleVariation: 0.1
+                damage: 6,
+                arrowCount: 4,
+                stunDuration: 30, // 0.5 sec stun per arrow
+                arrowSpeed: 18, // Falling speed
+                arrowRadius: 2,
+                rainHeight: 150, // Initial z height
+                rainSpread: 120 // How far arrows spread around target
             }
         }
     }

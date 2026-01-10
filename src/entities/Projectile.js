@@ -161,31 +161,71 @@ export class Projectile {
             }
         }
 
-        // Quincy Arrow - Spirit Trail (Reishi Particles)
+        // Raining Arrow Logic (Licht Regen)
+        if (this.isRainingArrow && this.active) {
+            this.z += this.vz * timeScale;
+            this.vz -= 0.5 * timeScale; // Gravity acceleration for "curved" fall
+
+            // Spawn falling trail particles (smaller, less intrusive)
+            if (Math.random() < 0.4) {
+                this.game.particles.particles.push({
+                    x: this.x + (Math.random() - 0.5) * 6,
+                    y: this.y - this.z, // Offset visually by z height
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: 1.5, // Falling down
+                    life: 0.4, decay: 0.06,
+                    size: 1.5,
+                    color: '#00BFFF',
+                    type: 'square'
+                });
+            }
+
+            // Arrow has landed
+            if (this.z <= 0) {
+                this.z = 0;
+                this.isRainingArrow = false; // Stop falling, now act as normal arrow
+                this.landedLifeTime = 60; // Disappear after 1 second
+
+                // Impact effect
+                this.game.particles.spawn(this.x, this.y, '#00BFFF', 5);
+            }
+            return; // Skip normal movement while falling
+        }
+
+        // Landed Raining Arrow decay
+        if (this.landedLifeTime !== undefined && this.landedLifeTime > 0) {
+            this.landedLifeTime -= 1 * timeScale;
+            if (this.landedLifeTime <= 0) {
+                this.active = false;
+                return;
+            }
+        }
+
+        // Quincy Arrow - Spirit Trail (Reishi Particles) - ENHANCED
         if (this.isQuincyArrow && this.active) {
-            // Spawn trailing spirit particles every frame
-            if (Math.random() < 0.8) {
+            // Spawn trailing spirit particles every frame - INCREASED FREQUENCY & SIZE
+            if (Math.random() < 0.95) {
                 // Core bright particles
                 this.game.particles.particles.push({
                     x: this.x - Math.cos(this.angle) * 8,
                     y: this.y - Math.sin(this.angle) * 8,
-                    vx: (Math.random() - 0.5) * 1.5,
-                    vy: (Math.random() - 0.5) * 1.5,
-                    life: 0.5, decay: 0.06,
-                    size: this.isPerfectShot ? 4 : 3,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 0.7, decay: 0.04, // Longer life
+                    size: this.isPerfectShot ? 6 : 5, // Bigger
                     color: '#E0FFFF',
                     type: 'square'
                 });
             }
-            // Outer glow particles (less frequent)
-            if (Math.random() < 0.4) {
+            // Outer glow particles (MORE FREQUENT & BIGGER)
+            if (Math.random() < 0.7) {
                 this.game.particles.particles.push({
-                    x: this.x - Math.cos(this.angle) * 5 + (Math.random() - 0.5) * 10,
-                    y: this.y - Math.sin(this.angle) * 5 + (Math.random() - 0.5) * 10,
-                    vx: (Math.random() - 0.5) * 3,
-                    vy: (Math.random() - 0.5) * 3,
-                    life: 0.35, decay: 0.04,
-                    size: this.isPerfectShot ? 6 : 4,
+                    x: this.x - Math.cos(this.angle) * 5 + (Math.random() - 0.5) * 12,
+                    y: this.y - Math.sin(this.angle) * 5 + (Math.random() - 0.5) * 12,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 0.5, decay: 0.03, // Longer life
+                    size: this.isPerfectShot ? 8 : 6, // Bigger
                     color: '#1E90FF',
                     type: 'square'
                 });

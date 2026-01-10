@@ -236,7 +236,7 @@ export class Fighter {
             }
         }
 
-        const speed = Math.hypot(this.dx, this.dy);
+        let speed = Math.hypot(this.dx, this.dy);
 
         // If STUNNED, apply friction/decay instead of driving velocity
         if (this.status.stun > 0) {
@@ -262,6 +262,14 @@ export class Fighter {
 
                 let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
                 targetSpeed *= mod;
+
+                // GLOBAL SPEED CAP: Prevent physics "explosions" from overlapping teleports/dashes
+                const MAX_SPEED = 20;
+                if (speed > MAX_SPEED) {
+                    this.dx = (this.dx / speed) * MAX_SPEED;
+                    this.dy = (this.dy / speed) * MAX_SPEED;
+                    speed = MAX_SPEED;
+                }
 
                 // Soft Clamp / Friction for Knockback
                 if (speed > targetSpeed) {
@@ -305,28 +313,28 @@ export class Fighter {
 
                 // 2. Lightning Bolt Trail (Lore Accurate)
                 this.game.particles.spawnBolt([
-                    {x: current.x, y: current.y}, 
-                    {x: next.x, y: next.y}
+                    { x: current.x, y: current.y },
+                    { x: next.x, y: next.y }
                 ], '#ffd700', 8); // Thick yellow bolt
-                
+
                 // Secondary white core for brightness
                 this.game.particles.spawnBolt([
-                    {x: current.x, y: current.y}, 
-                    {x: next.x, y: next.y}
+                    { x: current.x, y: current.y },
+                    { x: next.x, y: next.y }
                 ], '#ffffff', 3);
 
                 if (this.pendingRasengan) {
                     // Blue Rasengan trail woven in
                     this.game.particles.spawnBolt([
-                        {x: current.x, y: current.y}, 
-                        {x: next.x, y: next.y}
+                        { x: current.x, y: current.y },
+                        { x: next.x, y: next.y }
                     ], '#00BFFF', 4);
                 }
 
                 // 3. Flash at destination
                 this.game.particles.spawn(next.x, next.y, '#ffd700', 12); // Explosion of sparks
                 this.game.particles.spawnShockwave(next.x, next.y, '#ffd700'); // Ring effect
-                
+
                 audioEngine.playTeleport();
 
                 this.x = next.x;

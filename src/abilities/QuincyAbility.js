@@ -214,8 +214,14 @@ export class QuincyDefAbility extends Ability {
                 newY = Math.max(bounds.y + margin, Math.min(bounds.y + bounds.height - margin, newY));
 
                 // Teleport
-                fighter.x = newX;
-                fighter.y = newY;
+                // Add a tiny random jitter to prevent exact 0-distance overlaps which cause physics explosions
+                const jitter = (Math.random() - 0.5) * 2;
+                fighter.x = newX + jitter;
+                fighter.y = newY + jitter;
+
+                // Reset velocity to baseSpeed in the direction of the blink
+                fighter.dx = Math.cos(escapeAngle) * fighter.baseSpeed;
+                fighter.dy = Math.sin(escapeAngle) * fighter.baseSpeed;
 
                 // Visual effects at departure point
                 game.particles.spawnHirenkyaku(oldX, oldY);
@@ -259,61 +265,75 @@ export class QuincyUltAbility extends Ability {
         constructor(config, slot) {
                 super(config, slot);
                 // All values from config (fighters.js)
-                this.cooldown = config.cooldown || 240;
-                this.arrowCount = config.arrowCount || 5;
-                this.arrowDamage = config.damage || 5;
-                this.coneAngle = config.coneAngle || (Math.PI / 3);
-                this.arrowSpeed = config.arrowSpeed || 22;
-                this.arrowRadius = config.arrowRadius || 3;
-                this.angleVariation = config.angleVariation || 0.15;
+                this.cooldown = config.cooldown || 300;
+                this.arrowCount = config.arrowCount || 4;
+                this.arrowDamage = config.damage || 6;
+                this.arrowSpeed = config.arrowSpeed || 18;
+                this.arrowRadius = config.arrowRadius || 2; // Smaller arrows
+                this.stunDuration = config.stunDuration || 30;
+                this.rainHeight = config.rainHeight || 150;
+                this.rainSpread = config.rainSpread || 120;
         }
 
         update(fighter, context) {
                 // Trigger when off cooldown
                 if (fighter.cooldowns.ult <= 0) {
                         const { enemies } = context;
-                        const hasTarget = enemies.some(e => e !== fighter && !e.isDead);
+                        const target = enemies.find(e => e !== fighter && !e.isDead);
 
-                        if (hasTarget) {
-                                this.execute(fighter, context);
+                        if (target) {
+                                this.execute(fighter, context, target);
                         }
                 }
         }
 
-        execute(fighter, context) {
-                const { game } = context;
+        execute(fighter, context, target) {
+                const { game, enemies } = context;
 
-                // Spawn rain of arrows in a cone
-                const startAngle = fighter.angle - this.coneAngle / 2;
-                const angleStep = this.coneAngle / (this.arrowCount - 1);
+                // Fallback: find target if not passed
+                if (!target) {
+                        target = enemies.find(e => e !== fighter && !e.isDead);
+                }
+                if (!target) return; // No valid target
 
+                // Spawn rain of arrows above the target
                 for (let i = 0; i < this.arrowCount; i++) {
-                        const arrowAngle = startAngle + angleStep * i;
+                        // Random spread around target position
+                        const offsetX = (Math.random() - 0.5) * this.rainSpread;
+                        const offsetY = (Math.random() - 0.5) * this.rainSpread;
+                        const spawnX = target.x + offsetX;
+                        const spawnY = target.y + offsetY;
 
-                        // Slight random variation
-                        const finalAngle = arrowAngle + (Math.random() - 0.5) * this.angleVariation;
-
+                        // Arrows fall straight down (angle = PI/2 = down)
                         const p = new Projectile(
                                 fighter,
-                                fighter.x + Math.cos(finalAngle) * 20,
-                                fighter.y + Math.sin(finalAngle) * 20,
-                                finalAngle,
-                                this.arrowSpeed,
+                                spawnX,
+                                spawnY,
+                                Math.PI / 2, // Pointing downward visually
+                                0, // No horizontal speed
                                 this.arrowDamage,
                                 game
                         );
 
                         p.isQuincyArrow = true;
                         p.isLichtRegen = true;
+                        p.isRainingArrow = true;
                         p.radius = this.arrowRadius;
                         p.piercing = true;
                         p.hitList = [];
+                        p.stunDuration = this.stunDuration;
+
+                        // Vertical movement properties (like grenade arc)
+                        // Higher start + slower fall = slower animation
+                        p.z = this.rainHeight + 50 + (i * 20); // Stagger them out significantly
+                        p.vz = -12; // Slower falling speed (was 18)
 
                         game.projectiles.push(p);
                 }
 
-                // Visuals & Audio
-                game.particles.spawnLichtRegen(fighter.x, fighter.y);
+                // Visuals & Audio - "Throw" effect at fighter, "Rain" effect at target
+                game.particles.spawn(fighter.x, fighter.y, '#1E90FF', 12); // Throw burst
+                game.particles.spawnLichtRegen(target.x, target.y);
                 audioEngine.playMissileLaunch();
 
                 logger.log(`${fighter.name} unleashes LICHT REGEN!`, 'combat');

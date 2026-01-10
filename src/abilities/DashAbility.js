@@ -71,12 +71,97 @@ export class DashAssaultAbility extends Ability {
         });
 
         // 4. TELEPORT
-        // Add a tiny random jitter to prevent exact 0-distance overlaps which cause physics explosions
-        const jitter = (Math.random() - 0.5) * 2;
-        fighter.x = finalX + jitter;
-        fighter.y = finalY + jitter;
+        // 4. TELEPORT
+        // Robust Safe Position Solver
+        // Goal: Find a spot touching the target but NOT overlapping any entity or wall
 
-        // Reset velocity to baseSpeed in the direction of the dash to prevent "old momentum" physics bugs
+        let destX = finalX;
+        let destY = finalY;
+        const spacing = fighter.radius + 2; // Buffer
+
+        // Helper to check if a position is valid (no overlaps, inside bounds)
+        const isValidPos = (tx, ty, ignoreList = []) => {
+            // 1. Check Bounds (Strict)
+            if (tx < fighter.radius || tx > game.width - fighter.radius ||
+                ty < fighter.radius || ty > game.height - fighter.radius) {
+                return false;
+            }
+
+            // 2. Check Entity Overlaps
+            for (const e of enemies) {
+                if (e !== fighter && !e.isDead && !ignoreList.includes(e)) {
+                    // Check strict overlap
+                    if (Physics.dist(tx, ty, e.x, e.y) < fighter.radius + e.radius - 2) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        };
+
+        // Find primary target (the one we aimed at or hit)
+        // We used 'lineCircleIntersect' earlier, let's find the closest enemy to the ideal destination
+        let closestTarget = null;
+        let minDist = Infinity;
+        for (const e of enemies) {
+            if (e !== fighter && !e.isDead) {
+                const d = Physics.dist(destX, destY, e.x, e.y);
+                if (d < minDist) {
+                    minDist = d;
+                    closestTarget = e;
+                }
+            }
+        }
+
+        // Logic A: If we are landing ON someone, try to back off along approach vector
+        if (closestTarget && minDist < fighter.radius + closestTarget.radius) {
+            const angle = Math.atan2(closestTarget.y - startY, closestTarget.x - startX);
+            // Proposed spot: Backed off from center
+            const backOffDist = fighter.radius + closestTarget.radius + 2;
+
+            let attemptX = closestTarget.x - Math.cos(angle) * backOffDist;
+            let attemptY = closestTarget.y - Math.sin(angle) * backOffDist;
+
+            if (isValidPos(attemptX, attemptY)) {
+                destX = attemptX;
+                destY = attemptY;
+            } else {
+                // Logic B: "Sandwich" detected (Wall or another enemy blocking back-off).
+                // Spiral check around the target to find an open spot
+                let foundSpot = false;
+                // Check 8 directions around the target
+                for (let i = 1; i < 8; i++) {
+                    // Alternate sides: +45, -45, +90, -90...
+                    const sign = i % 2 === 0 ? 1 : -1;
+                    const step = Math.ceil(i / 2);
+                    const offset = angle + (sign * step * (Math.PI / 4));
+
+                    attemptX = closestTarget.x - Math.cos(offset) * backOffDist;
+                    attemptY = closestTarget.y - Math.sin(offset) * backOffDist;
+
+                    if (isValidPos(attemptX, attemptY)) {
+                        destX = attemptX;
+                        destY = attemptY;
+                        foundSpot = true;
+                        break;
+                    }
+                }
+
+                // If totally trapped, default to the original back-off and let Velocity Clamp handle the squeeze
+                if (!foundSpot) {
+                    destX = closestTarget.x - Math.cos(angle) * backOffDist;
+                    destY = closestTarget.y - Math.sin(angle) * backOffDist;
+                    // Clamp to bounds at least
+                    destX = Math.max(fighter.radius, Math.min(game.width - fighter.radius, destX));
+                    destY = Math.max(fighter.radius, Math.min(game.height - fighter.radius, destY));
+                }
+            }
+        }
+
+        fighter.x = destX;
+        fighter.y = destY;
+
+        // Reset velocity to baseSpeed in the direction of the dash
         fighter.dx = Math.cos(aimAngle) * fighter.baseSpeed;
         fighter.dy = Math.sin(aimAngle) * fighter.baseSpeed;
 

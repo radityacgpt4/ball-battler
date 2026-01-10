@@ -605,6 +605,18 @@ export class Game {
                         e2.dx += p * m1 * nx;
                         e2.dy += p * m1 * ny;
                         audioEngine.playHit();
+
+                        // Safety Clamp to prevent physics explosions from impulse
+                        const MAX_PHYSICS_SPEED = 25;
+                        const clamp = (e) => {
+                            const s = Math.hypot(e.dx, e.dy);
+                            if (s > MAX_PHYSICS_SPEED) {
+                                e.dx = (e.dx / s) * MAX_PHYSICS_SPEED;
+                                e.dy = (e.dy / s) * MAX_PHYSICS_SPEED;
+                            }
+                        };
+                        clamp(e1);
+                        clamp(e2);
                     }
                 }
             }

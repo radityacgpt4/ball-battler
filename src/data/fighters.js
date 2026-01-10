@@ -45,7 +45,7 @@ export const FIGHTER_TYPES = {
     THUNDER_MAGE: {
         name: "Thundermage",
         color: "#4ecdc4",
-        hp: 100, mass: 2.0, speed: 4, rotationSpeed: 0.12,
+        hp: 100, mass: 1.5, speed: 4, rotationSpeed: 0.12,
         skills: {
             atk: {
                 name: "Lightning Bolt",
@@ -53,9 +53,9 @@ export const FIGHTER_TYPES = {
                 type: "RAYCAST",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 90,
+                cooldown: 75,
                 range: 800,
-                damage: 18,
+                damage: 15,
                 bounces: 3,
                 damageDecayWall: 0.8,
                 damageDecayShield: 0.9
@@ -76,8 +76,8 @@ export const FIGHTER_TYPES = {
                 type: "DOUBLE_ZAP",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 160,
-                angleSpread: 0.15
+                cooldown: 120,
+                angleSpread: 0.18
             }
         }
     },
@@ -128,7 +128,7 @@ export const FIGHTER_TYPES = {
     SHIELDBEARER: {
         name: "Shieldbearer",
         color: "#8b5cf6",
-        hp: 100, mass: 1.8, speed: 4, rotationSpeed: 0.10,
+        hp: 100, mass: 1.6, speed: 4, rotationSpeed: 0.10,
         skills: {
             atk: {
                 name: "Momentum Strike",
@@ -306,7 +306,7 @@ export const FIGHTER_TYPES = {
     AXEMAN: {
         name: "Axeman",
         color: "#800000",
-        hp: 100, mass: 1.5, speed: 4.2, rotationSpeed: 0.13,
+        hp: 100, mass: 1.4, speed: 4.2, rotationSpeed: 0.13,
         skills: {
             atk: {
                 name: "Heavy Swing",
@@ -351,7 +351,7 @@ export const FIGHTER_TYPES = {
     BALLISTA: {
         name: "Ballista",
         color: "#8B4513",
-        hp: 100, mass: 2, speed: 3.5, rotationSpeed: 0.1,
+        hp: 100, mass: 1.6, speed: 3.5, rotationSpeed: 0.1,
         skills: {
             atk: {
                 name: "Heavy Bolt",
@@ -395,7 +395,7 @@ export const FIGHTER_TYPES = {
     DIVINE_GENERAL: {
         name: "Divine General",
         color: "#ffffff",
-        hp: 100, mass: 1.3, speed: 4.8, rotationSpeed: 0.18,
+        hp: 100, mass: 1.6, speed: 4.8, rotationSpeed: 0.18,
         skills: {
             atk: {
                 name: "Mahoraga Wheel",
@@ -435,7 +435,7 @@ export const FIGHTER_TYPES = {
     DIVINE_BRAWLER: {
         name: "Sorcerer Brawler",
         color: "#4B0082",
-        hp: 100, mass: 1.6, speed: 5.4, rotationSpeed: 0.15,
+        hp: 100, mass: 1.5, speed: 5.4, rotationSpeed: 0.15,
         skills: {
             atk: {
                 name: "Black Flash",

@@ -76,9 +76,10 @@ export class DivineBrawlerAtkAbility extends Ability {
         // Let's add manual impulse for Black Flash
         if (isBlackFlash) {
             const angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
-            const force = 25 + (finalCritMult * 2); // Scaling knockback
-            enemy.dx += Math.cos(angle) * force;
-            enemy.dy += Math.sin(angle) * force;
+            const forceVal = 12; // Base force
+            const speed = forceVal / enemy.mass;
+            enemy.dx += Math.cos(angle) * speed;
+            enemy.dy += Math.sin(angle) * speed;
         }
 
         enemy.takeDamage(damage, false, false, fighter);

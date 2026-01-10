@@ -261,8 +261,19 @@ export class Fighter {
                 if (this.status.slow > 0) mod *= 0.75; // 25% slow
 
                 let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
-                this.dx = (this.dx / speed) * targetSpeed * mod;
-                this.dy = (this.dy / speed) * targetSpeed * mod;
+                targetSpeed *= mod;
+
+                // Soft Clamp / Friction for Knockback
+                if (speed > targetSpeed) {
+                    // We are flying from knockback - apply friction
+                    const friction = 0.92;
+                    this.dx *= friction;
+                    this.dy *= friction;
+                } else {
+                    // Normal driving force to maintain speed
+                    this.dx = (this.dx / speed) * targetSpeed;
+                    this.dy = (this.dy / speed) * targetSpeed;
+                }
             }
         }
     }

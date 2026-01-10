@@ -37,7 +37,7 @@ export const FIGHTER_TYPES = {
         color: "#8b5cf6",
         hp: 100, mass: 1.8, speed: 4, rotationSpeed: 0.10,
         skills: {
-            atk: { name: "Momentum Strike", desc: "Damage increases with movement speed.", type: "MOMENTUM_PASSIVE", maxSpeed: 8, speedGain: 1, damagePerTier: 5, knockback: 15, isPassive: true },
+            atk: { name: "Momentum Strike", desc: "Damage increases with movement speed.", type: "MOMENTUM_PASSIVE", maxSpeed: 8, speedGain: 1, damagePerTier: 5, knockback: 12, isPassive: true },
             def: { name: "Greatshield", desc: "Blocks all projectiles from a wide front arc.", type: "SHIELD_DEFLECT", arcAngle: Math.PI * 0.65, isPassive: true },
             ult: { name: "Wall Slam", desc: "Smashes enemies into walls for bonus damage.", type: "WALL_SLAM", cooldown: 120, damage: 10, isPassive: false }
         }

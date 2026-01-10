@@ -302,38 +302,42 @@ export class Fighter {
                     return;
                 }
 
-                // === Visual: Flying Raijin Lightning ===
+                // === The Yellow Flash (Lore Accurate) ===
                 // 1. Afterimage at start
                 this.game.particles.particles.push({
                     x: current.x, y: current.y,
                     vx: 0, vy: 0,
-                    life: 0.3, decay: 0.1,
-                    size: this.radius, color: '#ffd700', type: 'dot', alpha: 0.5
+                    life: 0.4, decay: 0.1,
+                    size: this.radius, color: '#ffd700', type: 'dot', alpha: 0.15
                 });
 
-                // 2. Lightning Bolt Trail (Lore Accurate)
-                this.game.particles.spawnBolt([
-                    { x: current.x, y: current.y },
-                    { x: next.x, y: next.y }
-                ], '#ffd700', 8); // Thick yellow bolt
+                // 2. Yellow Flash Streak (Solid Beam)
+                // Use 'beam' type for a cohesive glowing line with white core
+                // Decay 0.08 means it lasts ~12 frames (0.2s), much more visible than 2 frames
+                // Width 8: Sharp and thin, distinct from the ball body (diameter 50)
+                this.game.particles.spawnBeam(current.x, current.y, next.x, next.y, '#ffd700', 8, 0.08);
 
-                // Secondary white core for brightness
-                this.game.particles.spawnBolt([
-                    { x: current.x, y: current.y },
-                    { x: next.x, y: next.y }
-                ], '#ffffff', 3);
+                // Add faint parallel lines for speed illusion
+                const px = current.y - next.y; // Perpendicular vector (simple approximation)
+                const py = next.x - current.x;
+                const len = Math.hypot(px, py) || 1;
+                const offX = (px / len) * 8;
+                const offY = (py / len) * 8;
 
-                if (this.pendingRasengan) {
-                    // Blue Rasengan trail woven in
-                    this.game.particles.spawnBolt([
-                        { x: current.x, y: current.y },
-                        { x: next.x, y: next.y }
-                    ], '#00BFFF', 4);
-                }
+                // Secondary faint beam
+                this.game.particles.spawnBeam(
+                    current.x + offX, current.y + offY,
+                    next.x + offX, next.y + offY,
+                    '#ffd700', 2, 0.1 // Thin line decays slightly faster
+                );
 
-                // 3. Flash at destination
-                this.game.particles.spawn(next.x, next.y, '#ffd700', 12); // Explosion of sparks
-                this.game.particles.spawnShockwave(next.x, next.y, '#ffd700'); // Ring effect
+                // 3. Subtle destination marker (No explosion)
+                this.game.particles.particles.push({
+                    x: next.x, y: next.y,
+                    vx: 0, vy: 0,
+                    life: 0.3, decay: 0.1,
+                    size: this.radius, color: '#ffd700', type: 'dot', alpha: 0.15
+                });
 
                 audioEngine.playTeleport();
 

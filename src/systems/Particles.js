@@ -37,7 +37,7 @@ export class ParticleSystem {
             type: 'beam', x1, y1, x2, y2, color,
             life: 0.8, decay: 0.08, width: thickness
         });
-        
+
         // Inner Core (White hot)
         this.particles.push({
             type: 'beam', x1, y1, x2, y2, color: '#ffffff',
@@ -51,25 +51,25 @@ export class ParticleSystem {
         const dx = (x2 - x1) / steps;
         const dy = (y2 - y1) / steps;
 
-        for(let i=0; i<steps; i++) {
+        for (let i = 0; i < steps; i++) {
             const bx = x1 + dx * i;
             const by = y1 + dy * i;
             this.spawnBolt([
-                {x: bx, y: by},
-                {x: bx + (Math.random()-0.5)*60, y: by + (Math.random()-0.5)*60}
+                { x: bx, y: by },
+                { x: bx + (Math.random() - 0.5) * 60, y: by + (Math.random() - 0.5) * 60 }
             ], color, 2);
         }
 
         // 2. Small Flickering Static
         const staticCount = Math.floor(dist / 12);
-        for(let i=0; i<staticCount; i++) {
+        for (let i = 0; i < staticCount; i++) {
             const t = Math.random();
             const px = x1 + (x2 - x1) * t;
             const py = y1 + (y2 - y1) * t;
-            
+
             this.spawnBolt([
-                {x: px, y: py},
-                {x: px + (Math.random()-0.5)*25, y: py + (Math.random()-0.5)*25}
+                { x: px, y: py },
+                { x: px + (Math.random() - 0.5) * 25, y: py + (Math.random() - 0.5) * 25 }
             ], '#ffffff', 1);
         }
     }
@@ -110,7 +110,7 @@ export class ParticleSystem {
             this.particles.push({
                 x: x + (Math.random() - 0.5) * 30,
                 y: y + (Math.random() - 0.5) * 10, // Start near feet
-                vx: 0, 
+                vx: 0,
                 vy: -8 - Math.random() * 5, // Shoot up very fast
                 life: 0.4, decay: 0.05,
                 size: 4, color: '#FFFFFF', // White sparks
@@ -119,10 +119,10 @@ export class ParticleSystem {
         }
     }
 
-    spawnBeam(x1, y1, x2, y2, color, width = 6) {
+    spawnBeam(x1, y1, x2, y2, color, width = 6, decay = 0.5) {
         this.particles.push({
             type: 'beam', x1, y1, x2, y2, color,
-            life: 1.0, decay: 0.5, width: width // Fast decay for no trails
+            life: 1.0, decay: decay, width: width
         });
     }
 
@@ -159,7 +159,7 @@ export class ParticleSystem {
 
     spawnHirenkyaku(x, y) {
         // Clean "Reishi" Effect: Rising Energy + Shockwave (No massive pillars)
-        
+
         // 1. Blue Shockwave Ring
         this.spawnShockwave(x, y, '#1E90FF');
 
@@ -168,14 +168,14 @@ export class ParticleSystem {
             this.particles.push({
                 x: x + (Math.random() - 0.5) * 25,
                 y: y + (Math.random() - 0.5) * 25,
-                vx: 0, 
+                vx: 0,
                 vy: -3 - Math.random() * 3, // Fast upward movement
                 life: 0.6, decay: 0.08,
-                size: 2, color: '#00BFFF', 
+                size: 2, color: '#00BFFF',
                 type: 'dot'
             });
         }
-        
+
         // 3. Central Flash
         this.particles.push({
             x: x, y: y,
@@ -196,7 +196,7 @@ export class ParticleSystem {
     }
 
     spawnLichtRegen(x, y) {
-         this.spawnHirenkyaku(x, y); // Reuse the cool effect
+        this.spawnHirenkyaku(x, y); // Reuse the cool effect
     }
 
     spawnWallImpact(x, y) {
@@ -469,13 +469,31 @@ export class ParticleSystem {
                 ctx.restore();
             }
             else if (p.type === 'beam') {
-                ctx.save(); ctx.globalAlpha = p.life; ctx.lineCap = 'butt';
-                ctx.strokeStyle = p.color; ctx.lineWidth = p.width;
-                ctx.shadowBlur = 10; ctx.shadowColor = p.color;
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.lineCap = 'butt';
+                ctx.globalCompositeOperation = 'screen'; // Use screen or lighter for glow
+
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = p.width;
+                ctx.shadowBlur = 20; // Increased glow
+                ctx.shadowColor = p.color;
+
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
 
-                // Core
-                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = p.width / 2; ctx.shadowBlur = 0;
+                // Extra bloom layer for super flashiness
+                ctx.shadowBlur = 40;
+                ctx.lineWidth = p.width * 1.5;
+                ctx.globalAlpha = p.life * 0.5;
+                ctx.stroke();
+
+                // Core (Solid White)
+                ctx.globalAlpha = p.life;
+                ctx.globalCompositeOperation = 'source-over'; // Core should be solid
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = p.width / 2;
+                ctx.shadowBlur = 0;
+
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
                 ctx.restore();
             }

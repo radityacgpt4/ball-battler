@@ -276,7 +276,7 @@ export const FIGHTER_TYPES = {
                 projectileSpeed: 21,
                 projectileRadius: 5,
                 ultProjectileRadius: 8,
-                recoilForce: 25,
+                recoilForce: 22,
                 laserMaxDist: 800
             },
             def: {
@@ -635,15 +635,15 @@ export const FIGHTER_TYPES = {
                 type: "ZOLTRAAK",
                 isPassive: false,
                 // Configurable properties
-                damage: 3,
+                damage: 4,
                 speed: 50,
                 range: 500,
                 cooldown: 180, // Full cooldown after burst finishes
-                homingStrength: 0.0175,
+                homingStrength: 0.019,
                 aimError: 0.55,
                 recoil: 3.5,
                 burstCount: 6,  // Firing 6 times
-                burstDelay: 6   // Frames between shots
+                burstDelay: 9   // Frames between shots
             },
             def: {
                 name: "Hexagonal Barrier",

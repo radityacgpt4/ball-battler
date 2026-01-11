@@ -528,8 +528,8 @@ export const FIGHTER_TYPES = {
                 type: "LICHT_REGEN",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 300,
-                damage: 6,
+                cooldown: 200,
+                damage: 4,
                 arrowCount: 6,
                 stunDuration: 30, // 0.5 sec stun per arrow
                 arrowSpeed: 18, // Falling speed
@@ -593,11 +593,11 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 chargeTime: 15,
-                duration: 150, // 2.5 seconds
-                fistDamage: 1,
-                fireRate: 2, // Faster (Every 2 frames = 30 hits/sec!)
+                duration: 120,
+                fistDamage: 2,
+                fireRate: 3,
                 range: 240,
-                spread: 0.1, // Tighter (Centered)
+                spread: 0.25,
                 cooldown: 120
             },
             def: {
@@ -635,15 +635,15 @@ export const FIGHTER_TYPES = {
                 type: "ZOLTRAAK",
                 isPassive: false,
                 // Configurable properties
-                damage: 4,
+                damage: 5,
                 speed: 50,
                 range: 500,
                 cooldown: 180, // Full cooldown after burst finishes
-                homingStrength: 0.019,
+                homingStrength: 0.018,
                 aimError: 0.55,
                 recoil: 3.5,
-                burstCount: 6,  // Firing 6 times
-                burstDelay: 9   // Frames between shots
+                burstCount: 4,  // Firing 4 times
+                burstDelay: 6   // Frames between shots
             },
             def: {
                 name: "Hexagonal Barrier",

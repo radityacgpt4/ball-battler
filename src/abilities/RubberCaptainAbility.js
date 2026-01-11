@@ -61,15 +61,15 @@ export class GatlingAbility extends Ability {
             this.timer--;
 
             // Charge visuals - arms stretching back
-            if (this.timer % 3 === 0) {
+            if (this.timer % 10 === 0) { // Reduced frequency from %6
                 const angle = fighter.angle + Math.PI; // Behind fighter
                 context.game.particles.particles.push({
                     x: fighter.x + Math.cos(angle) * 20,
                     y: fighter.y + Math.sin(angle) * 20,
-                    vx: Math.cos(angle) * 3,
-                    vy: Math.sin(angle) * 3,
-                    life: 0.4, decay: 0.1,
-                    size: 6, color: '#ffccaa', type: 'dot'
+                    vx: Math.cos(angle) * 2,
+                    vy: Math.sin(angle) * 2,
+                    life: 0.2, decay: 0.2, // Much faster decay
+                    size: 4, color: '#ffccaa', type: 'dot'
                 });
             }
 
@@ -175,15 +175,17 @@ export class GatlingAbility extends Ability {
         // Punch sound variation
         if (Math.random() < 0.3) audioEngine.playHit();
 
-        // Arm trail particle
-        context.game.particles.particles.push({
-            x: fighter.x + Math.cos(finalAngle) * fighter.radius,
-            y: fighter.y + Math.sin(finalAngle) * fighter.radius,
-            vx: Math.cos(finalAngle) * 5,
-            vy: Math.sin(finalAngle) * 5,
-            life: 0.3, decay: 0.1,
-            size: 8, color: '#ffddcc', type: 'dot'
-        });
+        // Arm trail particle (Reduced frequency/intensity)
+        if (Math.random() < 0.2) { // 20% chance instead of 50%
+            context.game.particles.particles.push({
+                x: fighter.x + Math.cos(finalAngle) * fighter.radius,
+                y: fighter.y + Math.sin(finalAngle) * fighter.radius,
+                vx: Math.cos(finalAngle) * 2,
+                vy: Math.sin(finalAngle) * 2,
+                life: 0.15, decay: 0.2, // Even shorter life
+                size: 4, color: '#ffddcc', type: 'dot'
+            });
+        }
     }
 }
 
@@ -205,16 +207,16 @@ export class BalloonAbility extends Ability {
         fighter.originalRadius = fighter.radius;
         fighter.balloonTargetRadius = fighter.radius * this.inflateSize;
 
-        // Big puff effect
-        for (let i = 0; i < 12; i++) {
-            const angle = (Math.PI * 2 / 12) * i;
+        // Big puff effect (Reduced count)
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI * 2 / 6) * i;
             context.game.particles.particles.push({
                 x: fighter.x + Math.cos(angle) * fighter.radius,
                 y: fighter.y + Math.sin(angle) * fighter.radius,
                 vx: Math.cos(angle) * 4,
                 vy: Math.sin(angle) * 4,
-                life: 0.6, decay: 0.08,
-                size: 8 + Math.random() * 4,
+                life: 0.4, decay: 0.1, // Faster decay
+                size: 6 + Math.random() * 4,
                 color: '#ffffff',
                 type: 'dot'
             });
@@ -253,8 +255,8 @@ export class BalloonAbility extends Ability {
                     (fighter.balloonTargetRadius - fighter.originalRadius) * this.inflateProgress;
             }
 
-            // Bouncy wobble effect - particles around body
-            if (this.timer % 8 === 0) {
+            // Bouncy wobble effect - particles around body (Reduced frequency)
+            if (this.timer % 15 === 0) {
                 const wobbleAngle = Math.random() * Math.PI * 2;
                 context.game.particles.particles.push({
                     x: fighter.x + Math.cos(wobbleAngle) * fighter.radius,
@@ -276,15 +278,15 @@ export class BalloonAbility extends Ability {
                 fighter.isBalloonActive = false;
                 fighter.radius = fighter.originalRadius;
 
-                // Deflation puff
-                for (let i = 0; i < 8; i++) {
-                    const angle = (Math.PI * 2 / 8) * i;
+                // Deflation puff (Reduced count)
+                for (let i = 0; i < 4; i++) {
+                    const angle = (Math.PI * 2 / 4) * i;
                     context.game.particles.particles.push({
                         x: fighter.x + Math.cos(angle) * fighter.radius * 1.5,
                         y: fighter.y + Math.sin(angle) * fighter.radius * 1.5,
                         vx: -Math.cos(angle) * 3,
                         vy: -Math.sin(angle) * 3,
-                        life: 0.4, decay: 0.08,
+                        life: 0.3, decay: 0.1,
                         size: 5, color: '#dddddd', type: 'dot'
                     });
                 }
@@ -325,8 +327,8 @@ export class BalloonAbility extends Ability {
         if (attacker && damage > 0) {
             attacker.takeDamage(damage, false, false, fighter);
 
-            // Visual feedback
-            fighter.game.particles.spawn(attackerX, attackerY, '#ffffff', 3);
+            // Visual feedback (Reduced count)
+            fighter.game.particles.spawn(attackerX, attackerY, '#ffffff', 1);
             if (Math.random() < 0.1) {
                 fighter.game.combatText.flash(fighter.x, fighter.y - 30, "REFLECT!");
             }
@@ -398,34 +400,50 @@ export class ConquerorHakiAbility extends Ability {
         logger.log(`${fighter.name} uses CONQUEROR HAKI!`, 'combat');
         audioEngine.playHeavyImpact();
 
-        // === RED AURA EXPLOSION (Optimized for nice visuals without clutter) ===
+        // === RED AURA EXPLOSION (Domain-style bomb shockwave) ===
 
         // 1. Flash
         game.combatText.flash(fighter.x, fighter.y - 50, "HAKI!");
 
-        // 2. Main red shockwave
+        // 2. MAIN OUTER RED SHOCKWAVE (Slow expanding)
         game.particles.particles.push({
             type: 'shockwave',
             x: fighter.x, y: fighter.y,
-            radius: 20, maxRadius: this.radius,
-            life: 0.6, decay: 0.05,
+            radius: 10,
+            maxRadius: this.radius,
+            life: 1.5,  // Much longer life for visibility
+            decay: 0.02, // Very slow decay
             color: '#ff0000',
-            width: 15 // Thick wave
+            lineWidth: 14 // Thick
         });
 
-        // 3. Inner Dark Pressure
+        // 3. MIDDLE BLACK PRESSURE WAVE
         game.particles.particles.push({
             type: 'shockwave',
             x: fighter.x, y: fighter.y,
-            radius: 10, maxRadius: this.radius * 0.8,
-            life: 0.5, decay: 0.05,
+            radius: 15,
+            maxRadius: this.radius * 0.85,
+            life: 1.3,
+            decay: 0.025,
             color: '#000000',
-            width: 5
+            lineWidth: 9
         });
 
-        // 4. Lightning Bolts (Black/Red) radiating out
-        for (let i = 0; i < 6; i++) {
-            const angle = (Math.PI * 2 / 6) * i;
+        // 4. INNER WHITE-HOT CORE BURST
+        game.particles.particles.push({
+            type: 'shockwave',
+            x: fighter.x, y: fighter.y,
+            radius: 20,
+            maxRadius: this.radius * 0.5,
+            life: 0.8,
+            decay: 0.04,
+            color: '#ffffff',
+            lineWidth: 5
+        });
+
+        // 5. Lightning Bolts (Black/Red) radiating out
+        for (let i = 0; i < 5; i++) {
+            const angle = (Math.PI * 2 / 5) * i;
             game.particles.spawnBolt(
                 [{ x: fighter.x, y: fighter.y },
                 { x: fighter.x + Math.cos(angle) * this.radius, y: fighter.y + Math.sin(angle) * this.radius }],
@@ -445,11 +463,21 @@ export class ConquerorHakiAbility extends Ability {
                 e.dx = Math.cos(angle) * this.knockback;
                 e.dy = Math.sin(angle) * this.knockback;
 
-                // Impact effect on enemy (Black Flash feel)
-                game.particles.spawnExplosion(e.x, e.y, '#000000');
+                // Restored Haki impact effect (Red/Black burst)
+                for (let i = 0; i < 12; i++) {
+                    game.particles.particles.push({
+                        x: e.x, y: e.y,
+                        vx: (Math.random() - 0.5) * 10,
+                        vy: (Math.random() - 0.5) * 10,
+                        life: 0.8, decay: 0.05,
+                        size: Math.random() * 5 + 2,
+                        color: Math.random() < 0.6 ? '#8b0000' : '#000000',
+                        type: 'dot'
+                    });
+                }
 
-                // Stun stars
-                for (let i = 0; i < 3; i++) {
+                // Stun stars (Restored to 80%)
+                for (let i = 0; i < 2; i++) {
                     game.particles.particles.push({
                         x: e.x + (Math.random() - 0.5) * 20,
                         y: e.y - e.radius - 10,

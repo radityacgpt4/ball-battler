@@ -337,7 +337,7 @@ export class Projectile {
             // 2. Range Limit
             if (travel >= (this.maxDist || 280)) {
                 this.active = false;
-                this.game.particles.spawn(this.x, this.y, '#ffccaa', 3);
+                this.game.particles.spawn(this.x, this.y, '#ffccaa', 1); // Reduced from 3
                 return;
             }
 

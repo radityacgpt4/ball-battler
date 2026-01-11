@@ -580,5 +580,98 @@ export const FIGHTER_TYPES = {
                 dragStrength: 0.2 // Drag factor
             }
         }
+    },
+    RUBBER_CAPTAIN: {
+        name: "Rubber Captain",
+        color: "#ff4500", // Orange/Red
+        hp: 100, mass: 1.2, speed: 5.2, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Gomu Gomu Gatling",
+                desc: "Rapid fire punches that keep enemies at bay.",
+                type: "GATLING_PUNCH",
+                isPassive: false,
+                // Configurable properties
+                chargeTime: 15,
+                duration: 150, // 2.5 seconds
+                fistDamage: 1,
+                fireRate: 2, // Faster (Every 2 frames = 30 hits/sec!)
+                range: 240,
+                spread: 0.1, // Tighter (Centered)
+                cooldown: 120
+            },
+            def: {
+                name: "Balloon",
+                desc: "Inflates body to deflect projectiles and bounce melee attackers.",
+                type: "BALLOON_DEFLECT",
+                isPassive: true, // It's an active toggle usually, but config style? 
+                // Config:
+                isPassive: false, // Auto-cast when ready
+                cooldown: 180,
+                duration: 120,
+                inflateSize: 1.5
+            },
+            ult: {
+                name: "Conqueror Haki",
+                desc: "Stuns and knocks back all nearby enemies.",
+                type: "CONQUEROR_HAKI",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 300,
+                radius: 350,
+                stunDuration: 120, // 2 seconds
+                knockback: 25
+            }
+        }
+    },
+    MAGE_OF_ERA: {
+        name: "Mage of the Era",
+        color: "#4fc3f7", // Light blue
+        hp: 90, mass: 0.9, speed: 5.2, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Zoltraak",
+                desc: "Ordinary offensive magic. Heavy high-speed mana beams.",
+                type: "ZOLTRAAK",
+                isPassive: false,
+                // Configurable properties
+                damage: 3,
+                speed: 50,
+                range: 500,
+                cooldown: 180, // Full cooldown after burst finishes
+                homingStrength: 0.0175,
+                aimError: 0.55,
+                recoil: 3.5,
+                burstCount: 6,  // Firing 6 times
+                burstDelay: 6   // Frames between shots
+            },
+            def: {
+                name: "Hexagonal Barrier",
+                desc: "A modular magic shield that can shatter on melee attackers.",
+                type: "HEX_BARRIER",
+                isPassive: true,
+                // Configurable properties
+                arcAngle: 2,
+                shieldRadius: 10,
+                shatterChance: 0.5,
+                shatterDamage: 5
+            },
+            ult: {
+                name: "The Great Void",
+                desc: "Creates a blackhole that pulls enemies and slows movement.",
+                type: "BLACKHOLE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 360,
+                duration: 240,
+                radius: 120,
+                pullStrength: 1.8,
+                dotDamage: 1,
+                dotRate: 10,
+                launchSpeed: 4,  // Initial fire velocity
+                friction: 0.95,  // Deceleration speed (1 = none)
+                growthSpeed: 0.04 // Speed of "birth" animation
+            }
+        }
     }
 };

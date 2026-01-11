@@ -13,6 +13,7 @@ import { renderer } from '../systems/Renderer.js';
 import { CollisionHandler } from '../systems/CollisionHandler.js';
 import { Fighter } from '../entities/Fighter.js';
 import { Projectile } from '../entities/Projectile.js';
+import { updateBlackholes } from '../abilities/FrierenAbility.js';
 
 export class Game {
     constructor() {
@@ -807,6 +808,10 @@ export class Game {
             // console.timeEnd('collisions');
 
             this.projectiles.forEach(p => p.update(this.timeScale));
+
+            // Update blackholes (Frieren ULT)
+            updateBlackholes(this, this.timeScale);
+
             this.updateUI();
             this.checkWinCondition();
 
@@ -831,7 +836,64 @@ export class Game {
         }
 
         // console.time('render');
-        this.entities.forEach(ent => renderer.drawFighter(this.ctx, ent));
+
+        // Draw blackholes (behind entities)
+        if (this.blackholes && this.blackholes.length > 0) {
+            for (const hole of this.blackholes) {
+                this.ctx.save();
+                this.ctx.translate(hole.x, hole.y);
+
+                // Outer gravitational lensing effect
+                const gradient = this.ctx.createRadialGradient(0, 0, hole.coreRadius || 0, 0, 0, hole.radius);
+                gradient.addColorStop(0, 'rgba(75, 0, 130, 0.8)');
+                gradient.addColorStop(0.3, 'rgba(128, 0, 255, 0.3)');
+                gradient.addColorStop(0.7, 'rgba(200, 100, 255, 0.1)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, hole.radius, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Accretion disk
+                this.ctx.rotate(hole.rotation || 0);
+                this.ctx.strokeStyle = '#ffab00';
+                this.ctx.lineWidth = 2;
+                this.ctx.globalAlpha = 0.6;
+
+                for (let i = 0; i < 3; i++) {
+                    const spiralAngle = (hole.rotation || 0) * 2 + (Math.PI * 2 / 3) * i;
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, (hole.coreRadius || 0) + 5 + i * 8, spiralAngle, spiralAngle + 0.8);
+                    this.ctx.stroke();
+                }
+
+                // Event horizon (black core)
+                this.ctx.globalAlpha = 1;
+                this.ctx.fillStyle = '#000000';
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, hole.coreRadius || 0, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Core glow edge
+                this.ctx.strokeStyle = '#4a0080';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, hole.coreRadius || 0, 0, Math.PI * 2);
+                this.ctx.stroke();
+
+                this.ctx.restore();
+            }
+        }
+
+        this.entities.forEach(ent => {
+            renderer.drawFighter(this.ctx, ent);
+
+            // Draw Hex Barrier if fighter has it
+            if (ent.abilities && ent.abilities.def && ent.abilities.def.draw) {
+                ent.abilities.def.draw(ent, this.ctx);
+            }
+        });
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.particles.updateAndDraw(this.ctx);
         // console.timeEnd('render');

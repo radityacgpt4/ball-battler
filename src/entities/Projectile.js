@@ -326,6 +326,117 @@ export class Projectile {
                 });
             }
         }
+
+        // Rubber Fist Logic (Curve & Range)
+        if (this.isRubberFist) {
+            // 1. Calculate travel stats
+            const dx_total = this.x - this.startX;
+            const dy_total = this.y - this.startY;
+            const travel = Math.hypot(dx_total, dy_total);
+
+            // 2. Range Limit
+            if (travel >= (this.maxDist || 280)) {
+                this.active = false;
+                this.game.particles.spawn(this.x, this.y, '#ffccaa', 3);
+                return;
+            }
+
+            // 3. Apply Curve to Velocity (Arcing Path)
+            // Rotate velocity vector slightly each frame to create an arc
+            const curveSpeed = 0.05 * (this.curveSide || 0); // Radians per frame
+
+            // Rotate dx, dy
+            const cos = Math.cos(curveSpeed);
+            const sin = Math.sin(curveSpeed);
+
+            const newDx = this.dx * cos - this.dy * sin;
+            const newDy = this.dx * sin + this.dy * cos;
+
+            this.dx = newDx;
+            this.dy = newDy;
+
+            // Sync angle for rendering orientation
+            this.angle += curveSpeed;
+        }
+
+        // Zoltraak Logic (Gentle Homing + Range)
+        if (this.isZoltraak) {
+            // Range limit
+            const travel = Math.hypot(this.x - this.startX, this.y - this.startY);
+            if (travel >= (this.maxDist || 450)) {
+                this.active = false;
+                this.game.particles.spawn(this.x, this.y, '#4fc3f7', 2);
+                return;
+            }
+
+            // Gentle homing towards target
+            if (this.target && !this.target.isDead) {
+                const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+                let angleDiff = targetAngle - this.angle;
+
+                // Normalize angle difference
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+                // Apply gentle curve (limit turn rate)
+                const maxTurn = this.homingStrength || 0.03;
+                const turn = Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
+
+                this.angle += turn;
+
+                // Update velocity based on new angle
+                const speed = Math.hypot(this.dx, this.dy);
+                this.dx = Math.cos(this.angle) * speed;
+                this.dy = Math.sin(this.angle) * speed;
+            }
+
+            // Laser Trail: Spawn heavy glowing beam segments
+            // Laser Trail: Optimized for performance
+            if (this.lastX !== undefined) {
+                const distSq = (this.x - this.lastX) ** 2 + (this.y - this.lastY) ** 2;
+                if (distSq > 16) { // Only spawn if moved > 4px
+                    const decay = 0.04; // Much faster clearing
+
+                    // 1. Massive outer glow
+                    this.game.particles.spawnBeam(
+                        this.lastX, this.lastY,
+                        this.x, this.y,
+                        '#4fc3f7', 5, decay * 1.5
+                    );
+
+                    // 2. Focused blue beam
+                    this.game.particles.spawnBeam(
+                        this.lastX, this.lastY,
+                        this.x, this.y,
+                        '#81d4fa', 3, decay
+                    );
+
+                    // 3. White hot core
+                    this.game.particles.spawnBeam(
+                        this.lastX, this.lastY,
+                        this.x, this.y,
+                        '#ffffff', 2, decay * 1.2
+                    );
+
+                    this.lastX = this.x;
+                    this.lastY = this.y;
+                }
+            } else {
+                this.lastX = this.x;
+                this.lastY = this.y;
+            }
+
+            // Mana trail sparks (Optimized)
+            if (Math.random() < 0.1) {
+                this.game.particles.particles.push({
+                    x: this.x, y: this.y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 0.5, decay: 0.05,
+                    size: 2, color: '#ffffff', type: 'dot'
+                });
+            }
+        }
     }
 
     draw(ctx) {
@@ -793,6 +904,83 @@ export class Projectile {
             ctx.fill();
 
             ctx.restore();
+        }
+        else if (this.isRubberFist) {
+            // Draw Arm Curve (Global Space)
+            ctx.save();
+
+            // Calculate Control Point for Curve
+            // Midpoint
+            const midX = (this.startX + this.x) / 2;
+            const midY = (this.startY + this.y) / 2;
+
+            // Vector from Start to End
+            const dx = this.x - this.startX;
+            const dy = this.y - this.startY;
+            const dist = Math.hypot(dx, dy);
+
+            // Perpendicular Vector (normalized)
+            // Right-hand normal: (dy, -dx) or (-dy, dx)?
+            // Let's use (-dy, dx) normalized * curveAmount
+            const nx = -dy / (dist || 1);
+            const ny = dx / (dist || 1);
+
+            // Curve amount based on "curveSide" and distance
+            // We want a nice bow. 
+            // The projectile physics curves it, but the arm needs to "fit" the arc.
+            // Since the projectile IS arc-ing, the straight line Start->End cuts the corner.
+            // We want to bulge OUT same side as curve.
+            // curveSide = 1 (Right). Normal should be Right.
+            // (-dy, dx) is Right.
+            const curveAmt = (this.curveSide || 0) * (dist * 0.2); // Curvature scales with length
+
+            const cpX = midX + nx * curveAmt;
+            const cpY = midY + ny * curveAmt;
+
+            // Draw Arm Skin
+            ctx.strokeStyle = '#ffccaa';
+            ctx.lineWidth = 3; // Thinner arm (Reduced from 4)
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(this.startX, this.startY);
+            ctx.quadraticCurveTo(cpX, cpY, this.x, this.y);
+            ctx.stroke();
+
+            // Draw Inner Muscle/Shadow
+            ctx.strokeStyle = '#eebba0';
+            ctx.lineWidth = 1; // Thinner muscle (Reduced from 1.5)
+            ctx.beginPath();
+            ctx.moveTo(this.startX, this.startY);
+            ctx.quadraticCurveTo(cpX, cpY, this.x, this.y);
+            ctx.stroke();
+
+            // Draw FIST at tip (Local Space transform)
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            // Fist Shape
+            ctx.fillStyle = '#ffccaa';
+            ctx.shadowBlur = 3;
+            ctx.shadowColor = '#d95a00';
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2); // Thinner fist (Reduced from 0.8)
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Knuckles
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = 0.5;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.arc(1.5, -1.5 + i * 1.5, 1, 0, Math.PI * 2); // Thinner knuckles
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+        else if (this.isZoltraak) {
+            // Zoltraak: No orb-tip needed. 
+            // The entire laser body is handled by beam particles in update()
         }
         else {
             // Generic Fallback

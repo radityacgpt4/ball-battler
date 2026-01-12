@@ -414,7 +414,7 @@ export class ConquerorHakiAbility extends Ability {
             life: 1.5,  // Much longer life for visibility
             decay: 0.02, // Very slow decay
             color: '#ff0000',
-            lineWidth: 14 // Thick
+            lineWidth: 11 // Thick
         });
 
         // 3. MIDDLE BLACK PRESSURE WAVE
@@ -426,7 +426,7 @@ export class ConquerorHakiAbility extends Ability {
             life: 1.3,
             decay: 0.025,
             color: '#000000',
-            lineWidth: 9
+            lineWidth: 8
         });
 
         // 4. INNER WHITE-HOT CORE BURST
@@ -438,7 +438,7 @@ export class ConquerorHakiAbility extends Ability {
             life: 0.8,
             decay: 0.04,
             color: '#ffffff',
-            lineWidth: 5
+            lineWidth: 4
         });
 
         // 5. Lightning Bolts (Black/Red) radiating out

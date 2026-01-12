@@ -594,7 +594,7 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 chargeTime: 15,
                 duration: 120,
-                fistDamage: 2,
+                fistDamage: 1,
                 fireRate: 3,
                 range: 240,
                 spread: 0.25,
@@ -608,7 +608,7 @@ export const FIGHTER_TYPES = {
                 // Config:
                 isPassive: false, // Auto-cast when ready
                 cooldown: 180,
-                duration: 120,
+                duration: 90,
                 inflateSize: 1.5
             },
             ult: {

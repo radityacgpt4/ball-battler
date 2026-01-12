@@ -608,7 +608,7 @@ export const FIGHTER_TYPES = {
                 // Config:
                 isPassive: false, // Auto-cast when ready
                 cooldown: 180,
-                duration: 90,
+                duration: 120,
                 inflateSize: 1.5
             },
             ult: {

@@ -699,6 +699,105 @@ export class Renderer {
                 ctx.restore();
             }
         });
+
+        // Captain Levi - Twin Blades (Lore Accurate Box Cutter Stance)
+        this.registerAccessory('LEVI', (ctx, fighter) => {
+            const currentSpeed = Math.hypot(fighter.dx || 0, fighter.dy || 0);
+            const isHighSpeed = currentSpeed > 8;
+
+            ctx.save();
+
+            // Blade properties - Lore accurate box cutter shape
+            const bladeLength = 35;
+            const bladeWidth = 7;
+            const handleLength = 14;
+
+            // Helper function to draw a single box-cutter blade
+            const drawBlade = (isBackBlade = false) => {
+                ctx.save();
+
+                // Box cutter shape: Rectangular with a single angled tip
+                // Start from handle
+                ctx.fillStyle = '#B0BEC5'; // Steel body
+                ctx.strokeStyle = '#455A64';
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+                ctx.moveTo(0, -bladeWidth / 2); // Top left (at handle)
+                ctx.lineTo(bladeLength, -bladeWidth / 2); // Top edge
+                ctx.lineTo(bladeLength + 8, bladeWidth / 2); // Angled tip (Box cutter signature)
+                ctx.lineTo(0, bladeWidth / 2); // Bottom edge
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Blade segment lines (box cutter blades are segmented)
+                ctx.beginPath();
+                ctx.strokeStyle = '#90A4AE';
+                ctx.lineWidth = 0.5;
+                for (let x = 8; x < bladeLength; x += 6) {
+                    ctx.moveTo(x, -bladeWidth / 2);
+                    ctx.lineTo(x + 2, bladeWidth / 2);
+                }
+                ctx.stroke();
+
+                // Handle (Survey Corps trigger handle)
+                ctx.fillStyle = '#212121';
+                ctx.fillRect(-handleLength, -bladeWidth / 2 - 1, handleLength, bladeWidth + 2);
+                // Trigger guard
+                ctx.strokeStyle = '#757575';
+                ctx.strokeRect(-handleLength, -bladeWidth / 2 - 1, handleLength, bladeWidth + 2);
+
+                // Sharp edge highlight
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(bladeLength, -bladeWidth / 2 + 1);
+                ctx.lineTo(bladeLength + 7, bladeWidth / 2 - 1); // Tip edge
+                ctx.lineTo(0, bladeWidth / 2 - 1); // Bottom sharp edge
+                ctx.stroke();
+
+                ctx.restore();
+            };
+
+            // Stance: Back-to-back diagonal (Lore stance)
+            const stanceAngle = -Math.PI / 4; // 45 degree diagonal
+
+            const renderStance = () => {
+                // Front Blade (Pushed inward, closer to side edge)
+                ctx.save();
+                ctx.translate(12, -23);
+                ctx.rotate(stanceAngle);
+                drawBlade();
+                ctx.restore();
+
+                // Back Blade (Pushed inward, closer to side edge)
+                ctx.save();
+                ctx.translate(-12, 23);
+                ctx.rotate(stanceAngle + Math.PI);
+                drawBlade();
+                ctx.restore();
+            };
+
+            // High speed visual: Circular Saw afterimages
+            if (isHighSpeed) {
+                ctx.globalAlpha = 0.15;
+                for (let i = 1; i <= 3; i++) {
+                    ctx.save();
+                    ctx.rotate(-fighter.rotationSpeed * i * 3);
+                    renderStance();
+                    ctx.restore();
+                }
+                ctx.globalAlpha = 1.0;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#FFFFFF';
+            }
+
+            renderStance();
+
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        });
     }
 }
 

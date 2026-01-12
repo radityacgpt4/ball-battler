@@ -244,7 +244,7 @@ export class LaserAbility extends Ability {
                 fighter.laserSpeedMult = this.speedSlow;
 
                 if (typeof audioEngine.playLaser === 'function') {
-                    audioEngine.playLaser();
+                    audioEngine.playLaser(this.duration / 60);
                 } else {
                     audioEngine.playZap();
                 }
@@ -260,6 +260,8 @@ export class LaserAbility extends Ability {
             if (this.timer % this.tickRate === 0) {
                 this.applyBufferedDamage(fighter, context);
             }
+
+
 
             if (this.timer <= 0) {
                 this.state = 'IDLE';
@@ -307,8 +309,31 @@ export class LaserAbility extends Ability {
         const hitX = rayX + dirX * closest.dist;
         const hitY = rayY + dirY * closest.dist;
 
+        // 1. Wide heat halo (Faint outer glow)
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ff2200', this.beamWidth * 1.5, 0.2);
+
+        // 2. Main energy beam
         game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ff4400', this.beamWidth);
-        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffff00', this.coreWidth);
+
+        // 3. Flickering hot core
+        const flicker = Math.sin(Date.now() * 0.05) * 2;
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffff00', this.coreWidth + flicker);
+
+        // 4. White-hot center (Lethal visual)
+        game.particles.spawnBeam(fighter.x, fighter.y, hitX, hitY, '#ffffff', this.coreWidth * 0.4);
+
+        // 5. Impact flare
+        if (this.timer % 2 === 0) {
+            game.particles.particles.push({
+                x: hitX, y: hitY,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+                life: 0.4, decay: 0.1,
+                size: 3 + Math.random() * 4,
+                color: Math.random() > 0.5 ? '#ffff00' : '#ff4400',
+                type: 'dot'
+            });
+        }
 
         // Spiral Effect
         const beamDist = closest.dist;

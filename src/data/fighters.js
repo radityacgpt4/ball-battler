@@ -228,8 +228,8 @@ export const FIGHTER_TYPES = {
                 range: 2000,
                 rotationSlow: 0.1,
                 speedSlow: 0.25,
-                beamWidth: 20,
-                coreWidth: 8,
+                beamWidth: 14,
+                coreWidth: 5,
                 tickRate: 3,
                 slowDuration: 45
             },
@@ -651,7 +651,7 @@ export const FIGHTER_TYPES = {
                 type: "HEX_BARRIER",
                 isPassive: true,
                 // Configurable properties
-                arcAngle: 2,
+                arcAngle: 1.8,
                 shieldRadius: 10,
                 shatterChance: 0.5,
                 shatterDamage: 5

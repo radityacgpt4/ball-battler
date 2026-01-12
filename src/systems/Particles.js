@@ -222,6 +222,31 @@ export class ParticleSystem {
         });
     }
 
+    spawnZoltraakImpact(x, y) {
+        // Bright blue shockwave (Optimized: No Blur)
+        this.particles.push({
+            type: 'shockwave',
+            x: x, y: y,
+            radius: 5, maxRadius: 60,
+            life: 0.6, decay: 0.1,
+            color: '#4fc3f7', lineWidth: 4
+        });
+
+        // Additive sparks
+        for (let i = 0; i < 8; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2 + Math.random() * 8;
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 0.5, decay: 0.08,
+                size: 3, color: '#ffffff',
+                type: 'dot'
+            });
+        }
+    }
+
     spawnBlackFlash(x, y) {
         // Core Black Hole Distortion
         this.particles.push({
@@ -460,41 +485,59 @@ export class ParticleSystem {
                 ctx.restore();
             }
             else if (p.type === 'slash') {
-                ctx.save(); ctx.globalAlpha = p.life; ctx.lineCap = 'round';
-                ctx.strokeStyle = p.color; ctx.lineWidth = 10 * p.life;
-                ctx.shadowBlur = 20; ctx.shadowColor = p.color;
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.lineCap = 'round';
+                ctx.globalCompositeOperation = 'lighter';
+
+                // Layer 1: Wide Outer Glow
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = (p.width || 40) * 1.5 * p.life;
+                ctx.globalAlpha = p.life * 0.3;
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
-                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.shadowBlur = 0;
-                ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
+
+                // Layer 2: Main Slash
+                ctx.lineWidth = (p.width || 40) * p.life;
+                ctx.globalAlpha = p.life * 0.7;
+                ctx.stroke();
+
+                // Layer 3: Sharp White Core
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = p.life;
+                ctx.stroke();
+
                 ctx.restore();
             }
             else if (p.type === 'beam') {
                 ctx.save();
                 ctx.globalAlpha = p.life;
-                ctx.lineCap = 'butt';
-                ctx.globalCompositeOperation = 'screen'; // Use screen or lighter for glow
+                ctx.lineCap = 'round';
 
+                // Use 'lighter' for a natural additive glow effect (ZERO blur cost)
+                ctx.globalCompositeOperation = 'lighter';
+
+                // Layer 1: Wide faint halo (The Bloom)
                 ctx.strokeStyle = p.color;
-                ctx.lineWidth = p.width;
-                ctx.shadowBlur = 20; // Increased glow
-                ctx.shadowColor = p.color;
-
+                ctx.lineWidth = p.width * 2.5;
+                ctx.globalAlpha = p.life * 0.15;
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
 
-                // Extra bloom layer for super flashiness
-                ctx.shadowBlur = 40;
+                // Layer 2: Medium glow (The Plasma)
                 ctx.lineWidth = p.width * 1.5;
-                ctx.globalAlpha = p.life * 0.5;
+                ctx.globalAlpha = p.life * 0.4;
                 ctx.stroke();
 
-                // Core (Solid White)
+                // Layer 3: Solid blue core
+                ctx.lineWidth = p.width;
                 ctx.globalAlpha = p.life;
-                ctx.globalCompositeOperation = 'source-over'; // Core should be solid
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = p.width / 2;
-                ctx.shadowBlur = 0;
+                ctx.stroke();
 
-                ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
+                // Layer 4: White hot center (Lore accurate)
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = p.width * 0.4;
+                ctx.stroke();
+
                 ctx.restore();
             }
             else if (p.type === 'bolt') {
@@ -502,10 +545,12 @@ export class ParticleSystem {
                 ctx.globalAlpha = p.life;
                 ctx.lineJoin = 'round';
                 ctx.lineCap = 'round';
+                ctx.globalCompositeOperation = 'lighter';
+
+                // Layer 1: Outer Lightning Glow
                 ctx.strokeStyle = p.color;
-                ctx.lineWidth = p.width || 5;
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = p.color;
+                ctx.lineWidth = (p.width || 5) * 2;
+                ctx.globalAlpha = p.life * 0.4;
                 ctx.beginPath();
                 if (p.segments.length > 0) {
                     ctx.moveTo(p.segments[0].x, p.segments[0].y);
@@ -514,11 +559,13 @@ export class ParticleSystem {
                     }
                 }
                 ctx.stroke();
-                // Inner white core
+
+                // Layer 2: Sharp Core
                 ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
-                ctx.shadowBlur = 0;
+                ctx.lineWidth = 1.5;
+                ctx.globalAlpha = p.life;
                 ctx.stroke();
+
                 ctx.restore();
             }
             else if (p.type === 'flame') {
@@ -529,14 +576,23 @@ export class ParticleSystem {
                 ctx.restore();
             }
             else if (p.type === 'shockwave') {
-                p.radius += (p.maxRadius - p.radius) * 0.08; // Slower expansion (was 0.15)
+                p.radius += (p.maxRadius - p.radius) * 0.08;
                 ctx.save();
-                ctx.globalAlpha = p.life * 0.8; // More visible (was 0.6)
+                ctx.globalAlpha = p.life * 0.8;
                 ctx.strokeStyle = p.color;
                 ctx.lineWidth = (p.lineWidth || p.width || 6) * p.life;
+                ctx.globalCompositeOperation = 'lighter';
+
+                // Single wide stroke (lighter does the 'glow' work now)
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                 ctx.stroke();
+
+                // Subtle inner ring
+                ctx.lineWidth = 1;
+                ctx.globalAlpha *= 0.5;
+                ctx.stroke();
+
                 ctx.restore();
             }
             else if (p.type === 'square') {
@@ -545,14 +601,14 @@ export class ParticleSystem {
                 ctx.globalAlpha = p.life;
                 ctx.fillStyle = p.color;
                 ctx.translate(p.x, p.y);
-                // Rotate slowly
                 ctx.rotate(p.life * 5);
+
+                // Optimized Square: Simple fill + small inner white square for "glow" look
                 ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
 
-                // Glow
-                ctx.shadowBlur = 4;
-                ctx.shadowColor = p.color;
-                ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                ctx.fillStyle = '#ffffff';
+                ctx.globalAlpha = p.life * 0.5;
+                ctx.fillRect(-p.size / 4, -p.size / 4, p.size / 2, p.size / 2);
 
                 ctx.restore();
             }

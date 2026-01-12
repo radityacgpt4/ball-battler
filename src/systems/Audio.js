@@ -139,10 +139,36 @@ export class AudioEngine {
         this.playTone(600, 'sine', 0.1, 0.1, 800); // Subtle rising bloop
     }
 
-    playLaser() {
-        // Continuous beam sound (powerful hum)
-        this.playTone(400, 'sawtooth', 0.5, 0.3, 380);
-        this.playNoise(0.5, 0.2, 1000);
+    playLaser(duration = 1.0) {
+        if (!this.enabled || !this.ctx) return;
+
+        const stopTime = this.ctx.currentTime + duration;
+
+        const createPart = (freq, type, vol) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+            // Stable envelope: Fade in, Stay Flat, Fade out
+            gain.gain.setValueAtTime(0, this.ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + 0.05);
+            gain.gain.setValueAtTime(vol, stopTime - 0.1);
+            gain.gain.linearRampToValueAtTime(0, stopTime);
+
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start();
+            osc.stop(stopTime);
+        };
+
+        // Harmonic Stack (Consistent, No Beating)
+        createPart(60, 'sawtooth', 0.4);  // Sub Core
+        createPart(120, 'sawtooth', 0.2); // Mid harmonic
+        createPart(180, 'square', 0.1);   // High grit
+
+        // Low Grit Noise
+        this.playNoise(duration, 0.15, 300);
     }
 
     playPowerUp() {

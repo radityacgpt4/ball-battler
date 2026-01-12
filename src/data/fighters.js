@@ -703,7 +703,7 @@ export const FIGHTER_TYPES = {
                 hookSpeed: 22,
                 speedBuildupPerUnit: 0.025, // Reach max speed in 400 range ( (14-4)/400 )
                 maxSpeed: 14,
-                evasionChance: 0.35, // 35% dodge while in flight
+                evasionChance: 0.5, // 50% dodge while in flight
                 stickDuration: 90, // 1.5 second
                 jumpAwayForce: 8
             },

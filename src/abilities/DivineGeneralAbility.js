@@ -71,7 +71,7 @@ export class DivineGeneralAtkAbility extends Ability {
     performAttack(fighter, enemy) {
         // Calculate Damage
         let damage = this.baseDamage + this.currentBonus;
-        
+
         // Check for Buff (Ult/Stored Damage)
         const isBuffed = fighter.activeEffects.adaptationStoredDamage > 0;
 
@@ -86,8 +86,8 @@ export class DivineGeneralAtkAbility extends Ability {
         enemy.takeDamage(damage, false, false, fighter);
 
         // Visuals & Audio
-        audioEngine.playHit();
-        
+        audioEngine.playRealisticSlash();
+
         // === RANDOM SLASHING SPECIAL EFFECT (Updated) ===
         // Config based on buff state
         const slashColor = isBuffed ? '#00BFFF' : '#FFD700'; // Blue for Adaptation/Ult, Gold for normal
@@ -95,19 +95,19 @@ export class DivineGeneralAtkAbility extends Ability {
         const slashCount = 3; // Reduced count (halved)
 
         // Generate slashes ON THE ENEMY
-        for(let i = 0; i < slashCount; i++) {
+        for (let i = 0; i < slashCount; i++) {
             // Center strictly on enemy with small variation
             const cx = enemy.x + (Math.random() - 0.5) * 40;
             const cy = enemy.y + (Math.random() - 0.5) * 40;
             const angle = Math.random() * Math.PI * 2;
             const len = 30 + Math.random() * 20;
-            
+
             fighter.game.particles.spawnSlash(
-                cx - Math.cos(angle) * len, 
-                cy - Math.sin(angle) * len, 
-                cx + Math.cos(angle) * len, 
-                cy + Math.sin(angle) * len, 
-                slashColor, 
+                cx - Math.cos(angle) * len,
+                cy - Math.sin(angle) * len,
+                cx + Math.cos(angle) * len,
+                cy + Math.sin(angle) * len,
+                slashColor,
                 slashThickness
             );
         }
@@ -118,10 +118,10 @@ export class DivineGeneralAtkAbility extends Ability {
             fighter.game.particles.spawn(enemy.x, enemy.y, '#00BFFF', 15);
             fighter.game.particles.spawnShockwave(enemy.x, enemy.y, '#00BFFF');
             // Extra sparks
-            for(let k=0; k<5; k++) {
+            for (let k = 0; k < 5; k++) {
                 fighter.game.particles.spawnBolt([
-                    {x: enemy.x, y: enemy.y},
-                    {x: enemy.x + (Math.random()-0.5)*50, y: enemy.y + (Math.random()-0.5)*50}
+                    { x: enemy.x, y: enemy.y },
+                    { x: enemy.x + (Math.random() - 0.5) * 50, y: enemy.y + (Math.random() - 0.5) * 50 }
                 ], '#00BFFF', 2);
             }
         } else {

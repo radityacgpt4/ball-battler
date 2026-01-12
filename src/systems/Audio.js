@@ -218,6 +218,18 @@ export class AudioEngine {
         // 2. Swirling noise
         this.playNoise(3.0, 0.2, 400);
     }
+
+    playRealisticSlash() {
+        // Premium Rapid Slash Sound
+        // 1. Sharp Metal Whistle (Sine slice)
+        this.playTone(2200, 'sine', 0.1, 0.25, 400);
+
+        // 2. Gritty Steel Slide (Sawtooth)
+        this.playTone(1500, 'sawtooth', 0.08, 0.2, 300);
+
+        // 3. High Frequency Air Cut (Noise)
+        this.playNoise(0.1, 0.35, 4500);
+    }
 }
 
 // Singleton instance

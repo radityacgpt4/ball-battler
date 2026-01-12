@@ -41,6 +41,7 @@ export class Projectile {
         this.slowDuration = 0;
         this.lifeTime = 0;
         this.isSniperShot = false;
+        this.isSniperUltShot = false;
         this.isUnblockable = false;
 
         // Ballista bolt props
@@ -422,6 +423,23 @@ export class Projectile {
                 });
             }
         }
+
+        // Sniper Ult Particles (High-tech energy trail)
+        if (this.isSniperUltShot && this.active) {
+            // Frequent small sparks
+            if (Math.random() < 0.4) {
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 15, // Trail behind
+                    y: this.y - Math.sin(this.angle) * 15,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 0.4, decay: 0.1,
+                    size: Math.random() < 0.5 ? 2 : 1, // Small crisp pixels
+                    color: '#00FF00', // Neon Green
+                    type: 'square'
+                });
+            }
+        }
     }
 
     draw(ctx) {
@@ -460,16 +478,6 @@ export class Projectile {
             ctx.rotate(this.angle);
 
             const slashWidth = this.radius || 40; // Uses the radius property for width
-
-            // Glow effect (Optimized Zero-Blur)
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.strokeStyle = '#DC143C';
-            ctx.lineWidth = 10;
-            ctx.globalAlpha = 0.4;
-            ctx.beginPath();
-            ctx.moveTo(0, -slashWidth);
-            ctx.quadraticCurveTo(slashWidth * 0.4, 0, 0, slashWidth);
-            ctx.stroke();
 
             // Main slash crescent (single forward arc)
             ctx.globalCompositeOperation = 'source-over';
@@ -518,22 +526,13 @@ export class Projectile {
                 ctx.rotate(this.angle);
             }
 
-            // 1. Intense Reishi Glow (Optimized Zero-Blur)
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.strokeStyle = '#00BFFF';
-            ctx.lineWidth = 6;
-            ctx.globalAlpha = 0.4;
-            ctx.strokeRect(-8, -1.5, 16, 3);
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.globalAlpha = 1.0;
-
             // 2. The Arrow Shaft (Pure Energy Beam) - REDUCED SIZE 50%
             // Core (White)
             ctx.fillStyle = '#FFFFFF';
             // Original: -15, -1.5, 30, 3 -> New: -7.5, -0.75, 15, 1.5
             ctx.fillRect(-7.5, -0.75, 15, 1.5);
 
-            // Outer Glow (Blue)
+            // Outer Edge (Blue)
             ctx.strokeStyle = '#00BFFF';
             ctx.lineWidth = 1; // 2 -> 1
             ctx.beginPath();
@@ -675,15 +674,10 @@ export class Projectile {
             // Slowly rotate the seal
             ctx.rotate(Date.now() * 0.002);
 
-            // Glow Effect (Optimized Zero-Blur)
-            ctx.globalCompositeOperation = 'lighter';
             ctx.strokeStyle = '#00BFFF';
-            ctx.lineWidth = 4;
-            ctx.globalAlpha = 0.5;
-            // (Star logic handles stroke below)
-            ctx.globalAlpha = 1.0;
-            ctx.globalCompositeOperation = 'source-over';
             ctx.lineWidth = 2;
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1.0;
 
             // Draw 5-pointed Quincy Star (The Trap Radius)
             ctx.beginPath();
@@ -710,15 +704,14 @@ export class Projectile {
 
             // Silver Tube Body
             ctx.fillStyle = '#C0C0C0'; // Silver
-            ctx.shadowColor = '#FFFFFF';
             ctx.beginPath();
-            ctx.rect(-3, -8, 6, 16); // Small capsule/tube
+            ctx.roundRect(-3, -8, 6, 16, 3); // Small rounded capsule
             ctx.fill();
 
             // Liquid Reishi inside (Blue strip)
             ctx.fillStyle = '#00FFFF';
             ctx.beginPath();
-            ctx.rect(-1, -6, 2, 12);
+            ctx.roundRect(-1, -6, 2, 12, 1);
             ctx.fill();
 
             // Metallic Glint
@@ -728,20 +721,52 @@ export class Projectile {
 
             ctx.restore();
         }
+        else if (this.isSniperUltShot) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            // UNIQUE ULT VISUAL: Sleek "Railgun" Needle
+            // Not bulky, but long and sharp.
+
+            // 1. Energy Shockwave Rings (Mach cones)
+            ctx.strokeStyle = 'rgba(0, 255, 100, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-10, -8);
+            ctx.lineTo(0, -4);
+            ctx.lineTo(0, 4);
+            ctx.lineTo(-10, 8);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(-20, -6);
+            ctx.lineTo(-12, -3);
+            ctx.lineTo(-12, 3);
+            ctx.lineTo(-20, 6);
+            ctx.stroke();
+
+            // 2. Main Beam / Needle Body
+
+            // Core Shaft (Long and thin)
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(-25, -1.5, 50, 3); // 50px long, 3px thin
+
+            // 3. Tip Flash
+            ctx.fillStyle = '#E0FFFF';
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            ctx.arc(25, 0, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
         else if (this.isSniperShot) {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
 
             const bulletColor = this.isUnblockable ? '#00ff00' : '#ff0000';
-
-            // 1. Optimized Glow (Zero-Blur)
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.strokeStyle = bulletColor;
-            ctx.lineWidth = 6;
-            ctx.globalAlpha = 0.3;
-            ctx.strokeRect(-12, -3, 24, 6);
-
             // 2. Motion Trail (Speed Streak)
             const trailGrad = ctx.createLinearGradient(-30, 0, 10, 0);
             trailGrad.addColorStop(0, 'transparent');
@@ -873,14 +898,6 @@ export class Projectile {
             // Draw FIST at tip (Local Space transform)
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
-
-            // Fist Shape (Zero-Blur Glow)
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.strokeStyle = '#d95a00';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius * 0.7, 0, Math.PI * 2);
-            ctx.stroke();
 
             ctx.globalCompositeOperation = 'source-over';
             ctx.fillStyle = '#ffccaa';

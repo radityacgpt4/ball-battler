@@ -101,6 +101,7 @@ export class SniperAtkAbility extends Ability {
         // Check for ULT buff
         if (fighter.activeEffects.ultActive) {
             p.isUnblockable = true;
+            p.isSniperUltShot = true; // Distinct visual flag
             p.radius = this.ultProjectileRadius;
             this.laserColor = '#00ff00';
         } else {

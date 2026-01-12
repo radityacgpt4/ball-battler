@@ -63,11 +63,27 @@ export class Renderer {
         // Draw HP text
         this.drawHPText(ctx, fighter);
 
+        // Burn stack indicator (independent of rotation, like Divine General)
+        if (fighter.status.burn > 0 && fighter.status.burnStacks > 0) {
+            ctx.save();
+            const text = `🔥x${fighter.status.burnStacks}`;
+            ctx.fillStyle = "#FF4500";
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 2;
+            ctx.font = "bold 16px monospace";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const textY = -fighter.radius - 40;
+            ctx.strokeText(text, 0, textY);
+            ctx.fillText(text, 0, textY);
+            ctx.restore();
+        }
+
         ctx.restore();
     }
 
     /**
-     * Draw status effect indicators (stun, slow, knockback)
+     * Draw status effect indicators (stun, slow, knockback, burn)
      */
     drawStatusEffects(ctx, fighter) {
         if (fighter.status.stun > 0) {
@@ -83,6 +99,21 @@ export class Renderer {
             ctx.beginPath();
             ctx.arc(0, 0, fighter.radius + 2, 0, Math.PI * 2);
             ctx.fill();
+        }
+
+        // BURN effect - orange/red pulsing glow and stack indicator
+        if (fighter.status.burn > 0 && fighter.status.burnStacks > 0) {
+            const pulse = (Math.sin(Date.now() / 150) + 1) * 0.3;
+            ctx.save();
+            ctx.globalAlpha = 0.4 + pulse;
+            ctx.strokeStyle = '#FF4500';
+            ctx.lineWidth = 2 + fighter.status.burnStacks;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#FF4500';
+            ctx.beginPath();
+            ctx.arc(0, 0, fighter.radius + 4, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
         }
 
         if (fighter.beingPushed) {
@@ -539,6 +570,134 @@ export class Renderer {
             ctx.arc(fistDist + 8, -separation, 2, 0, Math.PI * 2);
             ctx.arc(fistDist + 8, separation, 2, 0, Math.PI * 2);
             ctx.fill();
+        });
+
+        // Quincy - Spirit Bow (Energia)
+        this.registerAccessory('QUINCY', (ctx, fighter) => {
+            const bowDist = fighter.radius + 5;
+
+            ctx.save();
+
+            // Decouple from fighter rotation and aim at target
+            ctx.rotate(-fighter.angle);
+            const aimAngle = (fighter.quincyTargetAngle !== undefined && fighter.quincyTargetAngle !== null)
+                ? fighter.quincyTargetAngle
+                : fighter.angle;
+            ctx.rotate(aimAngle);
+
+            // Glow effect based on lock progress
+            const lockRatio = (fighter.lockProgress || 0) / 100;
+
+            // Main bow arc (translucent blue energy)
+            ctx.strokeStyle = '#1E90FF';
+            ctx.lineWidth = 3 + lockRatio * 2;
+            ctx.shadowBlur = 10 + lockRatio * 15;
+            ctx.shadowColor = '#00BFFF';
+            ctx.globalAlpha = 0.7 + lockRatio * 0.3;
+
+            // Draw curved bow arms
+            ctx.beginPath();
+            ctx.arc(bowDist, 0, 22, -Math.PI * 0.45, Math.PI * 0.45);
+            ctx.stroke();
+
+            // Inner energy glow
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.5 + lockRatio * 0.5;
+            ctx.beginPath();
+            ctx.arc(bowDist, 0, 20, -Math.PI * 0.4, Math.PI * 0.4);
+            ctx.stroke();
+
+            // Bowstring (energy thread)
+            ctx.strokeStyle = '#B0E0E6';
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.8;
+            ctx.shadowBlur = 5;
+
+            const topX = bowDist + Math.cos(-Math.PI * 0.45) * 22;
+            const topY = Math.sin(-Math.PI * 0.45) * 22;
+            const botX = bowDist + Math.cos(Math.PI * 0.45) * 22;
+            const botY = Math.sin(Math.PI * 0.45) * 22;
+
+            ctx.beginPath();
+            ctx.moveTo(topX, topY);
+            ctx.lineTo(bowDist - 8, 0); // Pulled back
+            ctx.lineTo(botX, botY);
+            ctx.stroke();
+
+            // Charging arrow (visible when locking)
+            if (fighter.lockProgress > 20) {
+                ctx.fillStyle = `rgba(30, 144, 255, ${lockRatio * 0.8})`;
+                ctx.shadowBlur = 20 * lockRatio;
+                ctx.shadowColor = '#1E90FF';
+
+                // Arrow shape
+                ctx.beginPath();
+                ctx.moveTo(bowDist + 15, 0);  // Tip
+                ctx.lineTo(bowDist - 5, -3);
+                ctx.lineTo(bowDist - 5, 3);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            ctx.restore();
+        });
+
+        // King of Curses - Domain Expansion Visual
+        this.registerAccessory('KING_OF_CURSES', (ctx, fighter) => {
+            // Domain Expansion Visual (always active)
+            if (fighter.domainActive) {
+                const radius = fighter.domainRadius || 150;
+
+                ctx.save();
+
+                // Pulsing effect - slowed down from 300 to 600, reduced intensity from 0.15 to 0.1
+                const pulse = (Math.sin(Date.now() / 600) + 1) * 0.1;
+                ctx.globalAlpha = 0.35 + pulse;
+
+                // Dark semi-transparent red fill
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+                gradient.addColorStop(0, 'rgba(50, 0, 0, 0.4)');
+                gradient.addColorStop(0.7, 'rgba(139, 0, 0, 0.3)');
+                gradient.addColorStop(1, 'rgba(220, 20, 60, 0.1)');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Jagged edge (force-field like)
+                ctx.globalAlpha = 0.6 + pulse;
+                ctx.strokeStyle = '#DC143C';
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#DC143C';
+
+                ctx.beginPath();
+                const segments = 36;
+                for (let i = 0; i <= segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    // Jagged variation - reduced from 8 to 3, and slowed down oscillation
+                    const jag = Math.sin(i * 3 + Date.now() / 400) * 3;
+                    const r = radius + jag;
+                    if (i === 0) {
+                        ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                    } else {
+                        ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                    }
+                }
+                ctx.closePath();
+                ctx.stroke();
+
+                // Inner dark ring
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius * 0.85, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.restore();
+            }
         });
     }
 }

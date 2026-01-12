@@ -83,12 +83,13 @@ export class DivineBrawlerAtkAbility extends Ability {
             logger.log(`${fighter.name} land a BLACK FLASH (${finalCritMult}x)!`, 'combat');
         }
 
-        // Knockback for Black Flash
+        // Knockback for Black Flash - FIXED LOGIC
         if (isBlackFlash) {
             const angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
-            const force = this.baseKnockback + (finalCritMult * this.knockbackPerMult);
-            enemy.dx += Math.cos(angle) * force;
-            enemy.dy += Math.sin(angle) * force;
+            const forceVal = 12; // Standardized Force
+            const speed = forceVal / enemy.mass;
+            enemy.dx += Math.cos(angle) * speed;
+            enemy.dy += Math.sin(angle) * speed;
         }
 
         enemy.takeDamage(damage, false, false, fighter);

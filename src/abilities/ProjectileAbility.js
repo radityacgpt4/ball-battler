@@ -202,7 +202,14 @@ export class GrenadeAbility extends Ability {
         p.isGrenade = true;
         p.explosionRadius = this.explosionRadius;
         p.z = 10;
-        p.vz = 15;
+        // Calculate vz so it lands exactly at t = airTime
+        // 0 = 10 + v0*t - 0.5*0.5*t^2  => v0 = 0.25*t - 10/t
+        const t = this.airTime;
+        p.vz = 0.25 * t - 10 / t;
+
+        // Store destination for hit indicator (cosmetic only)
+        p.destX = fighter.x + Math.cos(fighter.angle) * dist;
+        p.destY = fighter.y + Math.sin(fighter.angle) * dist;
 
         game.projectiles.push(p);
         audioEngine.playGrenadeThrow();

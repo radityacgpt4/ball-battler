@@ -163,14 +163,14 @@ body {
 
 canvas {
     display: block;
-    width: 500px;
-    height: 500px;
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    aspect-ratio: 1 / 1;
     background-color: var(--arena-bg);
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
     flex-shrink: 0;
 }
-
-/* ... (Screen Overlay Overhaul skipped) ... */
 
 #debug-log-container {
     width: 100%;
@@ -225,6 +225,7 @@ canvas {
     padding: 20px;
     box-sizing: border-box;
     backdrop-filter: blur(8px);
+    overflow-y: auto;
 }
 
 .setup-title {
@@ -300,10 +301,20 @@ canvas {
     width: 100%;
 }
 
-.grid-item:hover {
-    background: #2a2a3a;
-    border-color: var(--accent-blue);
-    transform: scale(1.05);
+@media (hover: hover) {
+    .grid-item:hover {
+        background: #2a2a3a;
+        border-color: var(--accent-blue);
+        transform: scale(1.05);
+    }
+
+    .grid-item:hover .grid-name {
+        color: #fff;
+    }
+}
+
+.grid-item * {
+    pointer-events: none;
 }
 
 .grid-item.selected-p1 {
@@ -335,6 +346,32 @@ canvas {
     font-weight: 700;
     text-align: center;
     color: var(--text-dim);
+}
+
+.select-badges {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.p-badge {
+    font-size: 8px;
+    font-weight: 900;
+    padding: 1px 3px;
+    border-radius: 2px;
+    color: #fff;
+}
+
+.p-badge.p1 {
+    background: var(--accent-blue);
+    color: #000;
+}
+
+.p-badge.p2 {
+    background: var(--accent-red);
 }
 
 .grid-item:hover .grid-name {
@@ -445,6 +482,8 @@ canvas {
     /* Readable size */
     color: var(--text-dim);
     line-height: 1.3;
+    pointer-events: none;
+    /* Let clicks pass through description to the item */
 }
 
 /* Bottom Controls */
@@ -493,12 +532,15 @@ canvas {
 
 /* Mobile Optimizations */
 @media (max-width: 900px) {
-    body, html {
-        overflow-x: hidden; /* Prevent horizontal scroll */
+
+    body,
+    html {
+        overflow-x: hidden;
+        /* Prevent horizontal scroll */
     }
 
     #game-container {
-        width: 100%; 
+        width: 100%;
         margin: 0;
         padding: 0;
     }
@@ -519,7 +561,8 @@ canvas {
         overflow-y: auto;
         padding: 10px;
         align-items: center;
-        justify-content: flex-start; /* Align to top so scrolling works */
+        justify-content: flex-start;
+        /* Align to top so scrolling works */
     }
 
     .setup-title {
@@ -540,7 +583,8 @@ canvas {
 
     /* Character grid: center of screen on mobile */
     .char-grid-container {
-        order: -1; /* Move grid to top */
+        order: -1;
+        /* Move grid to top */
         width: 100%;
         height: auto;
         overflow: visible;
@@ -551,7 +595,8 @@ canvas {
 
     .char-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr); /* 4 columns on mobile looks better */
+        grid-template-columns: repeat(4, 1fr);
+        /* 4 columns on mobile looks better */
         gap: 8px;
         width: 100%;
         max-width: 400px;
@@ -561,12 +606,15 @@ canvas {
     .grid-item {
         aspect-ratio: 1;
         padding: 5px;
-        max-width: none; /* Reset max-width constraint */
+        max-width: none;
+        /* Reset max-width constraint */
     }
 
     .grid-name {
-        font-size: 9px; /* Smaller font for mobile */
+        font-size: 9px;
+        /* Smaller font for mobile */
     }
+
     /* ----------------------------- */
 
     /* Detail panels: vertical stack on mobile */
@@ -603,7 +651,8 @@ canvas {
     /* Start button area */
     .start-container {
         margin-top: 20px;
-        padding-bottom: 60px; /* Extra space for scrolling on phones */
+        padding-bottom: 60px;
+        /* Extra space for scrolling on phones */
         width: 100%;
     }
 
@@ -620,7 +669,7 @@ canvas {
         max-width: 100%;
         aspect-ratio: 1/1;
     }
-    
+
     /* Hide header on small mobile to save space, or adjust it */
     #ui-header {
         padding: 5px;
@@ -628,14 +677,14 @@ canvas {
         flex-direction: column;
         gap: 5px;
     }
-    
+
     .hud-card {
         width: 100%;
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
     }
-    
+
     .hud-name {
         font-size: 0.9rem;
         margin: 0;
@@ -647,7 +696,7 @@ canvas {
     .char-grid {
         grid-template-columns: repeat(3, 1fr);
     }
-    
+
     .setup-title {
         font-size: 1rem;
     }

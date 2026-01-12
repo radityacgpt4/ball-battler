@@ -37,7 +37,7 @@ export class ParticleSystem {
             type: 'beam', x1, y1, x2, y2, color,
             life: 0.8, decay: 0.08, width: thickness
         });
-        
+
         // Inner Core (White hot)
         this.particles.push({
             type: 'beam', x1, y1, x2, y2, color: '#ffffff',
@@ -51,25 +51,25 @@ export class ParticleSystem {
         const dx = (x2 - x1) / steps;
         const dy = (y2 - y1) / steps;
 
-        for(let i=0; i<steps; i++) {
+        for (let i = 0; i < steps; i++) {
             const bx = x1 + dx * i;
             const by = y1 + dy * i;
             this.spawnBolt([
-                {x: bx, y: by},
-                {x: bx + (Math.random()-0.5)*60, y: by + (Math.random()-0.5)*60}
+                { x: bx, y: by },
+                { x: bx + (Math.random() - 0.5) * 60, y: by + (Math.random() - 0.5) * 60 }
             ], color, 2);
         }
 
         // 2. Small Flickering Static
         const staticCount = Math.floor(dist / 12);
-        for(let i=0; i<staticCount; i++) {
+        for (let i = 0; i < staticCount; i++) {
             const t = Math.random();
             const px = x1 + (x2 - x1) * t;
             const py = y1 + (y2 - y1) * t;
-            
+
             this.spawnBolt([
-                {x: px, y: py},
-                {x: px + (Math.random()-0.5)*25, y: py + (Math.random()-0.5)*25}
+                { x: px, y: py },
+                { x: px + (Math.random() - 0.5) * 25, y: py + (Math.random() - 0.5) * 25 }
             ], '#ffffff', 1);
         }
     }
@@ -110,7 +110,7 @@ export class ParticleSystem {
             this.particles.push({
                 x: x + (Math.random() - 0.5) * 30,
                 y: y + (Math.random() - 0.5) * 10, // Start near feet
-                vx: 0, 
+                vx: 0,
                 vy: -8 - Math.random() * 5, // Shoot up very fast
                 life: 0.4, decay: 0.05,
                 size: 4, color: '#FFFFFF', // White sparks
@@ -119,10 +119,10 @@ export class ParticleSystem {
         }
     }
 
-    spawnBeam(x1, y1, x2, y2, color, width = 6) {
+    spawnBeam(x1, y1, x2, y2, color, width = 6, decay = 0.5) {
         this.particles.push({
             type: 'beam', x1, y1, x2, y2, color,
-            life: 1.0, decay: 0.5, width: width // Fast decay for no trails
+            life: 1.0, decay: decay, width: width
         });
     }
 
@@ -159,7 +159,7 @@ export class ParticleSystem {
 
     spawnHirenkyaku(x, y) {
         // Clean "Reishi" Effect: Rising Energy + Shockwave (No massive pillars)
-        
+
         // 1. Blue Shockwave Ring
         this.spawnShockwave(x, y, '#1E90FF');
 
@@ -168,14 +168,14 @@ export class ParticleSystem {
             this.particles.push({
                 x: x + (Math.random() - 0.5) * 25,
                 y: y + (Math.random() - 0.5) * 25,
-                vx: 0, 
+                vx: 0,
                 vy: -3 - Math.random() * 3, // Fast upward movement
                 life: 0.6, decay: 0.08,
-                size: 2, color: '#00BFFF', 
+                size: 2, color: '#00BFFF',
                 type: 'dot'
             });
         }
-        
+
         // 3. Central Flash
         this.particles.push({
             x: x, y: y,
@@ -196,7 +196,7 @@ export class ParticleSystem {
     }
 
     spawnLichtRegen(x, y) {
-         this.spawnHirenkyaku(x, y); // Reuse the cool effect
+        this.spawnHirenkyaku(x, y); // Reuse the cool effect
     }
 
     spawnWallImpact(x, y) {
@@ -228,53 +228,53 @@ export class ParticleSystem {
             type: 'shockwave',
             x: x, y: y,
             radius: 5,
-            maxRadius: 120,
+            maxRadius: 150, // Increased from 120
             life: 1.0,
             decay: 0.05,
             color: '#000000', // Black Core
-            lineWidth: 10
+            lineWidth: 16 // Increased from 10
         });
 
         // Red Cursed Energy Sparks
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 30; i++) { // Increased from 20
             this.particles.push({
                 type: 'bolt',
                 segments: [
                     { x: x, y: y },
-                    { x: x + (Math.random() - 0.5) * 100, y: y + (Math.random() - 0.5) * 100 }
+                    { x: x + (Math.random() - 0.5) * 140, y: y + (Math.random() - 0.5) * 140 } // Increased spread
                 ],
                 life: 0.8,
-                decay: 0.1,
+                decay: 0.08,
                 color: '#FF0000', // Red Lightning
-                width: 3
+                width: 4 // Increased from 3
             });
         }
 
         // Debris
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 25; i++) { // Increased from 15
             this.particles.push({
                 x, y,
                 color: '#000000',
-                vx: (Math.random() - 0.5) * 12,
-                vy: (Math.random() - 0.5) * 12,
+                vx: (Math.random() - 0.5) * 15, // Increased speed
+                vy: (Math.random() - 0.5) * 15,
                 life: 1.0, decay: 0.04,
-                size: Math.random() * 6 + 2,
+                size: Math.random() * 7 + 2, // Slightly larger
                 type: 'dot'
             });
         }
     }
 
     spawnSuperBlackFlash(x, y) {
-        // Massive Distortion Ring
+        // Massive Distortion Ring (Reduced by 20% from previous peak)
         this.particles.push({
             type: 'shockwave',
             x: x, y: y,
             radius: 5,
-            maxRadius: 180,
-            life: 1.5,
-            decay: 0.03,
+            maxRadius: 180, // Reduced from 220
+            life: 1.4, // Slightly shorter
+            decay: 0.04,
             color: '#000000',
-            lineWidth: 22
+            lineWidth: 22 // Reduced from 28
         });
 
         // Glowing red outer ring
@@ -282,43 +282,96 @@ export class ParticleSystem {
             type: 'shockwave',
             x: x, y: y,
             radius: 10,
-            maxRadius: 200,
+            maxRadius: 210, // Reduced from 260
             life: 1.0,
             decay: 0.05,
             color: '#FF0000',
-            lineWidth: 5
+            lineWidth: 6 // Reduced from 8
         });
 
-        // Thick Red Lightning Bolts
-        for (let i = 0; i < 40; i++) {
+        // Thick Red Lightning Bolts (Restored towards 80% balance)
+        for (let i = 0; i < 40; i++) { // Reduced from 50
             this.particles.push({
                 type: 'bolt',
                 segments: [
                     { x: x, y: y },
-                    { x: x + (Math.random() - 0.5) * 200, y: y + (Math.random() - 0.5) * 200 }
+                    { x: x + (Math.random() - 0.5) * 240, y: y + (Math.random() - 0.5) * 240 } // Reduced spread from 300
                 ],
-                life: 1.2,
-                decay: 0.05,
+                life: 1.0,
+                decay: 0.06,
                 color: '#FF0000',
-                width: 5
+                width: 5 // Reduced from 6
             });
         }
 
-        // Huge Debris Burst
-        for (let i = 0; i < 40; i++) {
+        // Massive Debris Burst
+        for (let i = 0; i < 48; i++) { // Reduced from 60
             this.particles.push({
                 x, y,
-                color: Math.random() < 0.3 ? '#FF0000' : '#000000',
-                vx: (Math.random() - 0.5) * 25,
-                vy: (Math.random() - 0.5) * 25,
-                life: 1.5, decay: 0.02,
-                size: Math.random() * 12 + 4,
+                color: Math.random() < 0.4 ? '#FF0000' : '#000000',
+                vx: (Math.random() - 0.5) * 28, // Reduced speed from 35
+                vy: (Math.random() - 0.5) * 28,
+                life: 1.2, decay: 0.03,
+                size: Math.random() * 11 + 3, // Reduced from 14
                 type: 'dot'
             });
         }
 
         // Screenshake simulated via particles if we had it, but here we just add text
-        this.spawnText(x, y - 50, "MAX BLACK FLASH!!", "#FF0000");
+        this.spawnText(x, y - 60, "MAX BLACK FLASH!!", "#FF0000");
+    }
+
+    // Quincy Heilig Pfeil trail (Reishi Spirit Particles)
+    spawnQuincyArrow(x, y) {
+        // Core trail (dense bright)
+        for (let i = 0; i < 3; i++) {
+            this.particles.push({
+                x, y,
+                color: '#E0FFFF', // Light Cyan
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                life: 0.4, decay: 0.08,
+                size: 3, type: 'square'
+            });
+        }
+        // Aura trail (larger blue halo)
+        for (let i = 0; i < 2; i++) {
+            this.particles.push({
+                x, y,
+                color: '#1E90FF', // Dodger Blue
+                vx: (Math.random() - 0.5) * 5,
+                vy: (Math.random() - 0.5) * 5,
+                life: 0.3, decay: 0.05,
+                size: 5, type: 'square'
+            });
+        }
+    }
+
+    // Hirenkyaku blink effect (Reishi Platform)
+    spawnHirenkyaku(x, y) {
+        for (let i = 0; i < 10; i++) {
+            this.particles.push({
+                x: x + (Math.random() - 0.5) * 25,
+                y: y + (Math.random() - 0.5) * 25,
+                color: '#87CEEB',
+                vx: 0,
+                vy: -1 - Math.random(), // Float up
+                life: 0.8, decay: 0.05,
+                size: 4 + Math.random() * 4, type: 'square'
+            });
+        }
+        this.spawnShockwave(x, y, '#1E90FF');
+    }
+
+    // Licht Regen shockwave
+    spawnLichtRegen(x, y) {
+        this.particles.push({
+            type: 'shockwave',
+            x, y,
+            radius: 5, maxRadius: 80,
+            life: 0.8, decay: 0.08,
+            color: '#1E90FF'
+        });
     }
 
     spawnBolt(segments, color, width = 5) {
@@ -416,13 +469,31 @@ export class ParticleSystem {
                 ctx.restore();
             }
             else if (p.type === 'beam') {
-                ctx.save(); ctx.globalAlpha = p.life; ctx.lineCap = 'butt';
-                ctx.strokeStyle = p.color; ctx.lineWidth = p.width;
-                ctx.shadowBlur = 10; ctx.shadowColor = p.color;
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.lineCap = 'butt';
+                ctx.globalCompositeOperation = 'screen'; // Use screen or lighter for glow
+
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = p.width;
+                ctx.shadowBlur = 20; // Increased glow
+                ctx.shadowColor = p.color;
+
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
 
-                // Core
-                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = p.width / 2; ctx.shadowBlur = 0;
+                // Extra bloom layer for super flashiness
+                ctx.shadowBlur = 40;
+                ctx.lineWidth = p.width * 1.5;
+                ctx.globalAlpha = p.life * 0.5;
+                ctx.stroke();
+
+                // Core (Solid White)
+                ctx.globalAlpha = p.life;
+                ctx.globalCompositeOperation = 'source-over'; // Core should be solid
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = p.width / 2;
+                ctx.shadowBlur = 0;
+
                 ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
                 ctx.restore();
             }
@@ -458,14 +529,31 @@ export class ParticleSystem {
                 ctx.restore();
             }
             else if (p.type === 'shockwave') {
-                p.radius += (p.maxRadius - p.radius) * 0.15;
+                p.radius += (p.maxRadius - p.radius) * 0.08; // Slower expansion (was 0.15)
                 ctx.save();
-                ctx.globalAlpha = p.life * 0.6;
+                ctx.globalAlpha = p.life * 0.8; // More visible (was 0.6)
                 ctx.strokeStyle = p.color;
-                ctx.lineWidth = 6 * p.life;
+                ctx.lineWidth = (p.lineWidth || p.width || 6) * p.life;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                 ctx.stroke();
+                ctx.restore();
+            }
+            else if (p.type === 'square') {
+                p.x += p.vx; p.y += p.vy;
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.translate(p.x, p.y);
+                // Rotate slowly
+                ctx.rotate(p.life * 5);
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+
+                // Glow
+                ctx.shadowBlur = 4;
+                ctx.shadowColor = p.color;
+                ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
+
                 ctx.restore();
             }
             else {

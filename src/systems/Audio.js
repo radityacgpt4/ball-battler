@@ -155,6 +155,43 @@ export class AudioEngine {
         setTimeout(() => this.playTone(554, 'triangle', 0.2, 0.5), 150);
         setTimeout(() => this.playTone(659, 'triangle', 0.4, 0.5), 300);
     }
+
+    playSlash() {
+        // Sharper, more metallic slash sound
+        this.playNoise(0.1, 0.4, 4000); // Quick sharp whish
+        this.playTone(1200, 'sawtooth', 0.15, 0.3, 400); // High metallic cut
+        this.playTone(2000, 'sine', 0.05, 0.2); // Extremely high-pitch shimmer
+    }
+
+    playCleaveHit() {
+        // Very short, sharp cutting sound for rapid ticks
+        this.playNoise(0.05, 0.2, 5000); // High-frequency clip
+        this.playTone(1500, 'sawtooth', 0.04, 0.1, 800); // Tiny sharp cut
+    }
+
+    playBlackhole() {
+        // Deep ominous void sound
+        // 1. Sub-bass drone
+        if (!this.enabled || !this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(50, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 2.5); // Rising pitch
+
+        gain.gain.setValueAtTime(0, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.6, this.ctx.currentTime + 0.2);
+        gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 3.0);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 3.0);
+
+        // 2. Swirling noise
+        this.playNoise(3.0, 0.2, 400);
+    }
 }
 
 // Singleton instance

@@ -52,7 +52,7 @@ export class Projectile {
 
         // Deflection props
         this.isDeflected = false;
-        this.deflect= 0;
+        this.deflect = 0;
     }
 
     update(timeScale = 1.0) {
@@ -76,6 +76,19 @@ export class Projectile {
             // Claymore friction (stops sliding)
             this.dx *= 0.9;
             this.dy *= 0.9;
+        }
+
+        // Ginto Trap Lifetime
+        if (this.isGintoTrap) {
+            this.lifeTime -= 1 * timeScale;
+            if (this.lifeTime <= 0) {
+                this.active = false;
+                return;
+            }
+            // Ginto is stationary
+            this.dx = 0;
+            this.dy = 0;
+            return; // Don't move
         }
 
         // Ballista Bolt Drag Logic
@@ -148,6 +161,81 @@ export class Projectile {
             }
         }
 
+        // Raining Arrow Logic (Licht Regen)
+        if (this.isRainingArrow && this.active) {
+            this.z += this.vz * timeScale;
+            this.vz -= 0.5 * timeScale; // Gravity acceleration for "curved" fall
+
+            // Spawn falling trail particles (smaller, less intrusive)
+            if (this.z > 0 && Math.random() < 0.4) {
+                this.game.particles.particles.push({
+                    x: this.x + (Math.random() - 0.5) * 6,
+                    y: this.y - this.z, // Offset visually by z height
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: 1.5, // Falling down
+                    life: 0.4, decay: 0.06,
+                    size: 1.5,
+                    color: '#00BFFF',
+                    type: 'square'
+                });
+            }
+
+            // Arrow has landed
+            if (this.z <= 0) {
+                this.z = 0;
+                this.isRainingArrow = false; // Stop falling, now act as normal arrow
+                this.dx = 0; // Stop moving horizontally
+                this.dy = 0;
+                this.landedLifeTime = 60; // Disappear after 1 second
+
+                // Impact effect
+                this.game.particles.spawn(this.x, this.y, '#00BFFF', 5);
+            }
+            // Removed 'return' to allow x/y movement while airborne
+        }
+
+        // Landed Raining Arrow decay
+        if (this.landedLifeTime !== undefined && this.landedLifeTime > 0) {
+            this.landedLifeTime -= 1 * timeScale;
+            if (this.landedLifeTime <= 0) {
+                this.active = false;
+                return;
+            }
+        }
+
+        // Quincy Arrow - Spirit Trail (Reishi Particles) - PIXELATED STYLE
+        if (this.isQuincyArrow && this.active) {
+            // Spawn crisp pixel blocks instead of glowing clouds
+            if (this.game.frameAccumulator % 2 === 0) { // Every other frame for discrete look
+                // 1. Center Trail (The "Data Stream")
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 12,
+                    y: this.y - this.z - Math.sin(this.angle) * 12,
+                    vx: 0, vy: 0,
+                    life: 0.3, decay: 0.1, // Quick vanish
+                    size: 4, // Fixed pixel size
+                    color: '#00BFFF',
+                    type: 'square',
+                    alpha: 1.0 // No transparency fade at start
+                });
+
+                // 2. Occasional "Glitch" Pixels
+                if (Math.random() < 0.3) {
+                    const offset = (Math.random() < 0.5 ? -1 : 1) * 8;
+                    const perpAngle = this.angle + Math.PI / 2;
+                    this.game.particles.particles.push({
+                        x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset,
+                        y: this.y - this.z - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset,
+                        vx: 0, vy: 0,
+                        life: 0.2, decay: 0.1,
+                        size: 2, // Smaller pixel
+                        color: '#E0FFFF',
+                        type: 'square'
+                    });
+                }
+            }
+        }
+
         this.x += this.dx * timeScale;
         this.y += this.dy * timeScale;
 
@@ -184,7 +272,7 @@ export class Projectile {
                 this.hasExploded = true;
             }
         }
-else {
+        else {
             // Standard Bullet
             const bounds = this.game.arenaBounds;
             if (this.x < bounds.x || this.x > bounds.x + bounds.width || this.y < bounds.y || this.y > bounds.y + bounds.height) {
@@ -192,100 +280,415 @@ else {
             }
         }
 
-        // --- QUINCY REISHI ARROW EFFECTS ---
-        if (this.isQuincyArrow && this.active) {
-            // 1. Central Energy Residue (fading blue dust)
-            if (Math.random() < 0.3) {
-                this.game.particles.particles.push({
-                    x: this.x, 
-                    y: this.y,
-                    vx: (Math.random() - 0.5) * 0.5, 
-                    vy: (Math.random() - 0.5) * 0.5,
-                    life: 0.4, decay: 0.08, 
-                    size: Math.random() * 3, 
-                    color: '#00BFFF', 
-                    type: 'dot',
-                    alpha: 0.6
-                });
+        // --- KING OF CURSES LOGIC ---
+        if (this.isFugaArrow) {
+            const travel = Math.hypot(this.x - (this.startX || this.x), this.y - (this.startY || this.y));
+
+            // Check max range or wall hit (manual wall check if not covered by standard bullet logic?)
+            // Standard logic above checks bounds but just kills it. We want to spawn ground burn.
+            const bounds = this.game.arenaBounds;
+            let hitWall = false;
+            if (this.x < bounds.x || this.x > bounds.x + bounds.width || this.y < bounds.y || this.y > bounds.y + bounds.height) {
+                hitWall = true;
             }
 
-            // 2. Spiraling Helix Lines (Reishi strands)
-            const t = Date.now() * 0.025; // Rotation speed
-            const perpAngle = this.angle + Math.PI / 2;
-            const spiralRadius = 6; // Width of the spiral
+            if (travel >= (this.maxDistance || 300) || hitWall) {
+                this.active = false;
+                // Spawn Ground Burn
+                this.game.spawnGroundBurn(this.x, this.y, this.owner);
+                this.game.particles.spawnExplosion(this.x, this.y); // Fire effect
+                audioEngine.playExplosion();
+            }
+        }
 
-            // Helix Strand 1
-            const offset1 = Math.sin(t) * spiralRadius;
-            this.game.particles.particles.push({
-                x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset1,
-                y: this.y - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset1,
-                vx: 0, vy: 0, 
-                life: 0.2, decay: 0.1, 
-                size: 1.5, color: '#1E90FF', 
-                type: 'dot' 
-            });
+        if (this.isGroundBurn) {
+            this.lifeTime -= 1 * timeScale;
+            if (this.lifeTime <= 0) {
+                this.active = false;
+            }
+            // Logic for applying burn is in Game.js collision
+        }
 
-            // Helix Strand 2 (Opposite phase)
-            const offset2 = Math.sin(t + Math.PI) * spiralRadius;
-            this.game.particles.particles.push({
-                x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset2,
-                y: this.y - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset2,
-                vx: 0, vy: 0, 
-                life: 0.2, decay: 0.1, 
-                size: 1.5, color: '#00FFFF', 
-                type: 'dot'
-            });
+        if (this.isWorldSlash) {
+            // "Drag opponent along the projectile path"
+            // This is best handled in collision (Game.js), constantly resetting enemy position while overlapping?
+            // Or here, we can find overlapping enemies and pull them.
+            // But collision logic is in Game.js. We'll handle drag there.
+
+            // Visual particles for the slash
+            if (Math.random() < 0.3) {
+                this.game.particles.particles.push({
+                    x: this.x + (Math.random() - 0.5) * 40,
+                    y: this.y + (Math.random() - 0.5) * 40,
+                    vx: 0, vy: 0,
+                    life: 0.3, decay: 0.1,
+                    size: 3, color: '#DC143C', type: 'square'
+                });
+            }
+        }
+
+        // Rubber Fist Logic (Curve & Range)
+        if (this.isRubberFist) {
+            // 1. Calculate travel stats
+            const dx_total = this.x - this.startX;
+            const dy_total = this.y - this.startY;
+            const travel = Math.hypot(dx_total, dy_total);
+
+            // 2. Range Limit
+            if (travel >= (this.maxDist || 280)) {
+                this.active = false;
+                this.game.particles.spawn(this.x, this.y, '#ffccaa', 1); // Reduced from 3
+                return;
+            }
+
+            // 3. Apply Curve to Velocity (Arcing Path)
+            // Rotate velocity vector slightly each frame to create an arc
+            const curveSpeed = 0.05 * (this.curveSide || 0); // Radians per frame
+
+            // Rotate dx, dy
+            const cos = Math.cos(curveSpeed);
+            const sin = Math.sin(curveSpeed);
+
+            const newDx = this.dx * cos - this.dy * sin;
+            const newDy = this.dx * sin + this.dy * cos;
+
+            this.dx = newDx;
+            this.dy = newDy;
+
+            // Sync angle for rendering orientation
+            this.angle += curveSpeed;
+        }
+
+        // Zoltraak Logic (Gentle Homing + Range)
+        if (this.isZoltraak) {
+            // Range limit
+            const travel = Math.hypot(this.x - this.startX, this.y - this.startY);
+            if (travel >= (this.maxDist || 450)) {
+                this.active = false;
+                this.game.particles.spawn(this.x, this.y, '#4fc3f7', 2);
+                return;
+            }
+
+            // Gentle homing towards target
+            if (this.target && !this.target.isDead) {
+                const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+                let angleDiff = targetAngle - this.angle;
+
+                // Normalize angle difference
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+                // Apply gentle curve (limit turn rate)
+                const maxTurn = this.homingStrength || 0.03;
+                const turn = Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
+
+                this.angle += turn;
+
+                // Update velocity based on new angle
+                const speed = Math.hypot(this.dx, this.dy);
+                this.dx = Math.cos(this.angle) * speed;
+                this.dy = Math.sin(this.angle) * speed;
+            }
+
+            // Laser Trail: Spawn heavy glowing beam segments
+            // Laser Trail: Optimized for performance
+            if (this.lastX !== undefined) {
+                const distSq = (this.x - this.lastX) ** 2 + (this.y - this.lastY) ** 2;
+                if (distSq > 16) { // Only spawn if moved > 4px
+                    const decay = 0.04; // Much faster clearing
+
+                    // 1. Massive outer glow
+                    this.game.particles.spawnBeam(
+                        this.lastX, this.lastY,
+                        this.x, this.y,
+                        '#4fc3f7', 5, decay * 1.5
+                    );
+
+                    // 2. Focused blue beam
+                    this.game.particles.spawnBeam(
+                        this.lastX, this.lastY,
+                        this.x, this.y,
+                        '#81d4fa', 3, decay
+                    );
+
+                    // 3. White hot core
+                    this.game.particles.spawnBeam(
+                        this.lastX, this.lastY,
+                        this.x, this.y,
+                        '#ffffff', 2, decay * 1.2
+                    );
+
+                    this.lastX = this.x;
+                    this.lastY = this.y;
+                }
+            } else {
+                this.lastX = this.x;
+                this.lastY = this.y;
+            }
+
+            // Mana trail sparks (Optimized)
+            if (Math.random() < 0.1) {
+                this.game.particles.particles.push({
+                    x: this.x, y: this.y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 0.5, decay: 0.05,
+                    size: 2, color: '#ffffff', type: 'dot'
+                });
+            }
         }
     }
 
-draw(ctx) {
-        // --- QUINCY ARROW DRAWING ---
-        if (this.isQuincyArrow) {
+    draw(ctx) {
+        // --- HIT INDICATORS (Cosmetic Landing Zone Preview) ---
+        // Grenade: Faint red-filled circle at explosion zone
+        if (this.isGrenade && this.z > 0 && this.destX !== undefined) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 50, 50, 0.15)';
+            ctx.beginPath();
+            ctx.arc(this.destX, this.destY, this.explosionRadius, 0, Math.PI * 2);
+            ctx.fill();
+            // Subtle ring outline
+            ctx.strokeStyle = 'rgba(255, 50, 50, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Licht Regen Arrow: Blue stroke ring at landing spot
+        if (this.isLichtRegen && this.z > 0 && this.destX !== undefined) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(30, 144, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.destX, this.destY, 18, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // --- KING OF CURSES DRAWING ---
+        if (this.isFugaArrow) {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
 
+            // Outer flame glow
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#FF4500';
+
+            // Main arrow body (bigger)
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.moveTo(18, 0); // Bigger tip
+            ctx.lineTo(-12, 8);
+            ctx.lineTo(-8, 0);
+            ctx.lineTo(-12, -8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Inner hot core
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.moveTo(12, 0);
+            ctx.lineTo(-4, 4);
+            ctx.lineTo(-4, -4);
+            ctx.closePath();
+            ctx.fill();
+
+            // Flame trail (animated flickering)
+            const time = Date.now() / 50;
+            ctx.fillStyle = '#FF4500';
+            for (let i = 0; i < 5; i++) {
+                const flicker = Math.sin(time + i * 1.5) * 3;
+                const trailX = -15 - i * 6;
+                const trailY = flicker;
+                const size = 6 - i;
+                ctx.beginPath();
+                ctx.arc(trailX, trailY, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Sparks
+            ctx.fillStyle = '#FFFF00';
+            for (let i = 0; i < 3; i++) {
+                const sparkX = -10 - Math.random() * 20;
+                const sparkY = (Math.random() - 0.5) * 12;
+                ctx.beginPath();
+                ctx.arc(sparkX, sparkY, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+            // Spawn trailing fire particles in game
+            if (Math.random() < 0.4 && this.game) {
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 15,
+                    y: this.y - Math.sin(this.angle) * 15,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2 - 1,
+                    life: 0.5,
+                    decay: 0.05,
+                    size: 4 + Math.random() * 3,
+                    color: Math.random() > 0.5 ? '#FF4500' : '#FFD700',
+                    type: 'dot'
+                });
+            }
+
+            return;
+        }
+
+        if (this.isWorldSlash) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            const slashWidth = this.radius || 40; // Uses the radius property for width
+
+            // Glow effect
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = '#DC143C';
+
+            // Main slash crescent (single forward arc)
+            ctx.strokeStyle = '#DC143C';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+
+            ctx.beginPath();
+            // Draw a single clean crescent moving forward
+            ctx.moveTo(0, -slashWidth);
+            ctx.quadraticCurveTo(slashWidth * 0.4, 0, 0, slashWidth);
+            ctx.stroke();
+
+            // Inner bright edge
+            ctx.strokeStyle = '#FF6B6B';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, -slashWidth * 0.85);
+            ctx.quadraticCurveTo(slashWidth * 0.3, 0, 0, slashWidth * 0.85);
+            ctx.stroke();
+
+            // Core white flash
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, -slashWidth * 0.7);
+            ctx.quadraticCurveTo(slashWidth * 0.2, 0, 0, slashWidth * 0.7);
+            ctx.stroke();
+
+            ctx.restore();
+            return;
+        }
+
+        if (this.isGroundBurn) {
+            ctx.save();
+
+            // Calculate fade based on remaining lifetime
+            const fadeRatio = this.lifeTime / (this.maxLifeTime || 240);
+            ctx.globalAlpha = 0.4 + fadeRatio * 0.4;
+
+            // Outer glow ring
+            const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+            gradient.addColorStop(0, 'rgba(255, 200, 50, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.5)');
+            gradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Animated flame tongues
+            const time = Date.now() / 100;
+            ctx.fillStyle = '#FF4500';
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2 + time * 0.3;
+                const flicker = Math.sin(time * 2 + i) * 5;
+                const flameLen = (this.radius * 0.6) + flicker;
+                const fx = this.x + Math.cos(angle) * flameLen;
+                const fy = this.y + Math.sin(angle) * flameLen;
+
+                ctx.beginPath();
+                ctx.arc(fx, fy, 4 + Math.random() * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Central hot core
+            ctx.fillStyle = '#FFFF00';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#FF4500';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 8 + Math.sin(time * 3) * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sparks/Embers rising
+            ctx.fillStyle = '#FFAA00';
+            for (let i = 0; i < 3; i++) {
+                const sparkX = this.x + (Math.random() - 0.5) * this.radius;
+                const sparkY = this.y + (Math.random() - 0.5) * this.radius - Math.random() * 10;
+                ctx.beginPath();
+                ctx.arc(sparkX, sparkY, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+            return;
+        }
+
+        // --- QUINCY ARROW DRAWING ---
+        if (this.isQuincyArrow) {
+            ctx.save();
+            ctx.translate(this.x, this.y - this.z);
+
+            // If landed (no z height) and is Licht Regen, plant it vertically
+            if (this.isLichtRegen && this.z <= 0) {
+                ctx.rotate(Math.PI / 2);
+            } else {
+                ctx.rotate(this.angle);
+            }
+
             // 1. Intense Reishi Glow
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#00BFFF';
-            
-            // 2. The Arrow Shaft (Pure Energy Beam)
+
+            // 2. The Arrow Shaft (Pure Energy Beam) - REDUCED SIZE 50%
             // Core (White)
             ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(-15, -1.5, 30, 3);
-            
+            // Original: -15, -1.5, 30, 3 -> New: -7.5, -0.75, 15, 1.5
+            ctx.fillRect(-7.5, -0.75, 15, 1.5);
+
             // Outer Glow (Blue)
             ctx.strokeStyle = '#00BFFF';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1; // 2 -> 1
             ctx.beginPath();
-            ctx.moveTo(-15, 0);
-            ctx.lineTo(15, 0);
+            ctx.moveTo(-7.5, 0); // -15 -> -7.5
+            ctx.lineTo(7.5, 0);  // 15 -> 7.5
             ctx.stroke();
 
             // 3. The Cross-Guard (Quincy Cross shape at the back)
             ctx.strokeStyle = '#1E90FF';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1; // 2 -> 1
             ctx.beginPath();
             // Upper wing
-            ctx.moveTo(-5, 0);
-            ctx.lineTo(-12, -8);
+            ctx.moveTo(-2.5, 0);    // -5 -> -2.5
+            ctx.lineTo(-6, -4);     // -12, -8 -> -6, -4
             // Lower wing
-            ctx.moveTo(-5, 0);
-            ctx.lineTo(-12, 8);
+            ctx.moveTo(-2.5, 0);    // -5 -> -2.5
+            ctx.lineTo(-6, 4);      // -12, 8 -> -6, 4
             ctx.stroke();
 
             // 4. Arrow Head (Energy Diamond)
             ctx.fillStyle = '#E0FFFF';
             ctx.beginPath();
-            ctx.moveTo(10, 0);
-            ctx.lineTo(15, -3);
-            ctx.lineTo(22, 0); // Tip
-            ctx.lineTo(15, 3);
+            ctx.moveTo(5, 0);       // 10 -> 5
+            ctx.lineTo(7.5, -1.5);  // 15, -3 -> 7.5, -1.5
+            ctx.lineTo(11, 0);      // 22 -> 11
+            ctx.lineTo(7.5, 1.5);   // 15, 3 -> 7.5, 1.5
             ctx.closePath();
             ctx.fill();
 
             ctx.restore();
-            return; 
+            return;
         }
 
         if (this.isKunai) {
@@ -389,34 +792,60 @@ draw(ctx) {
             ctx.stroke();
         }
         else if (this.isGintoTrap) {
-            // Tiny Silver Tube (Capsule shape)
             ctx.save();
             ctx.translate(this.x, this.y);
-            
-            // Draw Ginto Tube
-            ctx.fillStyle = '#e0e0e0'; // Silver
-            ctx.strokeStyle = '#a0a0a0';
-            ctx.lineWidth = 1;
-            
-            // Vertical capsule
+
+            // 1. The Quincy Zeichen (Magic Seal on ground)
+            // Slowly rotate the seal
+            ctx.rotate(Date.now() * 0.002);
+
+            // Glow Effect
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00BFFF';
+            ctx.strokeStyle = '#00BFFF';
+            ctx.lineWidth = 2;
+
+            // Draw 5-pointed Quincy Star (The Trap Radius)
             ctx.beginPath();
-            ctx.roundRect(-3, -6, 6, 12, 3);
-            ctx.fill();
+            const r = this.radius * 1.8; // Visual radius slightly larger than hitbox
+            for (let i = 0; i < 5; i++) {
+                // Outer points
+                const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+
+                // Inner connecting lines (Pentagram style)
+                const nextIndex = (i + 2) % 5;
+                const nextAngle = (Math.PI * 2 * nextIndex) / 5 - Math.PI / 2;
+                ctx.lineTo(Math.cos(nextAngle) * r, Math.sin(nextAngle) * r);
+            }
+            ctx.closePath();
             ctx.stroke();
-            
-            // Energy liquid inside (Blue)
-            ctx.fillStyle = '#00BFFF';
+
+            // 2. The Ginto Tube (Physical Object in Center)
+            // Counter-rotate so the tube stays upright relative to the seal
+            ctx.rotate(-Date.now() * 0.002);
+
+            // Silver Tube Body
+            ctx.fillStyle = '#C0C0C0'; // Silver
+            ctx.shadowColor = '#FFFFFF';
             ctx.beginPath();
-            ctx.roundRect(-1.5, -3, 3, 6, 1);
+            ctx.rect(-3, -8, 6, 16); // Small capsule/tube
             ctx.fill();
-            
-            // Range indicator (Very faint)
-            ctx.strokeStyle = 'rgba(30, 144, 255, 0.15)';
-            ctx.lineWidth = 1;
+
+            // Liquid Reishi inside (Blue strip)
+            ctx.fillStyle = '#00FFFF';
             ctx.beginPath();
-            ctx.arc(0, 0, 15, 0, Math.PI * 2); // Visual range only
-            ctx.stroke();
-            
+            ctx.rect(-1, -6, 2, 12);
+            ctx.fill();
+
+            // Metallic Glint
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(-3, -8, 6, 16);
+
             ctx.restore();
         }
         else if (this.isSniperShot) {
@@ -476,63 +905,82 @@ draw(ctx) {
 
             ctx.restore();
         }
-        // --- QUINCY GINTO TRAP (DEF SKILL) ---
-        else if (this.isGintoTrap) {
+        else if (this.isRubberFist) {
+            // Draw Arm Curve (Global Space)
             ctx.save();
-            ctx.translate(this.x, this.y);
 
-            // 1. The Quincy Zeichen (Magic Seal on ground)
-            // Slowly rotate the seal
-            ctx.rotate(Date.now() * 0.002);
+            // Calculate Control Point for Curve
+            // Midpoint
+            const midX = (this.startX + this.x) / 2;
+            const midY = (this.startY + this.y) / 2;
 
-            // Glow Effect
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00BFFF';
-            ctx.strokeStyle = '#00BFFF';
-            ctx.lineWidth = 2;
+            // Vector from Start to End
+            const dx = this.x - this.startX;
+            const dy = this.y - this.startY;
+            const dist = Math.hypot(dx, dy);
 
-            // Draw 5-pointed Quincy Star (The Trap Radius)
+            // Perpendicular Vector (normalized)
+            // Right-hand normal: (dy, -dx) or (-dy, dx)?
+            // Let's use (-dy, dx) normalized * curveAmount
+            const nx = -dy / (dist || 1);
+            const ny = dx / (dist || 1);
+
+            // Curve amount based on "curveSide" and distance
+            // We want a nice bow. 
+            // The projectile physics curves it, but the arm needs to "fit" the arc.
+            // Since the projectile IS arc-ing, the straight line Start->End cuts the corner.
+            // We want to bulge OUT same side as curve.
+            // curveSide = 1 (Right). Normal should be Right.
+            // (-dy, dx) is Right.
+            const curveAmt = (this.curveSide || 0) * (dist * 0.2); // Curvature scales with length
+
+            const cpX = midX + nx * curveAmt;
+            const cpY = midY + ny * curveAmt;
+
+            // Draw Arm Skin
+            ctx.strokeStyle = '#ffccaa';
+            ctx.lineWidth = 3; // Thinner arm (Reduced from 4)
+            ctx.lineCap = 'round';
             ctx.beginPath();
-            const r = this.radius * 1.8; // Visual radius slightly larger than hitbox
-            for (let i = 0; i < 5; i++) {
-                // Outer points
-                const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
-                const x = Math.cos(angle) * r;
-                const y = Math.sin(angle) * r;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-                
-                // Inner connecting lines (Pentagram style)
-                const nextIndex = (i + 2) % 5;
-                const nextAngle = (Math.PI * 2 * nextIndex) / 5 - Math.PI / 2;
-                ctx.lineTo(Math.cos(nextAngle) * r, Math.sin(nextAngle) * r);
-            }
-            ctx.closePath();
+            ctx.moveTo(this.startX, this.startY);
+            ctx.quadraticCurveTo(cpX, cpY, this.x, this.y);
             ctx.stroke();
 
-            // 2. The Ginto Tube (Physical Object in Center)
-            // Counter-rotate so the tube stays upright relative to the seal
-            ctx.rotate(-Date.now() * 0.002);
-
-            // Silver Tube Body
-            ctx.fillStyle = '#C0C0C0'; // Silver
-            ctx.shadowColor = '#FFFFFF';
+            // Draw Inner Muscle/Shadow
+            ctx.strokeStyle = '#eebba0';
+            ctx.lineWidth = 1; // Thinner muscle (Reduced from 1.5)
             ctx.beginPath();
-            ctx.rect(-3, -8, 6, 16); // Small capsule/tube
-            ctx.fill();
+            ctx.moveTo(this.startX, this.startY);
+            ctx.quadraticCurveTo(cpX, cpY, this.x, this.y);
+            ctx.stroke();
 
-            // Liquid Reishi inside (Blue strip)
-            ctx.fillStyle = '#00FFFF';
+            // Draw FIST at tip (Local Space transform)
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            // Fist Shape
+            ctx.fillStyle = '#ffccaa';
+            ctx.shadowBlur = 3;
+            ctx.shadowColor = '#d95a00';
             ctx.beginPath();
-            ctx.rect(-1, -6, 2, 12);
+            ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2); // Thinner fist (Reduced from 0.8)
             ctx.fill();
+            ctx.shadowBlur = 0;
 
-            // Metallic Glint
-            ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(-3, -8, 6, 16);
+            // Knuckles
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = 0.5;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.arc(1.5, -1.5 + i * 1.5, 1, 0, Math.PI * 2); // Thinner knuckles
+                ctx.fill();
+            }
 
             ctx.restore();
+        }
+        else if (this.isZoltraak) {
+            // Zoltraak: No orb-tip needed. 
+            // The entire laser body is handled by beam particles in update()
         }
         else {
             // Generic Fallback

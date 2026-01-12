@@ -1,59 +1,85 @@
 # Ball Battler - 1v1 Fighter Ball Auto Battler
 
-A modular, scalable auto-battler game engine featuring physics-based combat between unique fighter characters.
+A modular, scalable auto-battler game engine featuring physics-based combat between unique fighter characters. Watch as two balls collide, unleash powerful abilities, and battle for supremacy in a shrinking arena.
 
 ## Project Structure
 
 ```
 ball-battler/
 ├── index.html              # Entry point (Main UI + Canvas)
-├── style.css               # Extracted CSS styles
+├── style.css               # Main application styles
 │
 └── src/
     ├── core/
     │   ├── Game.js         # Main Game Controller
-    │   └── Constants.js    # WIDTH, HEIGHT, BALL_RADIUS
+    │   ├── Constants.js    # WIDTH, HEIGHT, BALL_RADIUS
+    │   └── AbilityRegistry.js # Central factory for abilities
     │
     ├── systems/
-    │   ├── Physics.js      # Physics calculations (preserved logic)
+    │   ├── Physics.js      # Physics calculations & collision detection
     │   ├── Audio.js        # AudioEngine (procedural sound generation)
-    │   └── Particles.js    # ParticleSystem for visual effects
+    │   ├── Particles.js    # ParticleSystem for high-fidelity visual effects
+    │   ├── Renderer.js     # Component-based rendering system
+    │   ├── CombatText.js   # Floating text pop-ups (Damage, Stuns, etc.)
+    │   └── CollisionHandler.# Logic for resolving entity/projectile hits
     │
     ├── entities/
-    │   ├── Fighter.js      # Base Fighter class with ability system
-    │   └── Projectile.js   # Projectile entity (bullets, kunai, grenades)
+    │   ├── Fighter.js      # Base Fighter class with state management
+    │   └── Projectile.js   # Projectile entity (bullets, arrows, bolts, missiles)
     │
     ├── abilities/
     │   ├── Ability.js      # Base Ability class
-    │   ├── MeleeAbility.js # Sword Master melee attacks
-    │   ├── ProjectileAbility.js # Burst fire, kunai, grenades
-    │   ├── RaycastAbility.js # Thunder Mage lightning
-    │   ├── DashAbility.js  # Dash assault, retreat, flash barrage
-    │   ├── PassiveAbility.js # Parry, evasion, static, shield, momentum
-    │   └── SpecialAbility.js # Wall slam and other unique abilities
+    │   ├── AxeAbility.js   # Axeman's heavy swings and executions
+    │   ├── BallistaAbility.js # Ballista's bolts and barricades
+    │   ├── DashAbility.js  # Teleportation and dash-based strikes
+    │   ├── DivineBrawlerAbility.js # Black Flash and Boogie Woogie
+    │   ├── DivineGeneralAbility.js # Adaptation and Mahoraga wheel
+    │   ├── MeleeAbility.js # Close-quarters combat logic
+    │   ├── PassiveAbility.js # Shielding, evasion, and momentum logic
+    │   ├── ProjectileAbility.# Ranged projectile logic (guns, grenades)
+    │   ├── QuincyAbility.js # Predictive arrows and energy traps
+    │   ├── RaycastAbility.js # Chain lightning and continuous lasers
+    │   ├── SniperAbility.js # Long-range shots and traps
+    │   └── SpecialAbility.js # Wall slams and environment interactions
     │
     └── data/
-        └── fighters.js     # Fighter configuration database
+        └── fighters.js     # Fighter configuration database (Stats & Skill balance)
 ```
 
 ## Features
 
-- **6 Unique Fighters**: Sword Master, Thundermage, Rifleman, Shieldbearer, Yellow Flash, Cyborg
-- **Ability System**: Strategy pattern for modular skill implementation
-- **Physics Engine**: Preserved collision detection and resolution
-- **Procedural Audio**: All sounds generated via Web Audio API
-- **Arena Shrinking**: Dynamic arena size reduction during long battles
+- **12 Unique Fighters**: A diverse roster ranging from the high-speed **Yellow Flash** to the massive **Ballista**.
+- **Dynamic Ability System**: A deep Strategy-pattern implementation allowing for complex, reactive skills like teleportation, projectile hijacking, and healing.
+- **Advanced Physics**: Precise circular and ray-based collision detection with elastic reflections and mass-based knockback.
+- **High-Fidelity Visuals**: A robust particle system featuring glowing trails, razor-sharp beam effects, and stylized "Sakuga" bursts.
+- **Procedural Soundscape**: An audio engine that generates impacts, zaps, and explosions dynamically via the Web Audio API.
+- **Interactive UI**: Real-time HUD displaying HP, skill cooldowns, and a detailed character select screen.
+- **Arena Shrinking**: Dynamic physical boundary reduction that forces engagement by constricting the playable area over time.
 
-## Fighters
+## Lineup
 
-| Fighter | HP | Mass | Speed | Attack | Defense | Ultimate |
-|---------|-----|------|-------|--------|---------|----------|
-| Sword Master | 100 | 1.0 | 4.5 | Melee Passive | Parry (15%) | Dash Assault |
-| Thundermage | 100 | 2.0 | 4.0 | Raycast Lightning | Static Stun | Double Zap |
-| Rifleman | 100 | 1.2 | 4.0 | Burst Fire | Retreat | Grenade |
-| Shieldbearer | 100 | 1.8 | 4.0 | Momentum Passive | Shield Deflect | Wall Slam |
-| Yellow Flash | 100 | 1.0 | 5.0 | Kunai Mark | Evasion | Flash Barrage |
-| Cyborg | 75 | 1.4 | 4.5 | Laser Beam | Force Field | Missile Barrage |
+| Fighter | Role | Attack | Defense | Ultimate |
+|---------|------|--------|---------|----------|
+| **Sword Master** | Duelist | Melee Slash | Parry | Dash Assault |
+| **Thundermage** | Mage | Lightning Bolt | Static Field | Double Zap |
+| **Rifleman** | Marksman | Burst Fire | Tactical Retreat | Frag Grenade |
+| **Shieldbearer** | Tank | Momentum Strike | Greatshield | Wall Slam |
+| **Yellow Flash** | Assassin | Flying Raijin | Substitution | Flash Barrage |
+| **Cyborg** | Artillery | Plasma Laser | Energy Shield | Missile Swarm |
+| **Sniper** | Specialist | Sniper Shot | Claymore | Steady Aim |
+| **Axeman** | Juggernaut | Heavy Swing | Berserker Rage | Execution |
+| **Ballista** | Defender | Heavy Bolt | Gate Barrier | Siege Mode |
+| **Divine General**| Adapter | Mahoraga Wheel | Healing Stance | Perfect Adaptation|
+| **Sorcerer Brawler**| Fighter | Black Flash | Boogie Woogie | Pure Focus |
+| **Spirit Archer** | Ranger | Heilig Pfeil | Hirenkyaku | Licht Regen |
+
+## Mechanics
+
+- **Status Effects**: Fighters can apply **STUN**, **BLEED**, **SLOW**, and more.
+- **Unblockable Damage**: Certain high-tier abilities (like Ninja's Rasengan) bypass shields and parries.
+- **Knockback Physics**: Impact force is determined by mass ratios and movement speed, enabling "Wall Slams".
+- **Chain Reactions**: Thunderbolts bounce between targets, while Ninja's kunai create lightning traps.
+- **Scaling Combat**: Arena boundaries physically shrink every 15 seconds, constricting the battle space and forcing intense close-quarters engagement.
 
 ## Running the Game
 
@@ -64,32 +90,9 @@ ball-battler/
    python -m http.server 8000
    ```
 
-2. Open `http://localhost:8000` in your browser
-
-3. Select fighters for both players and click "FIGHT!"
-
-## Adding New Fighters
-
-1. Add fighter data to `src/data/fighters.js`:
-   ```javascript
-   NEW_FIGHTER: {
-       name: "Fighter Name",
-       color: "#hexcolor",
-       hp: 100,
-       mass: 1.0,
-       speed: 4.0,
-       rotationSpeed: 0.12,
-       skills: {
-           atk: { type: "ABILITY_TYPE", /* params */ },
-           def: { type: "ABILITY_TYPE", /* params */ },
-           ult: { type: "ABILITY_TYPE", cooldown: 180, /* params */ }
-       }
-   }
-   ```
-
-2. Create new ability classes in `src/abilities/` if needed
-
-3. Register abilities in `Fighter.createAbilities()` method
+2. Open `localhost` in your browser.
+3. Select your fighters (Left-click for P1, Right-click for P2).
+4. Click **FIGHT!** to start the match.
 
 ## License
 

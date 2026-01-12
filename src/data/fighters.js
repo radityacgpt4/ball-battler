@@ -45,7 +45,7 @@ export const FIGHTER_TYPES = {
     THUNDER_MAGE: {
         name: "Thundermage",
         color: "#4ecdc4",
-        hp: 100, mass: 2.0, speed: 4, rotationSpeed: 0.12,
+        hp: 100, mass: 1.5, speed: 4, rotationSpeed: 0.12,
         skills: {
             atk: {
                 name: "Lightning Bolt",
@@ -53,9 +53,9 @@ export const FIGHTER_TYPES = {
                 type: "RAYCAST",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 90,
+                cooldown: 75,
                 range: 800,
-                damage: 18,
+                damage: 15,
                 bounces: 3,
                 damageDecayWall: 0.8,
                 damageDecayShield: 0.9
@@ -76,8 +76,8 @@ export const FIGHTER_TYPES = {
                 type: "DOUBLE_ZAP",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 160,
-                angleSpread: 0.15
+                cooldown: 120,
+                angleSpread: 0.18
             }
         }
     },
@@ -119,7 +119,7 @@ export const FIGHTER_TYPES = {
                 cooldown: 60,
                 damage: 20,
                 explosionRadius: 80,
-                airTime: 60,
+                airTime: 45,
                 maxDistance: 400,
                 radius: 6
             }
@@ -128,7 +128,7 @@ export const FIGHTER_TYPES = {
     SHIELDBEARER: {
         name: "Shieldbearer",
         color: "#8b5cf6",
-        hp: 100, mass: 1.8, speed: 4, rotationSpeed: 0.10,
+        hp: 100, mass: 1.6, speed: 4, rotationSpeed: 0.10,
         skills: {
             atk: {
                 name: "Momentum Strike",
@@ -139,7 +139,7 @@ export const FIGHTER_TYPES = {
                 maxSpeed: 8,
                 speedGain: 1,
                 damagePerTier: 5,
-                knockback: 15
+                knockback: 12
             },
             def: {
                 name: "Greatshield",
@@ -276,7 +276,7 @@ export const FIGHTER_TYPES = {
                 projectileSpeed: 21,
                 projectileRadius: 5,
                 ultProjectileRadius: 8,
-                recoilForce: 25,
+                recoilForce: 22,
                 laserMaxDist: 800
             },
             def: {
@@ -306,7 +306,7 @@ export const FIGHTER_TYPES = {
     AXEMAN: {
         name: "Axeman",
         color: "#800000",
-        hp: 100, mass: 1.5, speed: 4.2, rotationSpeed: 0.13,
+        hp: 100, mass: 1.4, speed: 4.2, rotationSpeed: 0.13,
         skills: {
             atk: {
                 name: "Heavy Swing",
@@ -351,7 +351,7 @@ export const FIGHTER_TYPES = {
     BALLISTA: {
         name: "Ballista",
         color: "#8B4513",
-        hp: 100, mass: 2, speed: 3.5, rotationSpeed: 0.1,
+        hp: 100, mass: 1.6, speed: 3.5, rotationSpeed: 0.1,
         skills: {
             atk: {
                 name: "Heavy Bolt",
@@ -395,7 +395,7 @@ export const FIGHTER_TYPES = {
     DIVINE_GENERAL: {
         name: "Divine General",
         color: "#ffffff",
-        hp: 100, mass: 1.3, speed: 4.8, rotationSpeed: 0.18,
+        hp: 100, mass: 1.6, speed: 4.8, rotationSpeed: 0.18,
         skills: {
             atk: {
                 name: "Mahoraga Wheel",
@@ -435,7 +435,7 @@ export const FIGHTER_TYPES = {
     DIVINE_BRAWLER: {
         name: "Sorcerer Brawler",
         color: "#4B0082",
-        hp: 100, mass: 1.6, speed: 5.4, rotationSpeed: 0.15,
+        hp: 100, mass: 1.5, speed: 5.4, rotationSpeed: 0.15,
         skills: {
             atk: {
                 name: "Black Flash",
@@ -451,8 +451,8 @@ export const FIGHTER_TYPES = {
                 critMultLow: 2,
                 hpThresholdHigh: 0.8,
                 hpThresholdMid: 0.5,
-                baseKnockback: 25,
-                knockbackPerMult: 2,
+                baseKnockback: 12,
+                knockbackPerMult: 0,
                 baseAttackCooldown: 20,
                 focusAttackCooldown: 10
             },
@@ -465,7 +465,7 @@ export const FIGHTER_TYPES = {
                 cooldown: 150,
                 projectileCooldown: 120,
                 fallbackCooldown: 240,
-                detectionRadius: 100,
+                detectionRadius: 120,
                 approachThreshold: 0.7,
                 deflectLifetime: 180
             },
@@ -494,8 +494,8 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 60,
                 damage: 8,
-                projectileSpeed: 20,
-                perfectLockSpeed: 25,
+                projectileSpeed: 18,
+                perfectLockSpeed: 20,
                 lockChargeRate: 3,
                 lockDecayRate: 0.92,
                 perfectLockThreshold: 100,
@@ -520,21 +520,157 @@ export const FIGHTER_TYPES = {
                 blinkDistance: 150,
                 trapDuration: 180,
                 trapStunDuration: 30,
-                trapRadius: 15
+                trapRadius: 8
             },
             ult: {
                 name: "Licht Regen",
-                desc: "Rains a cone of piercing light arrows.",
+                desc: "Rains piercing arrows from above.",
                 type: "LICHT_REGEN",
                 isPassive: false,
                 // Configurable properties
+                cooldown: 200,
+                damage: 4,
+                arrowCount: 6,
+                stunDuration: 30, // 0.5 sec stun per arrow
+                arrowSpeed: 18, // Falling speed
+                arrowRadius: 2,
+                rainHeight: 150, // Initial z height
+                rainSpread: 120 // How far arrows spread around target
+            }
+        }
+    },
+    KING_OF_CURSES: {
+        name: "King of Curses",
+        color: "#DC143C", // Crimson/Blood Red
+        hp: 100, mass: 1.5, speed: 5.0, rotationSpeed: 0.16,
+        skills: {
+            atk: {
+                name: "Cleave",
+                desc: "Relentless cuts that shred enemies within the Domain.",
+                type: "DISMANTLE_SLASH",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 6, // 10 hits per second (10 DPS)
+                damage: 1,
+                range: 125
+            },
+            def: {
+                name: "Domain Expansion: Malevolent Shrine",
+                desc: "A domain that slows and stuns enemies who stay too long.",
+                type: "DOMAIN_EXPANSION",
+                isPassive: true,
+                // Configurable properties
+                domainRadius: 125, // Diameter 250
+                slowAmount: 0.2, // 20% slow
+                stunDelay: 60, // 1 second before stun
+                stunDuration: 60 // 1 second stun
+            },
+            ult: {
+                name: "World Cutting Slash",
+                desc: "Transforms attack into a dimension-cutting slash.",
+                type: "WORLD_SLASH_MODE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                duration: 600,
+                slashDamage: 9,
+                slashSpeed: 21,
+                slashFireRate: 60,
+                slashWidth: 90, // Parabolic width
+                dragStrength: 0.2 // Drag factor
+            }
+        }
+    },
+    RUBBER_CAPTAIN: {
+        name: "Rubber Captain",
+        color: "#ff4500", // Orange/Red
+        hp: 100, mass: 1.2, speed: 5.2, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Gomu Gomu Gatling",
+                desc: "Rapid fire punches that keep enemies at bay.",
+                type: "GATLING_PUNCH",
+                isPassive: false,
+                // Configurable properties
+                chargeTime: 15,
+                duration: 120,
+                fistDamage: 1,
+                fireRate: 3,
+                range: 240,
+                spread: 0.25,
+                cooldown: 120
+            },
+            def: {
+                name: "Balloon",
+                desc: "Inflates body to deflect projectiles and bounce melee attackers.",
+                type: "BALLOON_DEFLECT",
+                isPassive: true, // It's an active toggle usually, but config style? 
+                // Config:
+                isPassive: false, // Auto-cast when ready
+                cooldown: 180,
+                duration: 120,
+                inflateSize: 1.5
+            },
+            ult: {
+                name: "Conqueror Haki",
+                desc: "Stuns and knocks back all nearby enemies.",
+                type: "CONQUEROR_HAKI",
+                isPassive: false,
+                // Configurable properties
                 cooldown: 300,
+                radius: 350,
+                stunDuration: 120, // 2 seconds
+                knockback: 25
+            }
+        }
+    },
+    MAGE_OF_ERA: {
+        name: "Mage of the Era",
+        color: "#4fc3f7", // Light blue
+        hp: 90, mass: 0.9, speed: 5.2, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Zoltraak",
+                desc: "Ordinary offensive magic. Heavy high-speed mana beams.",
+                type: "ZOLTRAAK",
+                isPassive: false,
+                // Configurable properties
                 damage: 5,
-                arrowCount: 8,
-                coneAngle: Math.PI / 3,
-                arrowSpeed: 22,
-                arrowRadius: 3,
-                angleVariation: 0.1
+                speed: 50,
+                range: 500,
+                cooldown: 180, // Full cooldown after burst finishes
+                homingStrength: 0.018,
+                aimError: 0.55,
+                recoil: 3.5,
+                burstCount: 4,  // Firing 4 times
+                burstDelay: 6   // Frames between shots
+            },
+            def: {
+                name: "Hexagonal Barrier",
+                desc: "A modular magic shield that can shatter on melee attackers.",
+                type: "HEX_BARRIER",
+                isPassive: true,
+                // Configurable properties
+                arcAngle: 2,
+                shieldRadius: 10,
+                shatterChance: 0.5,
+                shatterDamage: 5
+            },
+            ult: {
+                name: "The Great Void",
+                desc: "Creates a blackhole that pulls enemies and slows movement.",
+                type: "BLACKHOLE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 360,
+                duration: 240,
+                radius: 120,
+                pullStrength: 1.8,
+                dotDamage: 1,
+                dotRate: 10,
+                launchSpeed: 4,  // Initial fire velocity
+                friction: 0.95,  // Deceleration speed (1 = none)
+                growthSpeed: 0.04 // Speed of "birth" animation
             }
         }
     }

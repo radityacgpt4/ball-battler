@@ -105,7 +105,11 @@ export class BallisticBehavior {
     }
 
     update(p, timeScale) {
-        // Z-axis physics
+        // Horizontal movement (x/y)
+        p.x += p.dx * timeScale;
+        p.y += p.dy * timeScale;
+
+        // Z-axis physics (vertical arc)
         p.z = p.z || 0;
         p.vz = p.vz || 0;
 

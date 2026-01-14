@@ -22,6 +22,7 @@ export class SniperAtkAbility extends Ability {
         this.damage = config.damage || 12;
         this.stunDuration = config.stun || 60;
         this.projectileSpeed = config.projectileSpeed || 20;
+        this.ultProjectileSpeed = config.ultProjectileSpeed || 25; // Faster during ult
         this.projectileRadius = config.projectileRadius || 5;
         this.ultProjectileRadius = config.ultProjectileRadius || 8;
         this.recoilForce = config.recoilForce || 5;
@@ -86,12 +87,14 @@ export class SniperAtkAbility extends Ability {
 
         fighter.cooldowns.atk = this.cooldown;
 
+        const speed = fighter.activeEffects.ultActive ? this.ultProjectileSpeed : this.projectileSpeed;
+
         const p = new Projectile(
             fighter,
             fighter.x + Math.cos(fighter.angle) * 20,
             fighter.y + Math.sin(fighter.angle) * 20,
             fighter.angle,
-            this.projectileSpeed,
+            speed,
             this.damage,
             game
         );

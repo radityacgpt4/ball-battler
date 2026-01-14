@@ -2,6 +2,7 @@
  * Projectile Behaviors (Component System)
  * Defines isolated, reusable behaviors for projectiles.
  */
+import { audioEngine } from '../systems/Audio.js';
 
 // BASE COMPONENT INTERFACE
 // class Behavior {
@@ -133,7 +134,7 @@ export class BallisticBehavior {
                 p.game.particles.spawnEffect(p.impactParticle, p.x, p.y);
             }
             if (p.impactSound) {
-                p.game.audioEngine.play(p.impactSound);
+                audioEngine.play(p.impactSound);
             }
         }
 
@@ -452,17 +453,34 @@ export class MineBehavior {
 
 export class SniperTrailBehavior {
     update(p, timeScale) {
-        // Frequent small sparks
+        const isUlt = p.isSniperUltShot || p.isUnblockable;
+        const trailColor = isUlt ? '#00FF88' : '#FF4444';
+        const glowColor = isUlt ? '#00FFAA' : '#FF6666';
+
+        // Main trail spark (40% chance per frame - lightweight)
         if (Math.random() < 0.4) {
             p.game.particles.particles.push({
-                x: p.x - Math.cos(p.angle) * 15, // Trail behind
-                y: p.y - Math.sin(p.angle) * 15,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
-                life: 0.4, decay: 0.1,
-                size: Math.random() < 0.5 ? 2 : 1, // Small crisp pixels
-                color: '#00FF00', // Neon Green
+                x: p.x - Math.cos(p.angle) * 12,
+                y: p.y - Math.sin(p.angle) * 12,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: (Math.random() - 0.5) * 1.5,
+                life: 0.35, decay: 0.12,
+                size: isUlt ? 3 : 2,
+                color: trailColor,
                 type: 'square'
+            });
+        }
+
+        // Secondary glow trail (20% chance - adds depth without heavy load)
+        if (Math.random() < 0.2) {
+            p.game.particles.particles.push({
+                x: p.x - Math.cos(p.angle) * 8,
+                y: p.y - Math.sin(p.angle) * 8,
+                vx: 0, vy: 0,
+                life: 0.2, decay: 0.15,
+                size: isUlt ? 4 : 2,
+                color: glowColor,
+                type: 'dot'
             });
         }
     }
@@ -520,7 +538,7 @@ export class KunaiBehavior {
             p.ignoreBounds = true; // Tell other systems not to kill it
 
             if (!p.hasPlayedStickSound) {
-                p.game.audioEngine.playHit();
+                audioEngine.playHit();
                 p.hasPlayedStickSound = true;
             }
         }

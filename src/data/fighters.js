@@ -53,11 +53,11 @@ export const FIGHTER_TYPES = {
                 type: "RAYCAST",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 75,
+                cooldown: 60,
                 range: 800,
                 damage: 15,
-                bounces: 3,
-                damageDecayWall: 0.8,
+                bounces: 2,
+                damageDecayWall: 0.9,
                 damageDecayShield: 0.9
             },
             def: {
@@ -76,8 +76,8 @@ export const FIGHTER_TYPES = {
                 type: "DOUBLE_ZAP",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 120,
-                angleSpread: 0.18
+                cooldown: 100,
+                angleSpread: 0.20
             }
         }
     },
@@ -223,11 +223,11 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 120,
                 duration: 180,
-                chargeTime: 150,
+                chargeTime: 120,
                 damage: 1,
                 range: 2000,
-                rotationSlow: 0.1,
-                speedSlow: 0.25,
+                rotationSlow: 0.15,
+                speedSlow: 0.50,
                 beamWidth: 14,
                 coreWidth: 5,
                 tickRate: 3,
@@ -272,8 +272,9 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 90,
                 damage: 12,
-                stun: 60,
+                stun: 45,
                 projectileSpeed: 21,
+                ultProjectileSpeed: 24, // Faster during Steady Aim
                 projectileRadius: 5,
                 ultProjectileRadius: 8,
                 recoilForce: 22,
@@ -528,14 +529,15 @@ export const FIGHTER_TYPES = {
                 type: "LICHT_REGEN",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 200,
+                cooldown: 180,
                 damage: 4,
                 arrowCount: 6,
-                stunDuration: 30, // 0.5 sec stun per arrow
-                arrowSpeed: 18, // Falling speed
+                stunDuration: 45,
+                arrowSpeed: 22,
                 arrowRadius: 2,
-                rainHeight: 150, // Initial z height
-                rainSpread: 120 // How far arrows spread around target
+                rainHeight: 150,
+                rainSpread: 120,
+                plantedArrowLifeTime: 120
             }
         }
     },
@@ -572,12 +574,12 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 120,
-                duration: 600,
-                slashDamage: 9,
-                slashSpeed: 21,
+                duration: 360,
+                slashDamage: 8,
+                slashSpeed: 18,
                 slashFireRate: 60,
-                slashWidth: 90, // Parabolic width
-                dragStrength: 0.2 // Drag factor
+                slashWidth: 120, // Parabolic width
+                dragStrength: 0.15 // Drag factor
             }
         }
     },

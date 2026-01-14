@@ -95,9 +95,9 @@ export class ZoltraakAbility extends Ability {
         fighter.dx -= Math.cos(aimAngle) * recoilForce;
         fighter.dy -= Math.sin(aimAngle) * recoilForce;
 
-        // Spawn projectile
-        const startX = fighter.x + Math.cos(aimAngle) * (fighter.radius + 15);
-        const startY = fighter.y + Math.sin(aimAngle) * (fighter.radius + 15);
+        // Spawn projectile at Magic Circle position
+        const startX = fighter.x + Math.cos(aimAngle) * (fighter.radius - 15);
+        const startY = fighter.y + Math.sin(aimAngle) * (fighter.radius - 15);
 
         const p = new Projectile(fighter, startX, startY, aimAngle, this.speed, this.damage, game);
         p.target = target;

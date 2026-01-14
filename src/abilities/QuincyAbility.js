@@ -288,6 +288,7 @@ export class QuincyUltAbility extends Ability {
                 this.stunDuration = config.stunDuration || 30;
                 this.rainHeight = config.rainHeight || 150;
                 this.rainSpread = config.rainSpread || 120;
+                this.plantedArrowLifeTime = config.plantedArrowLifeTime || 60; // NEW: Configurable planted duration
         }
 
         update(fighter, context) {

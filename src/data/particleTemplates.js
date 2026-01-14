@@ -66,8 +66,9 @@ export const PARTICLE_TEMPLATES = {
     // ============================================
     'zoltraakImpact': {
         layers: [
-            { type: 'shockwave', color: '#4fc3f7', maxRadius: 60, life: 0.6, lineWidth: 4 },
-            { type: 'burst', count: 8, color: '#ffffff', speed: { min: 2, max: 10 }, life: 0.5, shape: 'dot' }
+            { type: 'shockwave', color: '#4fc3f7', maxRadius: 45, life: 0.4, lineWidth: 3 }, // Quick shockwave
+            { type: 'burst', count: 10, color: ['#4fc3f7', '#87CEEB', '#ffffff'], speed: { min: 4, max: 12 }, life: 0.5, shape: 'dot' }, // Cyan sparks
+            { type: 'burst', count: 4, color: '#E0FFFF', speed: { min: 1, max: 3 }, life: 0.3, shape: 'flash', size: 6 } // Core flash
         ]
     },
 

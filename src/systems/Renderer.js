@@ -739,10 +739,8 @@ export class Renderer {
             ctx.fill();
         });
 
-        // Quincy - Spirit Bow (Energia)
+        // Quincy - Ginrei Kojaku (Spirit Bow - Anime Accurate)
         this.registerAccessory('QUINCY', (ctx, fighter) => {
-            const bowDist = fighter.radius + 5;
-
             ctx.save();
 
             // Decouple from fighter rotation and aim at target
@@ -752,73 +750,117 @@ export class Renderer {
                 : fighter.angle;
             ctx.rotate(aimAngle);
 
-            // Glow effect based on lock progress
+            // PERSPECTIVE TRANSFORM: Squash X (depth), Scale Y (width)
+            // This makes it look like a vertical bow facing the target
+            ctx.scale(0.3, 0.9);
+
+            const bowDist = fighter.radius + 75;
             const lockRatio = (fighter.lockProgress || 0) / 100;
 
-            // Main bow arc (translucent blue energy)
-            ctx.strokeStyle = '#1E90FF';
-            ctx.lineWidth = 3 + lockRatio * 2;
-
-            // Optimized Bow Glow (Zero-Blur)
+            // === GINREI KOJAKU DESIGN ===
+            // 1. Concentric Reishi Rings (Background glow)
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.15 + lockRatio * 0.15;
             ctx.strokeStyle = '#00BFFF';
-            ctx.lineWidth = (3 + lockRatio * 2) * 2;
-            ctx.globalAlpha = 0.3 + lockRatio * 0.3;
+            for (let i = 0; i < 3; i++) {
+                ctx.lineWidth = 2 - i * 0.5;
+                ctx.beginPath();
+                ctx.arc(bowDist + 5, 0, 35 + i * 8, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // 2. Main Bow Arms (Energy Limbs - Flaming Translucent)
+            ctx.globalAlpha = 0.85 + lockRatio * 0.15;
+
+            // Outer glow
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = '#1E90FF';
+            ctx.lineWidth = 8;
+            ctx.globalAlpha = 0.3;
             ctx.beginPath();
-            ctx.arc(bowDist, 0, 22, -Math.PI * 0.45, Math.PI * 0.45);
+            ctx.moveTo(bowDist, -30);
+            ctx.quadraticCurveTo(bowDist + 25, -15, bowDist + 30, 0);
+            ctx.quadraticCurveTo(bowDist + 25, 15, bowDist, 30);
             ctx.stroke();
             ctx.restore();
-            ctx.globalAlpha = 0.7 + lockRatio * 0.3;
 
-            // Draw curved bow arms
+            // Main bow shape (curved limbs)
+            ctx.strokeStyle = '#00BFFF';
+            ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.arc(bowDist, 0, 22, -Math.PI * 0.45, Math.PI * 0.45);
+            ctx.moveTo(bowDist - 5, -32);
+            ctx.quadraticCurveTo(bowDist + 28, -18, bowDist + 35, 0);
+            ctx.quadraticCurveTo(bowDist + 28, 18, bowDist - 5, 32);
             ctx.stroke();
 
-            // Inner energy glow
-            ctx.strokeStyle = '#87CEEB';
+            // Inner highlight
+            ctx.strokeStyle = '#E0FFFF';
             ctx.lineWidth = 1.5;
-            ctx.globalAlpha = 0.5 + lockRatio * 0.5;
             ctx.beginPath();
-            ctx.arc(bowDist, 0, 20, -Math.PI * 0.4, Math.PI * 0.4);
+            ctx.moveTo(bowDist - 3, -30);
+            ctx.quadraticCurveTo(bowDist + 25, -16, bowDist + 32, 0);
+            ctx.quadraticCurveTo(bowDist + 25, 16, bowDist - 3, 30);
             ctx.stroke();
 
-            // Bowstring (energy thread)
-            ctx.strokeStyle = '#B0E0E6';
+            // 3. Quincy Cross (Center of bow - The Zeichen)
+            ctx.save();
+            ctx.translate(bowDist - 8, 0);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.strokeStyle = '#1E90FF';
             ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.8;
+            // Vertical bar
+            ctx.fillRect(-2, -8, 4, 16);
+            // Horizontal bar
+            ctx.fillRect(-6, -2, 12, 4);
+            // Glow
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = '#00BFFF';
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = 0.5;
+            ctx.strokeRect(-2, -8, 4, 16);
+            ctx.strokeRect(-6, -2, 12, 4);
+            ctx.restore();
 
-            const topX = bowDist + Math.cos(-Math.PI * 0.45) * 22;
-            const topY = Math.sin(-Math.PI * 0.45) * 22;
-            const botX = bowDist + Math.cos(Math.PI * 0.45) * 22;
-            const botY = Math.sin(Math.PI * 0.45) * 22;
-
+            // 4. Bowstring (Reishi Thread)
+            ctx.strokeStyle = '#B0E0E6';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.9;
             ctx.beginPath();
-            ctx.moveTo(topX, topY);
-            ctx.lineTo(bowDist - 8, 0); // Pulled back
-            ctx.lineTo(botX, botY);
+            ctx.moveTo(bowDist - 5, -32);
+            ctx.lineTo(bowDist - 12, 0); // Pulled back
+            ctx.lineTo(bowDist - 5, 32);
             ctx.stroke();
 
-            // Charging arrow (visible when locking)
-            if (fighter.lockProgress > 20) {
-                // Charging Arrow Glow (Zero-Blur)
+            // 5. Nocked Arrow (when charging)
+            if (fighter.lockProgress > 15) {
+                // Arrow glow
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
-                ctx.fillStyle = '#1E90FF';
-                ctx.globalAlpha = lockRatio * 0.5;
+                ctx.fillStyle = '#00BFFF';
+                ctx.globalAlpha = lockRatio * 0.6;
                 ctx.beginPath();
-                ctx.arc(bowDist + 5, 0, 10 * lockRatio, 0, Math.PI * 2);
+                ctx.arc(bowDist + 10, 0, 8 + lockRatio * 6, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
 
-                ctx.fillStyle = `rgba(30, 144, 255, ${lockRatio * 0.8})`;
-
-                // Arrow shape
+                // Arrow shape (Heilig Pfeil - Sacred Arrow)
+                ctx.fillStyle = `rgba(224, 255, 255, ${0.6 + lockRatio * 0.4})`;
                 ctx.beginPath();
-                ctx.moveTo(bowDist + 15, 0);  // Tip
-                ctx.lineTo(bowDist - 5, -3);
-                ctx.lineTo(bowDist - 5, 3);
+                ctx.moveTo(bowDist + 25, 0);  // Tip
+                ctx.lineTo(bowDist - 10, -4);
+                ctx.lineTo(bowDist - 10, 4);
+                ctx.closePath();
+                ctx.fill();
+
+                // Arrow core
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.moveTo(bowDist + 22, 0);
+                ctx.lineTo(bowDist - 8, -2);
+                ctx.lineTo(bowDist - 8, 2);
                 ctx.closePath();
                 ctx.fill();
             }

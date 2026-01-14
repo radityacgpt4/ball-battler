@@ -9,6 +9,8 @@ export class Projectile {
         this.owner = owner;
         this.x = x;
         this.y = y;
+        this.startX = x; // Store initial position for range calculations
+        this.startY = y;
         this.angle = angle; // Store angle for drawing rotation
         this.dx = Math.cos(angle) * speed;
         this.dy = Math.sin(angle) * speed;

@@ -187,7 +187,7 @@ export class HexBarrierAbility extends Ability {
                     });
                 }
 
-                fighter.game.combatText.flash(attackerX, attackerY - 20, "SHATTER!");
+                fighter.game.combatText.text(attackerX, attackerY - 20, "SHATTER!", '#4fc3f7');
                 audioEngine.playBlock();
                 logger.log(`${fighter.name}'s barrier shattered on ${attacker.name}!`, 'combat');
             }

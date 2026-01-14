@@ -467,17 +467,8 @@ export class Game {
                                     ent.applyStatus('STUN', p.stunDuration);
                                 }
 
-                                // Play impact sound using unified property
-                                if (p.impactSound) {
-                                    const soundMethod = `play${p.impactSound.charAt(0).toUpperCase() + p.impactSound.slice(1)}`;
-                                    if (audioEngine[soundMethod]) {
-                                        audioEngine[soundMethod]();
-                                    } else {
-                                        audioEngine.playHit();
-                                    }
-                                } else {
-                                    audioEngine.playHit();
-                                }
+                                // Play impact sound using unified method
+                                audioEngine.play(p.impactSound);
 
                                 // Spawn impact particle using unified property
                                 if (p.impactParticle) {

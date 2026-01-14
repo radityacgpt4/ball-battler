@@ -22,6 +22,25 @@ export class AudioEngine {
         }
     }
 
+    // ============================================
+    // UNIFIED PLAY METHOD (De-spaghettification)
+    // ============================================
+    // Allows playing sounds by string ID, e.g., audioEngine.play('zap')
+    // Falls back to playHit() if the method doesn't exist
+    play(soundId) {
+        if (!soundId) {
+            this.playHit();
+            return;
+        }
+        const methodName = `play${soundId.charAt(0).toUpperCase() + soundId.slice(1)}`;
+        if (typeof this[methodName] === 'function') {
+            this[methodName]();
+        } else {
+            console.warn(`AudioEngine: Unknown sound ID '${soundId}', playing 'hit' instead`);
+            this.playHit();
+        }
+    }
+
     // Helper: Create an oscillator tone
     playTone(freq, type, duration, vol = 1, slideTo = null) {
         if (!this.enabled || !this.ctx) return;

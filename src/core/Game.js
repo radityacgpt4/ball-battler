@@ -472,12 +472,7 @@ export class Game {
 
                                 // Spawn impact particle using unified property
                                 if (p.impactParticle) {
-                                    const particleMethod = `spawn${p.impactParticle.charAt(0).toUpperCase() + p.impactParticle.slice(1)}`;
-                                    if (this.particles[particleMethod]) {
-                                        this.particles[particleMethod](ent.x, ent.y);
-                                    } else {
-                                        this.particles.spawn(ent.x, ent.y, '#ffffff', 5);
-                                    }
+                                    this.particles.spawnEffect(p.impactParticle, ent.x, ent.y);
                                 }
 
                                 // Deactivate if not piercing

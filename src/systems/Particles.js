@@ -3,340 +3,123 @@
  * Handles all visual effects and particle rendering
  */
 import { Physics } from './Physics.js';
+import { PARTICLE_TEMPLATES } from '../data/particleTemplates.js';
 
 export class ParticleSystem {
     constructor() {
         this.particles = [];
     }
 
+    /**
+     * GENERIC SPAWNER (OCP Compliant)
+     * Spawns an effect based on a string ID defined in particleTemplates.js
+     */
+    spawnEffect(id, x, y) {
+        const template = PARTICLE_TEMPLATES[id];
+        if (!template) {
+            console.warn(`ParticleSystem: Unknown effect ID '${id}'`);
+            return;
+        }
+
+        for (let layer of template.layers) {
+            this.processLayer(layer, x, y);
+        }
+    }
+
+    processLayer(layer, x, y) {
+        if (layer.type === 'burst') {
+            const count = layer.count || 10;
+            const colors = Array.isArray(layer.color) ? layer.color : [layer.color];
+
+            for (let i = 0; i < count; i++) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                // Determine velocity
+                let vx, vy;
+                if (layer.angle !== undefined) {
+                    // Directional burst (e.g. Licht Regen)
+                    const angle = layer.angle + (Math.random() - 0.5) * (layer.spread || 1);
+                    const speed = layer.speed || 5;
+                    vx = Math.cos(angle) * speed;
+                    vy = Math.sin(angle) * speed;
+                } else {
+                    // Omni-directional burst
+                    const speed = typeof layer.speed === 'object' ?
+                        (layer.speed.min + Math.random() * (layer.speed.max - layer.speed.min)) :
+                        (layer.speed || 5);
+                    vx = (Math.random() - 0.5) * speed;
+                    vy = (Math.random() - 0.5) * speed;
+                }
+
+                if (layer.rise) vy += layer.rise; // Add vertical rise (e.g. Hirenkyaku)
+
+                this.particles.push({
+                    x, y, color,
+                    vx, vy,
+                    life: layer.life,
+                    decay: 0.05 + Math.random() * 0.05, // Slight variance
+                    size: layer.size || (Math.random() * 3 + 2),
+                    type: layer.shape // dot, square, flash
+                });
+            }
+        }
+        else if (layer.type === 'shockwave') {
+            this.particles.push({
+                type: 'shockwave',
+                x, y,
+                radius: 5,
+                maxRadius: layer.maxRadius,
+                life: layer.life,
+                decay: 1 / (layer.life * 60), // approx decay to finish in life
+                color: layer.color,
+                lineWidth: layer.lineWidth || 6
+            });
+        }
+        else if (layer.type === 'lightning') {
+            for (let i = 0; i < layer.count; i++) {
+                this.particles.push({
+                    type: 'bolt',
+                    segments: [
+                        { x: x, y: y },
+                        { x: x + (Math.random() - 0.5) * layer.spread, y: y + (Math.random() - 0.5) * layer.spread }
+                    ],
+                    life: layer.life,
+                    decay: 0.08,
+                    color: layer.color,
+                    width: layer.width
+                });
+            }
+        }
+        else if (layer.type === 'text') {
+            this.spawnText(x + (layer.offset?.x || 0), y + (layer.offset?.y || 0), layer.text, layer.color);
+        }
+    }
+
+    // ==========================================
+    // LEGACY ADAPTERS (For Backward Compatibility)
+    // ==========================================
+
     spawn(x, y, color, count) {
+        // Primitive spawner kept for simple needs
         for (let i = 0; i < count; i++) {
             this.particles.push({
                 x, y, color,
                 vx: (Math.random() - 0.5) * 6,
                 vy: (Math.random() - 0.5) * 6,
-                life: 1.0,
-                decay: 0.03 + Math.random() * 0.03,
-                size: Math.random() * 3 + 1,
-                type: 'dot'
+                life: 1.0, decay: 0.05, size: 3, type: 'dot'
             });
         }
     }
 
-    spawnSlash(x1, y1, x2, y2, color, width = 40) {
-        this.particles.push({
-            type: 'slash', x1, y1, x2, y2, color,
-            life: 1.0, decay: 0.08, width: width
-        });
-    }
+    spawnExplosion(x, y) { this.spawnEffect('explosion', x, y); }
+    spawnWallImpact(x, y) { this.spawnEffect('wallImpact', x, y); }
+    spawnQuincyArrow(x, y) { this.spawnEffect('quincyArrow', x, y); }
+    spawnHirenkyaku(x, y) { this.spawnEffect('hirenkyaku', x, y); }
+    spawnLichtRegen(x, y) { this.spawnEffect('lichtRegen', x, y); }
+    spawnZoltraakImpact(x, y) { this.spawnEffect('zoltraakImpact', x, y); }
+    spawnBlackFlash(x, y) { this.spawnEffect('blackFlash', x, y); }
+    spawnSuperBlackFlash(x, y) { this.spawnEffect('superBlackFlash', x, y); }
 
-    // UPDATED: Thinner, sharper thunderclap
-    spawnThunderclap(x1, y1, x2, y2, color, thickness = 6) {
-        // Main Beam - Razor sharp
-        this.particles.push({
-            type: 'beam', x1, y1, x2, y2, color,
-            life: 0.8, decay: 0.08, width: thickness
-        });
-
-        // Inner Core (White hot)
-        this.particles.push({
-            type: 'beam', x1, y1, x2, y2, color: '#ffffff',
-            life: 0.8, decay: 0.08, width: thickness / 2
-        });
-
-        const dist = Physics.dist(x1, y1, x2, y2);
-
-        // 1. Residual Arcs
-        const steps = Math.floor(dist / 40);
-        const dx = (x2 - x1) / steps;
-        const dy = (y2 - y1) / steps;
-
-        for (let i = 0; i < steps; i++) {
-            const bx = x1 + dx * i;
-            const by = y1 + dy * i;
-            this.spawnBolt([
-                { x: bx, y: by },
-                { x: bx + (Math.random() - 0.5) * 60, y: by + (Math.random() - 0.5) * 60 }
-            ], color, 2);
-        }
-
-        // 2. Small Flickering Static
-        const staticCount = Math.floor(dist / 12);
-        for (let i = 0; i < staticCount; i++) {
-            const t = Math.random();
-            const px = x1 + (x2 - x1) * t;
-            const py = y1 + (y2 - y1) * t;
-
-            this.spawnBolt([
-                { x: px, y: py },
-                { x: px + (Math.random() - 0.5) * 25, y: py + (Math.random() - 0.5) * 25 }
-            ], '#ffffff', 1);
-        }
-    }
-
-    // NOTE: spawnHirenkyaku is defined later in this file (line ~445)
-    // This duplicate was removed during de-spaghettification
-
-    spawnBeam(x1, y1, x2, y2, color, width = 6, decay = 0.5) {
-        this.particles.push({
-            type: 'beam', x1, y1, x2, y2, color,
-            life: 1.0, decay: decay, width: width
-        });
-    }
-
-    spawnText(x, y, text, color) {
-        this.particles.push({
-            x, y, text, color,
-            vx: (Math.random() - 0.5) * 1, vy: -2,
-            life: 1.0, decay: 0.01, type: 'text'
-        });
-    }
-
-    spawnExplosion(x, y) {
-        for (let i = 0; i < 15; i++) {
-            this.particles.push({
-                x, y,
-                color: Math.random() < 0.5 ? '#ff4400' : '#ffaa00',
-                vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
-                life: 1.0, decay: 0.05, size: Math.random() * 4 + 2, type: 'flame'
-            });
-        }
-    }
-
-    spawnShockwave(x, y, color = '#ffffff') {
-        this.particles.push({
-            type: 'shockwave',
-            x: x, y: y,
-            radius: 10,
-            maxRadius: 100,
-            life: 1.0,
-            decay: 0.05,
-            color: color
-        });
-    }
-
-    // NOTE: spawnHirenkyaku, spawnQuincyArrow, spawnLichtRegen are defined
-    // later in this file. These duplicates were removed during de-spaghettification.
-
-    spawnWallImpact(x, y) {
-        for (let i = 0; i < 30; i++) {
-            this.particles.push({
-                x, y,
-                color: Math.random() < 0.3 ? '#ffffff' : '#ff4444',
-                vx: (Math.random() - 0.5) * 18,
-                vy: (Math.random() - 0.5) * 18,
-                life: 1.0, decay: 0.03,
-                size: Math.random() * 8 + 2,
-                type: 'dot'
-            });
-        }
-        this.particles.push({
-            type: 'shockwave',
-            x: x, y: y,
-            radius: 10,
-            maxRadius: 150,
-            life: 1.0,
-            decay: 0.04,
-            color: '#ff4444'
-        });
-    }
-
-    spawnZoltraakImpact(x, y) {
-        // Bright blue shockwave (Optimized: No Blur)
-        this.particles.push({
-            type: 'shockwave',
-            x: x, y: y,
-            radius: 5, maxRadius: 60,
-            life: 0.6, decay: 0.1,
-            color: '#4fc3f7', lineWidth: 4
-        });
-
-        // Additive sparks
-        for (let i = 0; i < 8; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 2 + Math.random() * 8;
-            this.particles.push({
-                x, y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 0.5, decay: 0.08,
-                size: 3, color: '#ffffff',
-                type: 'dot'
-            });
-        }
-    }
-
-    spawnBlackFlash(x, y) {
-        // Core Black Hole Distortion
-        this.particles.push({
-            type: 'shockwave',
-            x: x, y: y,
-            radius: 5,
-            maxRadius: 150, // Increased from 120
-            life: 1.0,
-            decay: 0.05,
-            color: '#000000', // Black Core
-            lineWidth: 16 // Increased from 10
-        });
-
-        // Red Cursed Energy Sparks
-        for (let i = 0; i < 30; i++) { // Increased from 20
-            this.particles.push({
-                type: 'bolt',
-                segments: [
-                    { x: x, y: y },
-                    { x: x + (Math.random() - 0.5) * 140, y: y + (Math.random() - 0.5) * 140 } // Increased spread
-                ],
-                life: 0.8,
-                decay: 0.08,
-                color: '#FF0000', // Red Lightning
-                width: 4 // Increased from 3
-            });
-        }
-
-        // Debris
-        for (let i = 0; i < 25; i++) { // Increased from 15
-            this.particles.push({
-                x, y,
-                color: '#000000',
-                vx: (Math.random() - 0.5) * 15, // Increased speed
-                vy: (Math.random() - 0.5) * 15,
-                life: 1.0, decay: 0.04,
-                size: Math.random() * 7 + 2, // Slightly larger
-                type: 'dot'
-            });
-        }
-    }
-
-    spawnSuperBlackFlash(x, y) {
-        // Massive Distortion Ring (Reduced by 20% from previous peak)
-        this.particles.push({
-            type: 'shockwave',
-            x: x, y: y,
-            radius: 5,
-            maxRadius: 180, // Reduced from 220
-            life: 1.4, // Slightly shorter
-            decay: 0.04,
-            color: '#000000',
-            lineWidth: 22 // Reduced from 28
-        });
-
-        // Glowing red outer ring
-        this.particles.push({
-            type: 'shockwave',
-            x: x, y: y,
-            radius: 10,
-            maxRadius: 210, // Reduced from 260
-            life: 1.0,
-            decay: 0.05,
-            color: '#FF0000',
-            lineWidth: 6 // Reduced from 8
-        });
-
-        // Thick Red Lightning Bolts (Restored towards 80% balance)
-        for (let i = 0; i < 40; i++) { // Reduced from 50
-            this.particles.push({
-                type: 'bolt',
-                segments: [
-                    { x: x, y: y },
-                    { x: x + (Math.random() - 0.5) * 240, y: y + (Math.random() - 0.5) * 240 } // Reduced spread from 300
-                ],
-                life: 1.0,
-                decay: 0.06,
-                color: '#FF0000',
-                width: 5 // Reduced from 6
-            });
-        }
-
-        // Massive Debris Burst
-        for (let i = 0; i < 48; i++) { // Reduced from 60
-            this.particles.push({
-                x, y,
-                color: Math.random() < 0.4 ? '#FF0000' : '#000000',
-                vx: (Math.random() - 0.5) * 28, // Reduced speed from 35
-                vy: (Math.random() - 0.5) * 28,
-                life: 1.2, decay: 0.03,
-                size: Math.random() * 11 + 3, // Reduced from 14
-                type: 'dot'
-            });
-        }
-
-        // Screenshake simulated via particles if we had it, but here we just add text
-        this.spawnText(x, y - 60, "MAX BLACK FLASH!!", "#FF0000");
-    }
-    // NOTE: spawnQuincyArrow, spawnHirenkyaku, spawnLichtRegen are defined
-    // after spawnBolt(). Duplicates removed during de-spaghettification.
-
-    spawnBolt(segments, color, width = 5) {
-        if (segments.length < 2) return;
-
-        let jagged = [];
-        jagged.push(segments[0]);
-
-        for (let i = 0; i < segments.length - 1; i++) {
-            let p1 = segments[i];
-            let p2 = segments[i + 1];
-            let dist = Physics.dist(p1.x, p1.y, p2.x, p2.y);
-            let steps = Math.max(1, Math.floor(dist / 15));
-            let dx = (p2.x - p1.x) / steps;
-            let dy = (p2.y - p1.y) / steps;
-            let perpX = -dy; let perpY = dx;
-            let len = Math.hypot(perpX, perpY) || 1;
-            perpX /= len; perpY /= len;
-
-            for (let j = 1; j < steps; j++) {
-                let jitter = (Math.random() - 0.5) * 15;
-                jagged.push({ x: p1.x + dx * j + perpX * jitter, y: p1.y + dy * j + perpY * jitter });
-            }
-            jagged.push(p2);
-        }
-
-        this.particles.push({ type: 'bolt', segments: jagged, life: 1.0, decay: 0.08, color: color, width: width });
-    }
-
-    spawnQuincyArrow(x, y) {
-        // Blue energy flash
-        this.spawn(x, y, '#1E90FF', 8);
-        // Sparkles
-        for (let i = 0; i < 6; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            this.particles.push({
-                x: x, y: y,
-                vx: Math.cos(angle) * 2,
-                vy: Math.sin(angle) * 2,
-                life: 0.6, decay: 0.1,
-                size: 2, color: '#00BFFF', type: 'dot'
-            });
-        }
-    }
-
-    spawnHirenkyaku(x, y) {
-        // Static/Glitch effect for teleport
-        for (let i = 0; i < 10; i++) {
-            this.particles.push({
-                x: x + (Math.random() - 0.5) * 20,
-                y: y + (Math.random() - 0.5) * 20,
-                vx: 0, vy: -1,
-                life: 0.4, decay: 0.1,
-                size: 2, color: '#ffffff', type: 'dot'
-            });
-        }
-        this.spawn(x, y, '#1E90FF', 8);
-    }
-
-    spawnLichtRegen(x, y) {
-        // Upward burst indicating arrow rain launch
-        for (let i = 0; i < 15; i++) {
-            const angle = -Math.PI / 2 + (Math.random() - 0.5);
-            this.particles.push({
-                x: x, y: y,
-                vx: Math.cos(angle) * 6,
-                vy: Math.sin(angle) * 6,
-                life: 0.8, decay: 0.05,
-                size: 3, color: '#00BFFF', type: 'dot'
-            });
-        }
-    }
 
     updateAndDraw(ctx) {
         for (let i = this.particles.length - 1; i >= 0; i--) {

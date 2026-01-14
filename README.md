@@ -1,99 +1,80 @@
 # Ball Battler - 1v1 Fighter Ball Auto Battler
 
-A modular, scalable auto-battler game engine featuring physics-based combat between unique fighter characters. Watch as two balls collide, unleash powerful abilities, and battle for supremacy in a shrinking arena.
+> [!IMPORTANT]
+> **ATTENTION AI AGENTS AND DEVELOPERS**
+> This project follows a strict **Scalable-First (Open-Closed Principle)** architecture.
+> **DO NOT** use `if/else` or `switch` statements to check for specific fighter types or ability names in core files (`Game.js`, `Physics.js`, `CollisionHandler.js`).
+>
+> If you find yourself writing `if (projectile.isQuincyArrow) { ... }` in a core file, **STOP**. You are breaking the architecture.
+
+## 🤖 AI Development Guidelines
+
+### 1. The Core Principle: Open for Extension, Closed for Modification
+This engine is designed to support 50+ fighters. We cannot modify `Game.js` every time a new fighter is added.
+
+*   **Bad Pattern (Do Not Use):**
+    ```javascript
+    // src/core/Game.js
+    if (projectile.type === 'FIRE_BALL') {
+        particles.spawnFire(x, y);
+    } else if (projectile.type === 'ICE_SHARD') {
+        particles.spawnIce(x, y);
+    }
+    ```
+*   **Good Pattern (Use This):**
+    ```javascript
+    // src/core/Game.js
+    // The engine doesn't care WHAT the particle is, just that it has an ID.
+    particles.spawn(projectile.impactParticleId, x, y);
+    ```
+
+### 2. Module Responsibilities (Where to Touch)
+
+| Task | Files to Modify | Files NOT to Touch |
+|------|-----------------|--------------------|
+| **Add New Fighter** | `src/data/fighters.js`<br>`src/abilities/[New]Ability.js` | `Game.js`, `Fighter.js` |
+| **Add New Projectile** | `src/abilities/[New]Ability.js` (Config properties) | `Game.js`, `Projectile.js` |
+| **New Particle Effect** | `src/data/particleTemplates.js` | `Particles.js`, `Game.js` |
+| **New Sound Effect** | `src/systems/Audio.js` (Add only if new synthesis needed) | `Game.js` |
+| **New Status Effect** | `src/entities/Fighter.js` (Add logic), `src/systems/CombatText.js` | `Game.js` |
+
+### 3. Tips for Avoiding Mistakes
+1.  **Look for Registries First:** Use `particleTemplates`, `soundRegistry`, and `AbilityRegistry`. Do not hardcode values.
+2.  **Configuration over Code:** Define behavior in the `Ability` class config or `Projectile` properties (`impactSound`, `piercing`, `statusEffect`).
+3.  **Reuse Systems:** The `Particles` and `Audio` systems are generic renderers/synthesizers. Feed them data, don't change their logic unless adding a fundamental new *capability* (e.g., a new physics shape).
+
+---
 
 ## Project Structure
 
 ```
 ball-battler/
-├── index.html              # Entry point (Main UI + Canvas)
-├── style.css               # Main application styles
-│
-└── src/
-    ├── core/
-    │   ├── Game.js         # Main Game Controller
-    │   ├── Constants.js    # WIDTH, HEIGHT, BALL_RADIUS
-    │   └── AbilityRegistry.js # Central factory for abilities
-    │
-    ├── systems/
-    │   ├── Physics.js      # Physics calculations & collision detection
-    │   ├── Audio.js        # AudioEngine (procedural sound generation)
-    │   ├── Particles.js    # ParticleSystem for high-fidelity visual effects
-    │   ├── Renderer.js     # Component-based rendering system
-    │   ├── CombatText.js   # Floating text pop-ups (Damage, Stuns, etc.)
-    │   └── CollisionHandler.# Logic for resolving entity/projectile hits
-    │
-    ├── entities/
-    │   ├── Fighter.js      # Base Fighter class with state management
-    │   └── Projectile.js   # Projectile entity (bullets, arrows, bolts, missiles)
-    │
-    ├── abilities/
-    │   ├── Ability.js      # Base Ability class
-    │   ├── AxeAbility.js   # Axeman's heavy swings and executions
-    │   ├── BallistaAbility.js # Ballista's bolts and barricades
-    │   ├── DashAbility.js  # Teleportation and dash-based strikes
-    │   ├── DivineBrawlerAbility.js # Black Flash and Boogie Woogie
-    │   ├── DivineGeneralAbility.js # Adaptation and Mahoraga wheel
-    │   ├── MeleeAbility.js # Close-quarters combat logic
-    │   ├── PassiveAbility.js # Shielding, evasion, and momentum logic
-    │   ├── ProjectileAbility.# Ranged projectile logic (guns, grenades)
-    │   ├── QuincyAbility.js # Predictive arrows and energy traps
-    │   ├── RaycastAbility.js # Chain lightning and continuous lasers
-    │   ├── SniperAbility.js # Long-range shots and traps
-    │   └── SpecialAbility.js # Wall slams and environment interactions
-    │
-    └── data/
-        └── fighters.js     # Fighter configuration database (Stats & Skill balance)
+├── index.html              # Entry point
+├── src/
+│   ├── core/
+│   │   ├── Game.js         # Main Loop (Closed for modification)
+│   │   └── AbilityRegistry.js
+│   ├── systems/
+│   │   ├── Particles.js    # Generic Particle Renderer
+│   │   ├── Audio.js        # Generic Sound Synthesizer
+│   │   └── CollisionHandler.js # Generic Physics Resolver
+│   ├── entities/
+│   │   └── Projectile.js   # Composition container (Components/Properties)
+│   ├── abilities/          # ALL fighter logic lives here
+│   └── data/
+│       ├── fighters.js     # Fighter balancing configs
+│       └── particleTemplates.js # Visual effect definitions
 ```
 
-## Features
-
-- **12 Unique Fighters**: A diverse roster ranging from the high-speed **Yellow Flash** to the massive **Ballista**.
-- **Dynamic Ability System**: A deep Strategy-pattern implementation allowing for complex, reactive skills like teleportation, projectile hijacking, and healing.
-- **Advanced Physics**: Precise circular and ray-based collision detection with elastic reflections and mass-based knockback.
-- **High-Fidelity Visuals**: A robust particle system featuring glowing trails, razor-sharp beam effects, and stylized "Sakuga" bursts.
-- **Procedural Soundscape**: An audio engine that generates impacts, zaps, and explosions dynamically via the Web Audio API.
-- **Interactive UI**: Real-time HUD displaying HP, skill cooldowns, and a detailed character select screen.
-- **Arena Shrinking**: Dynamic physical boundary reduction that forces engagement by constricting the playable area over time.
-
-## Lineup
-
-| Fighter | Role | Attack | Defense | Ultimate |
-|---------|------|--------|---------|----------|
-| **Sword Master** | Duelist | Melee Slash | Parry | Dash Assault |
-| **Thundermage** | Mage | Lightning Bolt | Static Field | Double Zap |
-| **Rifleman** | Marksman | Burst Fire | Tactical Retreat | Frag Grenade |
-| **Shieldbearer** | Tank | Momentum Strike | Greatshield | Wall Slam |
-| **Yellow Flash** | Assassin | Flying Raijin | Substitution | Flash Barrage |
-| **Cyborg** | Artillery | Plasma Laser | Energy Shield | Missile Swarm |
-| **Sniper** | Specialist | Sniper Shot | Claymore | Steady Aim |
-| **Axeman** | Juggernaut | Heavy Swing | Berserker Rage | Execution |
-| **Ballista** | Defender | Heavy Bolt | Gate Barrier | Siege Mode |
-| **Divine General**| Adapter | Mahoraga Wheel | Healing Stance | Perfect Adaptation|
-| **Sorcerer Brawler**| Fighter | Black Flash | Boogie Woogie | Pure Focus |
-| **Spirit Archer** | Ranger | Heilig Pfeil | Hirenkyaku | Licht Regen |
-
-## Mechanics
-
-- **Status Effects**: Fighters can apply **STUN**, **BLEED**, **SLOW**, and more.
-- **Unblockable Damage**: Certain high-tier abilities (like Ninja's Rasengan) bypass shields and parries.
-- **Knockback Physics**: Impact force is determined by mass ratios and movement speed, enabling "Wall Slams".
-- **Chain Reactions**: Thunderbolts bounce between targets, while Ninja's kunai create lightning traps.
-- **Scaling Combat**: Arena boundaries physically shrink every 15 seconds, constricting the battle space and forcing intense close-quarters engagement.
+## Features & Mechanics
+*   **12+ Unique Fighters**: Distinct playstyles defined purely by Ability modules.
+*   **Physics-Based Combat**: Mass, velocity, and elasticity drive gameplay.
+*   **Data-Driven Visuals/Audio**: Procedural effects driven by configuration.
 
 ## Running the Game
-
-1. Serve the files using a local web server (ES6 modules require HTTP):
-   ```bash
-   npx serve .
-   # or
-   python -m http.server 8000
-   ```
-
-2. Open `localhost` in your browser.
-3. Select your fighters (Left-click for P1, Right-click for P2).
-4. Click **FIGHT!** to start the match.
+```bash
+npx serve .
+```
 
 ## License
-
 MIT

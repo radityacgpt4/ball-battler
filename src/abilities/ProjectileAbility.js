@@ -11,6 +11,8 @@ import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
 
+import { HomingBehavior, LinearMovement } from '../components/ProjectileBehaviors.js';
+
 export class BurstFireAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
@@ -249,9 +251,20 @@ export class MissileBarrageAbility extends Ability {
                 game
             );
 
-            p.isMissile = true;
+            // Refactored to OCP Component System
             p.radius = this.radius;
-            p.turnSpeed = this.turnSpeed;
+
+            // Attach Behaviors
+            p.addComponent(new HomingBehavior(this.turnSpeed));
+            p.addComponent(new LinearMovement());
+
+            // Legacy flag (removed for Missile, keeping cosmetic fallback if needed?)
+            // p.isMissile = true; // REMOVED - Logic is now in HomingComponent
+
+            // Used for drawing only (Rendering System still checks flags? No, behaviors should work independent)
+            // Wait, RENDERING still checks flags in Projectile.js draw() loop!
+            // I must keep p.isMissile = true ONLY for drawing until I refactor drawing.
+            p.isMissile = true;
 
             // Unified impact properties
             p.impactSound = 'explosion';

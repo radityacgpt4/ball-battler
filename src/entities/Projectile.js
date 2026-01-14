@@ -65,9 +65,27 @@ export class Projectile {
         this.statusEffect = null;           // Status effect: { type: 'STUN', duration: 30 } or null
         this.piercing = false;              // If true, projectile continues after hitting
         this.knockbackForce = 0;            // Force applied to hit entity
+        // ============================================
+        // COMPONENT SYSTEM (Phase 2 Refactor)
+        // ============================================
+        this.components = [];
+    }
+
+    addComponent(component) {
+        this.components.push(component);
+        return this;
     }
 
     update(timeScale = 1.0) {
+        // 1. BEHAVIOR SYSTEM (New Path)
+        if (this.components.length > 0) {
+            for (const component of this.components) {
+                component.update(this, timeScale);
+            }
+            return; // Pure Component Entities skip legacy logic entirely
+        }
+
+        // 2. LEGACY LOGIC (Old Path)
         // Handle deflected projectile lifetime (even if embedded)
         if (this.isDeflected && this.deflectLifetime > 0) {
             this.deflectLifetime -= 1 * timeScale;

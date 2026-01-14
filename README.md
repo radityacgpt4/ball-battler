@@ -25,15 +25,28 @@ This engine is designed to support 50+ fighters. We cannot modify `Game.js` ever
     ```javascript
     // src/core/Game.js
     // The engine doesn't care WHAT the particle is, just that it has an ID.
-    particles.spawn(projectile.impactParticleId, x, y);
+    particles.spawnEffect(projectile.impactParticle, x, y);
     ```
 
-### 2. Module Responsibilities (Where to Touch)
+### 2. Projectile Component System
+Projectiles no longer use "flags" (like `isMissile`) for behavior. Instead, they use a **Component Architecture**.
+
+*   **Logic components:** Attach behaviors to projectiles in the ability class.
+*   **Example (Homing Missile):**
+    ```javascript
+    const p = new Projectile(...);
+    p.addComponent(new HomingBehavior(target));
+    p.addComponent(new LinearMovement()); // Components run in order
+    ```
+*   **Pre-built Behaviors:** See `src/components/ProjectileBehaviors.js` for `LinearMovement`, `HomingBehavior`, and `BallisticBehavior`.
+
+### 3. Module Responsibilities (Where to Touch)
 
 | Task | Files to Modify | Files NOT to Touch |
 |------|-----------------|--------------------|
 | **Add New Fighter** | `src/data/fighters.js`<br>`src/abilities/[New]Ability.js` | `Game.js`, `Fighter.js` |
-| **Add New Projectile** | `src/abilities/[New]Ability.js` (Config properties) | `Game.js`, `Projectile.js` |
+| **Add New Projectile** | `src/abilities/[New]Ability.js` (Config/Components) | `Game.js`, `Projectile.js` |
+| **New Projectile Behavior** | `src/components/ProjectileBehaviors.js` | `Projectile.js`, `Game.js` |
 | **New Particle Effect** | `src/data/particleTemplates.js` | `Particles.js`, `Game.js` |
 | **New Sound Effect** | `src/systems/Audio.js` (Add only if new synthesis needed) | `Game.js` |
 | **New Status Effect** | `src/entities/Fighter.js` (Add logic), `src/systems/CombatText.js` | `Game.js` |

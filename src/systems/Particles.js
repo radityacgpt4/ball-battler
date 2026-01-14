@@ -192,6 +192,19 @@ export class ParticleSystem {
         this.particles.push({ type: 'bolt', segments: jagged, life: 1.0, decay: 0.08, color: color, width: width });
     }
 
+    spawnShockwave(x, y, color = '#ffffff', maxRadius = 50, life = 0.5) {
+        this.particles.push({
+            type: 'shockwave',
+            x, y,
+            radius: 5,
+            maxRadius: maxRadius,
+            life: life,
+            decay: 1 / (life * 60),
+            color: color,
+            lineWidth: 6
+        });
+    }
+
 
     spawn(x, y, color, count) {
         // Primitive spawner kept for simple needs

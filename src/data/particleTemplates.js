@@ -29,6 +29,16 @@ export const PARTICLE_TEMPLATES = {
             { type: 'burst', count: 5, color: '#ffffff', speed: 5, life: 0.5, shape: 'dot' }
         ]
     },
+    'smoke': {
+        layers: [
+            { type: 'burst', count: 3, color: ['#888888', '#aaaaaa', '#cccccc'], speed: { min: 0.5, max: 2 }, life: 0.8, shape: 'dot' }
+        ]
+    },
+    'sparkle': {
+        layers: [
+            { type: 'burst', count: 8, color: ['#ffffff', '#fff7e0'], speed: { min: 1, max: 4 }, life: 0.4, shape: 'dot' }
+        ]
+    },
 
     // ============================================
     // FIGHTER SPECIFIC: QUINCY (Spirit Archer)

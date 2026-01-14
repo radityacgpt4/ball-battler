@@ -204,36 +204,69 @@ export class Projectile {
             }
         }
 
-        // Quincy Arrow - Spirit Trail (Reishi Particles) - PIXELATED STYLE
+        // Quincy Arrow - Spirit Trail (Reishi Particles) - WITH GLOW EFFECT
         if (this.isQuincyArrow && this.active) {
-            // Spawn crisp pixel blocks instead of glowing clouds
-            if (this.game.frameAccumulator % 2 === 0) { // Every other frame for discrete look
+            // Spawn trailing beam segments (like Cyborg's laser)
+            if (this.lastTrailX !== undefined) {
+                const distSq = (this.x - this.lastTrailX) ** 2 + ((this.y - this.z) - this.lastTrailY) ** 2;
+                if (distSq > 25) { // Every 5px
+                    // Beam trail segment (creates glowing trail effect)
+                    this.game.particles.particles.push({
+                        type: 'beam',
+                        x1: this.lastTrailX, y1: this.lastTrailY,
+                        x2: this.x, y2: this.y - this.z,
+                        color: this.isPerfectShot ? '#00BFFF' : '#1E90FF',
+                        life: 0.4, decay: 0.1, width: this.isPerfectShot ? 4 : 3
+                    });
+                    this.lastTrailX = this.x;
+                    this.lastTrailY = this.y - this.z;
+                }
+            } else {
+                this.lastTrailX = this.x;
+                this.lastTrailY = this.y - this.z;
+            }
+
+            // Spawn crisp pixel blocks for sparkle effect
+            if (this.game.frameAccumulator % 2 === 0) {
                 // 1. Center Trail (The "Data Stream")
                 this.game.particles.particles.push({
                     x: this.x - Math.cos(this.angle) * 12,
                     y: this.y - this.z - Math.sin(this.angle) * 12,
                     vx: 0, vy: 0,
-                    life: 0.3, decay: 0.1, // Quick vanish
-                    size: 4, // Fixed pixel size
+                    life: 0.3, decay: 0.1,
+                    size: 3,
                     color: '#00BFFF',
                     type: 'square',
-                    alpha: 1.0 // No transparency fade at start
+                    alpha: 1.0
                 });
 
-                // 2. Occasional "Glitch" Pixels
-                if (Math.random() < 0.3) {
-                    const offset = (Math.random() < 0.5 ? -1 : 1) * 8;
+                // 2. Occasional "Glitch" Pixels (side sparkles)
+                if (Math.random() < 0.4) {
+                    const offset = (Math.random() < 0.5 ? -1 : 1) * 6;
                     const perpAngle = this.angle + Math.PI / 2;
                     this.game.particles.particles.push({
                         x: this.x - Math.cos(this.angle) * 10 + Math.cos(perpAngle) * offset,
                         y: this.y - this.z - Math.sin(this.angle) * 10 + Math.sin(perpAngle) * offset,
-                        vx: 0, vy: 0,
-                        life: 0.2, decay: 0.1,
-                        size: 2, // Smaller pixel
+                        vx: Math.cos(perpAngle) * offset * 0.3,
+                        vy: Math.sin(perpAngle) * offset * 0.3,
+                        life: 0.25, decay: 0.1,
+                        size: 2,
                         color: '#E0FFFF',
-                        type: 'square'
+                        type: 'dot'
                     });
                 }
+            }
+
+            // Perfect shot gets extra sparkle
+            if (this.isPerfectShot && Math.random() < 0.15) {
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 8,
+                    y: this.y - this.z - Math.sin(this.angle) * 8,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 0.3, decay: 0.1,
+                    size: 3, color: '#ffffff', type: 'dot'
+                });
             }
         }
 
@@ -412,14 +445,32 @@ export class Projectile {
                 this.lastY = this.y;
             }
 
-            // Mana trail sparks (Optimized)
-            if (Math.random() < 0.1) {
+            // Magical mana trail sparks (Improved)
+            if (Math.random() < 0.25) {
+                // Sparkle particles that float outward
+                const perpAngle = this.angle + Math.PI / 2;
+                const offsetDir = Math.random() < 0.5 ? 1 : -1;
                 this.game.particles.particles.push({
-                    x: this.x, y: this.y,
-                    vx: (Math.random() - 0.5) * 4,
-                    vy: (Math.random() - 0.5) * 4,
-                    life: 0.5, decay: 0.05,
-                    size: 2, color: '#ffffff', type: 'dot'
+                    x: this.x - Math.cos(this.angle) * 8,
+                    y: this.y - Math.sin(this.angle) * 8,
+                    vx: Math.cos(perpAngle) * offsetDir * 2 + (Math.random() - 0.5) * 2,
+                    vy: Math.sin(perpAngle) * offsetDir * 2 + (Math.random() - 0.5) * 2,
+                    life: 0.4, decay: 0.08,
+                    size: Math.random() < 0.3 ? 3 : 2,
+                    color: Math.random() < 0.5 ? '#ffffff' : '#87CEEB',
+                    type: 'dot'
+                });
+            }
+
+            // Rune-like square particles (magical effect)
+            if (Math.random() < 0.08) {
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 6,
+                    y: this.y - Math.sin(this.angle) * 6,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    life: 0.3, decay: 0.1,
+                    size: 4, color: '#4fc3f7', type: 'square'
                 });
             }
         }
@@ -526,39 +577,65 @@ export class Projectile {
                 ctx.rotate(this.angle);
             }
 
-            // 2. The Arrow Shaft (Pure Energy Beam) - REDUCED SIZE 50%
-            // Core (White)
-            ctx.fillStyle = '#FFFFFF';
-            // Original: -15, -1.5, 30, 3 -> New: -7.5, -0.75, 15, 1.5
-            ctx.fillRect(-7.5, -0.75, 15, 1.5);
-
-            // Outer Edge (Blue)
-            ctx.strokeStyle = '#00BFFF';
-            ctx.lineWidth = 1; // 2 -> 1
+            // 1. Outer Glow (additive blending for laser-like effect)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = this.isPerfectShot ? '#00BFFF' : '#1E90FF';
+            ctx.lineWidth = this.isPerfectShot ? 12 : 8;
+            ctx.globalAlpha = 0.3;
             ctx.beginPath();
-            ctx.moveTo(-7.5, 0); // -15 -> -7.5
-            ctx.lineTo(7.5, 0);  // 15 -> 7.5
+            ctx.moveTo(-8, 0);
+            ctx.lineTo(10, 0);
             ctx.stroke();
+            ctx.restore();
+
+            // 2. The Arrow Shaft (Pure Energy Beam)
+            // Outer Edge (Blue glow)
+            ctx.strokeStyle = '#00BFFF';
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(-7.5, 0);
+            ctx.lineTo(7.5, 0);
+            ctx.stroke();
+
+            // Core (White)
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(-7.5, -0.75, 15, 1.5);
 
             // 3. The Cross-Guard (Quincy Cross shape at the back)
             ctx.strokeStyle = '#1E90FF';
-            ctx.lineWidth = 1; // 2 -> 1
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
             // Upper wing
-            ctx.moveTo(-2.5, 0);    // -5 -> -2.5
-            ctx.lineTo(-6, -4);     // -12, -8 -> -6, -4
+            ctx.moveTo(-2.5, 0);
+            ctx.lineTo(-6, -4);
             // Lower wing
-            ctx.moveTo(-2.5, 0);    // -5 -> -2.5
-            ctx.lineTo(-6, 4);      // -12, 8 -> -6, 4
+            ctx.moveTo(-2.5, 0);
+            ctx.lineTo(-6, 4);
             ctx.stroke();
 
-            // 4. Arrow Head (Energy Diamond)
+            // 4. Arrow Head (Energy Diamond with glow)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = '#00BFFF';
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.moveTo(4, 0);
+            ctx.lineTo(7.5, -2.5);
+            ctx.lineTo(13, 0);
+            ctx.lineTo(7.5, 2.5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
             ctx.fillStyle = '#E0FFFF';
             ctx.beginPath();
-            ctx.moveTo(5, 0);       // 10 -> 5
-            ctx.lineTo(7.5, -1.5);  // 15, -3 -> 7.5, -1.5
-            ctx.lineTo(11, 0);      // 22 -> 11
-            ctx.lineTo(7.5, 1.5);   // 15, 3 -> 7.5, 1.5
+            ctx.moveTo(5, 0);
+            ctx.lineTo(7.5, -1.5);
+            ctx.lineTo(11, 0);
+            ctx.lineTo(7.5, 1.5);
             ctx.closePath();
             ctx.fill();
 
@@ -917,8 +994,33 @@ export class Projectile {
             ctx.restore();
         }
         else if (this.isZoltraak) {
-            // Zoltraak: No orb-tip needed. 
-            // The entire laser body is handled by beam particles in update()
+            // Zoltraak: Magical glowing orb head
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            // Outer glow (additive blending)
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = '#4fc3f7';
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mid glow
+            ctx.fillStyle = '#87CEEB';
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.arc(0, 0, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bright core
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = 1.0;
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
         }
         else {
             // Generic Fallback

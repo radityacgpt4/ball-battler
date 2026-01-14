@@ -230,6 +230,56 @@ export class AudioEngine {
         // 3. High Frequency Air Cut (Noise)
         this.playNoise(0.1, 0.35, 4500);
     }
+
+    playZoltraak() {
+        // Magical laser sound - high pitch, ethereal, quick end
+        if (!this.enabled || !this.ctx) return;
+
+        const duration = 0.25; // Much shorter than playLaser
+        const stopTime = this.ctx.currentTime + duration;
+
+        // High-pitched magical hum (main tone)
+        const osc1 = this.ctx.createOscillator();
+        const gain1 = this.ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1200, this.ctx.currentTime);
+        osc1.frequency.exponentialRampToValueAtTime(800, stopTime);
+        gain1.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, stopTime);
+        osc1.connect(gain1);
+        gain1.connect(this.masterGain);
+        osc1.start();
+        osc1.stop(stopTime);
+
+        // Ethereal shimmer (triangle harmonics)
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(2400, this.ctx.currentTime);
+        osc2.frequency.exponentialRampToValueAtTime(1600, stopTime);
+        gain2.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.01, stopTime);
+        osc2.connect(gain2);
+        gain2.connect(this.masterGain);
+        osc2.start();
+        osc2.stop(stopTime);
+
+        // Sparkle effect (very high frequency chirp)
+        const osc3 = this.ctx.createOscillator();
+        const gain3 = this.ctx.createGain();
+        osc3.type = 'sine';
+        osc3.frequency.setValueAtTime(3600, this.ctx.currentTime);
+        osc3.frequency.exponentialRampToValueAtTime(2000, stopTime);
+        gain3.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain3.gain.exponentialRampToValueAtTime(0.01, stopTime * 0.5);
+        osc3.connect(gain3);
+        gain3.connect(this.masterGain);
+        osc3.start();
+        osc3.stop(stopTime);
+
+        // Light noise for "magic dust" feel
+        this.playNoise(0.15, 0.08, 6000);
+    }
 }
 
 // Singleton instance

@@ -120,7 +120,7 @@ export class ZoltraakAbility extends Ability {
             color: '#4fc3f7', width: 2
         });
 
-        audioEngine.playLaser(); // Updated sound
+        audioEngine.playZoltraak(); // Magical laser sound
     }
 }
 

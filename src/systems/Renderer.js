@@ -584,12 +584,71 @@ export class Renderer {
             const fistSize = 10;
             const fistDist = fighter.radius - 2;
             const separation = 12;
+            const isFocusActive = fighter.activeEffects && fighter.activeEffects.focusActive;
+
+            // ULT Stance Visual - Cursed Energy Aura (when Focus is active)
+            if (isFocusActive) {
+                ctx.save();
+                ctx.rotate(-fighter.angle); // Decouple from fighter rotation
+
+                // Pulsing aura effect
+                const pulse = (Math.sin(Date.now() / 150) + 1) * 0.15;
+
+                // Outer cursed energy ring
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#4B0082';
+                ctx.lineWidth = 8;
+                ctx.globalAlpha = 0.4 + pulse;
+                ctx.beginPath();
+                ctx.arc(0, 0, fighter.radius + 12, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Inner intense glow
+                ctx.strokeStyle = '#8B008B';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 0.6 + pulse;
+                ctx.beginPath();
+                ctx.arc(0, 0, fighter.radius + 8, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // "Immovable" indicator text
+                ctx.globalAlpha = 0.8;
+                ctx.fillStyle = '#FF00FF';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const textY = -fighter.radius - 25;
+                ctx.strokeText('FOCUS', 0, textY);
+                ctx.fillText('FOCUS', 0, textY);
+
+                ctx.restore();
+            }
 
             ctx.fillStyle = fighter.color;
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
 
+            // Fist glow when Focus is active
+            if (isFocusActive) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = '#4B0082';
+                ctx.globalAlpha = 0.5;
+                // Right fist glow
+                ctx.beginPath();
+                ctx.roundRect(fistDist - 2, -separation - fistSize / 2 - 2, fistSize + 8, fistSize + 4, 6);
+                ctx.fill();
+                // Left fist glow
+                ctx.beginPath();
+                ctx.roundRect(fistDist - 2, separation - fistSize / 2 - 2, fistSize + 8, fistSize + 4, 6);
+                ctx.fill();
+                ctx.restore();
+            }
+
             // Right Fist
+            ctx.fillStyle = isFocusActive ? '#6B238E' : fighter.color; // Purple when focused
             ctx.beginPath();
             ctx.roundRect(fistDist, -separation - fistSize / 2, fistSize + 4, fistSize, 4);
             ctx.fill();
@@ -602,7 +661,7 @@ export class Renderer {
             ctx.stroke();
 
             // Knuckle highlights for "tech/fighter" look
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillStyle = isFocusActive ? 'rgba(255, 0, 255, 0.5)' : 'rgba(255, 255, 255, 0.3)';
             ctx.beginPath();
             ctx.arc(fistDist + 8, -separation, 2, 0, Math.PI * 2);
             ctx.arc(fistDist + 8, separation, 2, 0, Math.PI * 2);

@@ -96,8 +96,102 @@ export class ParticleSystem {
     }
 
     // ==========================================
-    // LEGACY ADAPTERS (For Backward Compatibility)
+    // PRIMITIVES (Required for Procedural Effects)
     // ==========================================
+
+    spawnSlash(x1, y1, x2, y2, color, width = 40) {
+        this.particles.push({
+            type: 'slash', x1, y1, x2, y2, color,
+            life: 1.0, decay: 0.08, width: width
+        });
+    }
+
+    // UPDATED: Thinner, sharper thunderclap
+    spawnThunderclap(x1, y1, x2, y2, color, thickness = 6) {
+        // Main Beam - Razor sharp
+        this.particles.push({
+            type: 'beam', x1, y1, x2, y2, color,
+            life: 0.8, decay: 0.08, width: thickness
+        });
+
+        // Inner Core (White hot)
+        this.particles.push({
+            type: 'beam', x1, y1, x2, y2, color: '#ffffff',
+            life: 0.8, decay: 0.08, width: thickness / 2
+        });
+
+        const dist = Physics.dist(x1, y1, x2, y2);
+
+        // 1. Residual Arcs
+        const steps = Math.floor(dist / 40);
+        const dx = (x2 - x1) / steps;
+        const dy = (y2 - y1) / steps;
+
+        for (let i = 0; i < steps; i++) {
+            const bx = x1 + dx * i;
+            const by = y1 + dy * i;
+            this.spawnBolt([
+                { x: bx, y: by },
+                { x: bx + (Math.random() - 0.5) * 60, y: by + (Math.random() - 0.5) * 60 }
+            ], color, 2);
+        }
+
+        // 2. Small Flickering Static
+        const staticCount = Math.floor(dist / 12);
+        for (let i = 0; i < staticCount; i++) {
+            const t = Math.random();
+            const px = x1 + (x2 - x1) * t;
+            const py = y1 + (y2 - y1) * t;
+
+            this.spawnBolt([
+                { x: px, y: py },
+                { x: px + (Math.random() - 0.5) * 25, y: py + (Math.random() - 0.5) * 25 }
+            ], '#ffffff', 1);
+        }
+    }
+
+    spawnBeam(x1, y1, x2, y2, color, width = 6, decay = 0.5) {
+        this.particles.push({
+            type: 'beam', x1, y1, x2, y2, color,
+            life: 1.0, decay: decay, width: width
+        });
+    }
+
+    spawnText(x, y, text, color) {
+        this.particles.push({
+            x, y, text, color,
+            vx: (Math.random() - 0.5) * 1, vy: -2,
+            life: 1.0, decay: 0.01, type: 'text'
+        });
+    }
+
+    spawnBolt(segments, color, width = 5) {
+        if (segments.length < 2) return;
+
+        let jagged = [];
+        jagged.push(segments[0]);
+
+        for (let i = 0; i < segments.length - 1; i++) {
+            let p1 = segments[i];
+            let p2 = segments[i + 1];
+            let dist = Physics.dist(p1.x, p1.y, p2.x, p2.y);
+            let steps = Math.max(1, Math.floor(dist / 15));
+            let dx = (p2.x - p1.x) / steps;
+            let dy = (p2.y - p1.y) / steps;
+            let perpX = -dy; let perpY = dx;
+            let len = Math.hypot(perpX, perpY) || 1;
+            perpX /= len; perpY /= len;
+
+            for (let j = 1; j < steps; j++) {
+                let jitter = (Math.random() - 0.5) * 15;
+                jagged.push({ x: p1.x + dx * j + perpX * jitter, y: p1.y + dy * j + perpY * jitter });
+            }
+            jagged.push(p2);
+        }
+
+        this.particles.push({ type: 'bolt', segments: jagged, life: 1.0, decay: 0.08, color: color, width: width });
+    }
+
 
     spawn(x, y, color, count) {
         // Primitive spawner kept for simple needs

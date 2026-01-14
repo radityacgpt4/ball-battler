@@ -20,6 +20,7 @@ import { QuincyAtkAbility, QuincyDefAbility, QuincyUltAbility } from '../abiliti
 import { KingOfCursesAtkAbility, KingOfCursesDefAbility, KingOfCursesUltAbility } from '../abilities/KingOfCursesAbility.js';
 import { GatlingAbility, BalloonAbility, ConquerorHakiAbility } from '../abilities/RubberCaptainAbility.js';
 import { ZoltraakAbility, HexBarrierAbility, BlackholeAbility } from '../abilities/FrierenAbility.js';
+import { SwordShredAbility, ODMDefAbility, GodspeedODMAbility } from '../abilities/LeviAbility.js';
 
 class AbilityRegistryClass {
     constructor() {
@@ -135,6 +136,11 @@ class AbilityRegistryClass {
         this.register('ZOLTRAAK', ZoltraakAbility);
         this.register('HEX_BARRIER', HexBarrierAbility);
         this.register('BLACKHOLE', BlackholeAbility);
+
+        // Levi abilities
+        this.register('SWORD_SHRED', SwordShredAbility);
+        this.register('ODM_MANEUVER', ODMDefAbility);
+        this.register('GODSPEED_ODM', GodspeedODMAbility);
     }
 }
 

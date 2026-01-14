@@ -41,6 +41,7 @@ export class Projectile {
         this.slowDuration = 0;
         this.lifeTime = 0;
         this.isSniperShot = false;
+        this.isSniperUltShot = false;
         this.isUnblockable = false;
 
         // Ballista bolt props
@@ -390,32 +391,17 @@ export class Projectile {
                 this.dy = Math.sin(this.angle) * speed;
             }
 
-            // Laser Trail: Spawn heavy glowing beam segments
-            // Laser Trail: Optimized for performance
+            // Laser Trail: Optimized for High-Performance (ZERO Blur)
             if (this.lastX !== undefined) {
                 const distSq = (this.x - this.lastX) ** 2 + (this.y - this.lastY) ** 2;
-                if (distSq > 16) { // Only spawn if moved > 4px
-                    const decay = 0.04; // Much faster clearing
+                if (distSq > 36) { // Spawning segments every 6px (was 4px)
+                    const decay = 0.05; // Fast clearing for performance
 
-                    // 1. Massive outer glow
+                    // Single call: The new 'beam' type handles layers internally
                     this.game.particles.spawnBeam(
                         this.lastX, this.lastY,
                         this.x, this.y,
-                        '#4fc3f7', 5, decay * 1.5
-                    );
-
-                    // 2. Focused blue beam
-                    this.game.particles.spawnBeam(
-                        this.lastX, this.lastY,
-                        this.x, this.y,
-                        '#81d4fa', 3, decay
-                    );
-
-                    // 3. White hot core
-                    this.game.particles.spawnBeam(
-                        this.lastX, this.lastY,
-                        this.x, this.y,
-                        '#ffffff', 2, decay * 1.2
+                        '#4fc3f7', 4, decay
                     );
 
                     this.lastX = this.x;
@@ -434,6 +420,23 @@ export class Projectile {
                     vy: (Math.random() - 0.5) * 4,
                     life: 0.5, decay: 0.05,
                     size: 2, color: '#ffffff', type: 'dot'
+                });
+            }
+        }
+
+        // Sniper Ult Particles (High-tech energy trail)
+        if (this.isSniperUltShot && this.active) {
+            // Frequent small sparks
+            if (Math.random() < 0.4) {
+                this.game.particles.particles.push({
+                    x: this.x - Math.cos(this.angle) * 15, // Trail behind
+                    y: this.y - Math.sin(this.angle) * 15,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 0.4, decay: 0.1,
+                    size: Math.random() < 0.5 ? 2 : 1, // Small crisp pixels
+                    color: '#00FF00', // Neon Green
+                    type: 'square'
                 });
             }
         }
@@ -467,76 +470,7 @@ export class Projectile {
         }
 
         // --- KING OF CURSES DRAWING ---
-        if (this.isFugaArrow) {
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.rotate(this.angle);
 
-            // Outer flame glow
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = '#FF4500';
-
-            // Main arrow body (bigger)
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.moveTo(18, 0); // Bigger tip
-            ctx.lineTo(-12, 8);
-            ctx.lineTo(-8, 0);
-            ctx.lineTo(-12, -8);
-            ctx.closePath();
-            ctx.fill();
-
-            // Inner hot core
-            ctx.fillStyle = '#FFFFFF';
-            ctx.beginPath();
-            ctx.moveTo(12, 0);
-            ctx.lineTo(-4, 4);
-            ctx.lineTo(-4, -4);
-            ctx.closePath();
-            ctx.fill();
-
-            // Flame trail (animated flickering)
-            const time = Date.now() / 50;
-            ctx.fillStyle = '#FF4500';
-            for (let i = 0; i < 5; i++) {
-                const flicker = Math.sin(time + i * 1.5) * 3;
-                const trailX = -15 - i * 6;
-                const trailY = flicker;
-                const size = 6 - i;
-                ctx.beginPath();
-                ctx.arc(trailX, trailY, size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // Sparks
-            ctx.fillStyle = '#FFFF00';
-            for (let i = 0; i < 3; i++) {
-                const sparkX = -10 - Math.random() * 20;
-                const sparkY = (Math.random() - 0.5) * 12;
-                ctx.beginPath();
-                ctx.arc(sparkX, sparkY, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            ctx.restore();
-
-            // Spawn trailing fire particles in game
-            if (Math.random() < 0.4 && this.game) {
-                this.game.particles.particles.push({
-                    x: this.x - Math.cos(this.angle) * 15,
-                    y: this.y - Math.sin(this.angle) * 15,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: (Math.random() - 0.5) * 2 - 1,
-                    life: 0.5,
-                    decay: 0.05,
-                    size: 4 + Math.random() * 3,
-                    color: Math.random() > 0.5 ? '#FF4500' : '#FFD700',
-                    type: 'dot'
-                });
-            }
-
-            return;
-        }
 
         if (this.isWorldSlash) {
             ctx.save();
@@ -545,11 +479,9 @@ export class Projectile {
 
             const slashWidth = this.radius || 40; // Uses the radius property for width
 
-            // Glow effect
-            ctx.shadowBlur = 25;
-            ctx.shadowColor = '#DC143C';
-
             // Main slash crescent (single forward arc)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1.0;
             ctx.strokeStyle = '#DC143C';
             ctx.lineWidth = 6;
             ctx.lineCap = 'round';
@@ -580,60 +512,7 @@ export class Projectile {
             return;
         }
 
-        if (this.isGroundBurn) {
-            ctx.save();
 
-            // Calculate fade based on remaining lifetime
-            const fadeRatio = this.lifeTime / (this.maxLifeTime || 240);
-            ctx.globalAlpha = 0.4 + fadeRatio * 0.4;
-
-            // Outer glow ring
-            const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-            gradient.addColorStop(0, 'rgba(255, 200, 50, 0.8)');
-            gradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.5)');
-            gradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
-
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Animated flame tongues
-            const time = Date.now() / 100;
-            ctx.fillStyle = '#FF4500';
-            for (let i = 0; i < 8; i++) {
-                const angle = (i / 8) * Math.PI * 2 + time * 0.3;
-                const flicker = Math.sin(time * 2 + i) * 5;
-                const flameLen = (this.radius * 0.6) + flicker;
-                const fx = this.x + Math.cos(angle) * flameLen;
-                const fy = this.y + Math.sin(angle) * flameLen;
-
-                ctx.beginPath();
-                ctx.arc(fx, fy, 4 + Math.random() * 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // Central hot core
-            ctx.fillStyle = '#FFFF00';
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#FF4500';
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, 8 + Math.sin(time * 3) * 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Sparks/Embers rising
-            ctx.fillStyle = '#FFAA00';
-            for (let i = 0; i < 3; i++) {
-                const sparkX = this.x + (Math.random() - 0.5) * this.radius;
-                const sparkY = this.y + (Math.random() - 0.5) * this.radius - Math.random() * 10;
-                ctx.beginPath();
-                ctx.arc(sparkX, sparkY, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            ctx.restore();
-            return;
-        }
 
         // --- QUINCY ARROW DRAWING ---
         if (this.isQuincyArrow) {
@@ -647,17 +526,13 @@ export class Projectile {
                 ctx.rotate(this.angle);
             }
 
-            // 1. Intense Reishi Glow
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#00BFFF';
-
             // 2. The Arrow Shaft (Pure Energy Beam) - REDUCED SIZE 50%
             // Core (White)
             ctx.fillStyle = '#FFFFFF';
             // Original: -15, -1.5, 30, 3 -> New: -7.5, -0.75, 15, 1.5
             ctx.fillRect(-7.5, -0.75, 15, 1.5);
 
-            // Outer Glow (Blue)
+            // Outer Edge (Blue)
             ctx.strokeStyle = '#00BFFF';
             ctx.lineWidth = 1; // 2 -> 1
             ctx.beginPath();
@@ -799,11 +674,10 @@ export class Projectile {
             // Slowly rotate the seal
             ctx.rotate(Date.now() * 0.002);
 
-            // Glow Effect
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00BFFF';
             ctx.strokeStyle = '#00BFFF';
             ctx.lineWidth = 2;
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1.0;
 
             // Draw 5-pointed Quincy Star (The Trap Radius)
             ctx.beginPath();
@@ -830,15 +704,14 @@ export class Projectile {
 
             // Silver Tube Body
             ctx.fillStyle = '#C0C0C0'; // Silver
-            ctx.shadowColor = '#FFFFFF';
             ctx.beginPath();
-            ctx.rect(-3, -8, 6, 16); // Small capsule/tube
+            ctx.roundRect(-3, -8, 6, 16, 3); // Small rounded capsule
             ctx.fill();
 
             // Liquid Reishi inside (Blue strip)
             ctx.fillStyle = '#00FFFF';
             ctx.beginPath();
-            ctx.rect(-1, -6, 2, 12);
+            ctx.roundRect(-1, -6, 2, 12, 1);
             ctx.fill();
 
             // Metallic Glint
@@ -848,17 +721,85 @@ export class Projectile {
 
             ctx.restore();
         }
+        else if (this.isSniperUltShot) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+
+            // UNIQUE ULT VISUAL: Sleek "Railgun" Needle
+            // Not bulky, but long and sharp.
+
+            // 1. Energy Shockwave Rings (Mach cones)
+            ctx.strokeStyle = 'rgba(0, 255, 100, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-10, -8);
+            ctx.lineTo(0, -4);
+            ctx.lineTo(0, 4);
+            ctx.lineTo(-10, 8);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(-20, -6);
+            ctx.lineTo(-12, -3);
+            ctx.lineTo(-12, 3);
+            ctx.lineTo(-20, 6);
+            ctx.stroke();
+
+            // 2. Main Beam / Needle Body
+
+            // Core Shaft (Long and thin)
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(-25, -1.5, 50, 3); // 50px long, 3px thin
+
+            // 3. Tip Flash
+            ctx.fillStyle = '#E0FFFF';
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            ctx.arc(25, 0, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
         else if (this.isSniperShot) {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
 
-            ctx.fillStyle = this.isUnblockable ? '#00ff00' : '#ff0000';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = ctx.fillStyle;
+            const bulletColor = this.isUnblockable ? '#00ff00' : '#ff0000';
+            // 2. Motion Trail (Speed Streak)
+            const trailGrad = ctx.createLinearGradient(-30, 0, 10, 0);
+            trailGrad.addColorStop(0, 'transparent');
+            trailGrad.addColorStop(1, bulletColor);
+            ctx.fillStyle = trailGrad;
+            ctx.globalAlpha = 0.6;
+            ctx.fillRect(-45, -1.5, 45, 3);
 
+            // 3. Bullet Shape (Sharp Tip / Aerodynamic)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = this.isUnblockable ? '#00ff88' : '#ff4444';
             ctx.beginPath();
-            ctx.fillRect(-10, -2, 20, 4); // Long bullet
+            ctx.moveTo(12, 0); // Sharp Point
+            ctx.quadraticCurveTo(8, -3, 0, -3); // Ogive curve
+            ctx.lineTo(-12, -3); // Body
+            ctx.lineTo(-12, 3); // Base
+            ctx.lineTo(0, 3); // Body
+            ctx.quadraticCurveTo(8, 3, 12, 0); // Ogive curve
+            ctx.closePath();
+            ctx.fill();
+
+            // 4. White-Hot Energy Core
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(10, 0);
+            ctx.lineTo(2, -1);
+            ctx.lineTo(-10, -1);
+            ctx.lineTo(-10, 1);
+            ctx.lineTo(2, 1);
+            ctx.closePath();
+            ctx.fill();
+
             ctx.restore();
         }
         else if (this.isBallistaBolt) {
@@ -958,14 +899,11 @@ export class Projectile {
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
 
-            // Fist Shape
+            ctx.globalCompositeOperation = 'source-over';
             ctx.fillStyle = '#ffccaa';
-            ctx.shadowBlur = 3;
-            ctx.shadowColor = '#d95a00';
             ctx.beginPath();
-            ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2); // Thinner fist (Reduced from 0.8)
+            ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowBlur = 0;
 
             // Knuckles
             ctx.fillStyle = '#ffffff';

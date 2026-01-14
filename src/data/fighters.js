@@ -228,8 +228,8 @@ export const FIGHTER_TYPES = {
                 range: 2000,
                 rotationSlow: 0.1,
                 speedSlow: 0.25,
-                beamWidth: 20,
-                coreWidth: 8,
+                beamWidth: 14,
+                coreWidth: 5,
                 tickRate: 3,
                 slowDuration: 45
             },
@@ -651,7 +651,7 @@ export const FIGHTER_TYPES = {
                 type: "HEX_BARRIER",
                 isPassive: true,
                 // Configurable properties
-                arcAngle: 2,
+                arcAngle: 1.8,
                 shieldRadius: 10,
                 shatterChance: 0.5,
                 shatterDamage: 5
@@ -671,6 +671,53 @@ export const FIGHTER_TYPES = {
                 launchSpeed: 4,  // Initial fire velocity
                 friction: 0.95,  // Deceleration speed (1 = none)
                 growthSpeed: 0.04 // Speed of "birth" animation
+            }
+        }
+    },
+    LEVI: {
+        name: "Captain Levi",
+        color: "#4A5D4E", // Survey Corps Green
+        hp: 90, mass: 0.8, speed: 4.0, rotationSpeed: 0.08,
+        skills: {
+            atk: {
+                name: "Sword Shred",
+                desc: "Rotation speed scales with movement speed. Shreds at max momentum.",
+                type: "SWORD_SHRED",
+                isPassive: true,
+                // Configurable properties
+                baseDamage: 2,
+                range: 33,
+                attackCooldown: 12, // Base cooldown (decreases with speed)
+                minCooldown: 2,     // Minimum cooldown at max speed
+                maxRotationSpeed: 0.6, // Cap for rotation speed scaling
+                speedScaleFactor: 0.0372 // How much rotation increases per speed unit
+            },
+            def: {
+                name: "ODM Maneuver",
+                desc: "Fires hook to walls. Builds speed over distance. Sticks to enemies.",
+                type: "ODM_MANEUVER",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 45,
+                hookRange: 500,
+                hookSpeed: 22,
+                speedBuildupPerUnit: 0.025, // Reach max speed in 400 range ( (14-4)/400 )
+                maxSpeed: 14,
+                evasionChance: 0.5, // 50% dodge while in flight
+                stickDuration: 90, // 1.5 second
+                jumpAwayForce: 8
+            },
+            ult: {
+                name: "Godspeed ODM",
+                desc: "Fires hooks 1.5x faster. Rope speed doubled.",
+                type: "GODSPEED_ODM",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 240,
+                duration: 300, // 5 seconds
+                fireRateMultiplier: 1.5,
+                hookSpeedMultiplier: 2.0,
+                maxSpeedBoost: 18 // Increased max speed cap during ult
             }
         }
     }

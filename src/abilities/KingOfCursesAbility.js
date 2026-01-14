@@ -47,7 +47,7 @@ export class KingOfCursesAtkAbility extends Ability {
 
             if (hit) {
                 fighter.cleaveTimer = 6; // Fixed 10 DPS rate (6 frames)
-                audioEngine.playCleaveHit();
+                audioEngine.playRealisticSlash();
             }
         } else {
             fighter.cleaveTimer--;

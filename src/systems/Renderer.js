@@ -108,11 +108,14 @@ export class Renderer {
             ctx.globalAlpha = 0.4 + pulse;
             ctx.strokeStyle = '#FF4500';
             ctx.lineWidth = 2 + fighter.status.burnStacks;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#FF4500';
+
+            // Optimized Burn Glow (Zero-Blur)
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.lineWidth = 6 + fighter.status.burnStacks;
             ctx.beginPath();
             ctx.arc(0, 0, fighter.radius + 4, 0, Math.PI * 2);
             ctx.stroke();
+
             ctx.restore();
         }
 
@@ -157,14 +160,21 @@ export class Renderer {
         ctx.fillStyle = fighter.color;
 
         if (fighter.activeEffects.ultActive) {
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = fighter.color;
+            // Optimized Ult Aura (Zero-Blur)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = fighter.color;
+            ctx.lineWidth = 6;
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, fighter.radius + 4, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
         }
 
         ctx.beginPath();
         ctx.arc(0, 0, fighter.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
     }
 
     /**
@@ -207,8 +217,17 @@ export class Renderer {
             const hpRatio = barrier.hp / barrier.maxHp;
             const adjustedAngle = barrier.angle + fighter.angle;
 
-            ctx.shadowBlur = 5 + hpRatio * 10;
-            ctx.shadowColor = '#8B4513';
+            if (hpRatio < 1.0) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : '#FF0000';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 0.3 * (1 - hpRatio);
+                ctx.beginPath();
+                ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
+                ctx.stroke();
+                ctx.restore();
+            }
 
             ctx.beginPath();
             ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
@@ -241,7 +260,7 @@ export class Renderer {
             ctx.strokeText(Math.ceil(barrier.hp), textX, textY);
             ctx.fillText(Math.ceil(barrier.hp), textX, textY);
 
-            ctx.shadowBlur = 0;
+            // End barrier draw
         }
     }
 
@@ -292,14 +311,17 @@ export class Renderer {
         this.registerAccessory('SHIELDBEARER', (ctx, fighter) => {
             const halfArc = fighter.skills.def.arcAngle / 2;
 
-            if (fighter.wallBounceSpeed > fighter.baseSpeed) {
-                ctx.shadowBlur = fighter.wallBounceSpeed * 4;
-                ctx.shadowColor = '#8b5cf6';
-            }
-
-            if (fighter.ultWallSlamActive) {
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = '#ff4444';
+            if (fighter.wallBounceSpeed > fighter.baseSpeed || fighter.ultWallSlamActive) {
+                // Optimized Bounce Glow (Zero-Blur)
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = fighter.ultWallSlamActive ? '#ff4444' : '#8b5cf6';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath();
+                ctx.arc(0, 0, fighter.radius + 8, -halfArc, halfArc);
+                ctx.stroke();
+                ctx.restore();
             }
 
             ctx.beginPath();
@@ -321,7 +343,7 @@ export class Renderer {
             ctx.strokeStyle = fighter.ultWallSlamActive ? '#ff6666' : '#a78bfa';
             ctx.stroke();
 
-            ctx.shadowBlur = 0;
+            // End shieldbearer draw
         });
 
         // Thunder Mage - Orb
@@ -350,9 +372,10 @@ export class Renderer {
                 ctx.ellipse(20, 0, 10 + ratio * 20, 10 + ratio * 10, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Add some glow
-                ctx.shadowBlur = 10 + ratio * 20;
-                ctx.shadowColor = '#ffaa00';
+                // Add some glow (Zero-Blur)
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#ffaa00';
+                ctx.lineWidth = 4 + ratio * 8;
                 ctx.stroke();
                 ctx.restore();
             }
@@ -374,8 +397,13 @@ export class Renderer {
                 ctx.globalAlpha = fighter.activeEffects.ultActive ? 1.0 : 0.6;
 
                 if (fighter.activeEffects.ultActive) {
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = fighter.laserColor;
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = fighter.laserColor;
+                    ctx.lineWidth = 6;
+                    ctx.globalAlpha = 0.4;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0); ctx.lineTo(fighter.laserDist, 0);
+                    ctx.stroke();
                 }
 
                 ctx.beginPath();
@@ -480,27 +508,35 @@ export class Renderer {
 
             const wheelRadius = fighter.radius + 15;
 
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = '#FFD700';
+            // Optimized Wheel Glow (Zero-Blur)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 6; // Reduced from 10
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
 
             // Outer Ring
             ctx.beginPath();
             ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
-            ctx.lineWidth = 6;
+            ctx.lineWidth = 3; // Reduced from 6
             ctx.strokeStyle = '#B8860B';
             ctx.stroke();
 
-            // Inner Highlight
+            // Inner Highlight (Orb)
             ctx.beginPath();
             ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2; // Reduced from 3
             ctx.strokeStyle = '#FFD700';
             ctx.stroke();
 
             const startR = fighter.radius + 3;
             const endR = fighter.radius + 18;
 
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 2; // Reduced from 4
             ctx.lineCap = 'round';
             ctx.strokeStyle = '#B8860B';
 
@@ -516,9 +552,10 @@ export class Renderer {
                 ctx.lineTo(ex, ey);
                 ctx.stroke();
 
+                // Orb size
                 ctx.fillStyle = '#FFD700';
                 ctx.beginPath();
-                ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+                ctx.arc(ex, ey, 4, 0, Math.PI * 2); // Restored to 3
                 ctx.fill();
             }
 
@@ -591,8 +628,17 @@ export class Renderer {
             // Main bow arc (translucent blue energy)
             ctx.strokeStyle = '#1E90FF';
             ctx.lineWidth = 3 + lockRatio * 2;
-            ctx.shadowBlur = 10 + lockRatio * 15;
-            ctx.shadowColor = '#00BFFF';
+
+            // Optimized Bow Glow (Zero-Blur)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = '#00BFFF';
+            ctx.lineWidth = (3 + lockRatio * 2) * 2;
+            ctx.globalAlpha = 0.3 + lockRatio * 0.3;
+            ctx.beginPath();
+            ctx.arc(bowDist, 0, 22, -Math.PI * 0.45, Math.PI * 0.45);
+            ctx.stroke();
+            ctx.restore();
             ctx.globalAlpha = 0.7 + lockRatio * 0.3;
 
             // Draw curved bow arms
@@ -612,7 +658,6 @@ export class Renderer {
             ctx.strokeStyle = '#B0E0E6';
             ctx.lineWidth = 1;
             ctx.globalAlpha = 0.8;
-            ctx.shadowBlur = 5;
 
             const topX = bowDist + Math.cos(-Math.PI * 0.45) * 22;
             const topY = Math.sin(-Math.PI * 0.45) * 22;
@@ -627,9 +672,17 @@ export class Renderer {
 
             // Charging arrow (visible when locking)
             if (fighter.lockProgress > 20) {
+                // Charging Arrow Glow (Zero-Blur)
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = '#1E90FF';
+                ctx.globalAlpha = lockRatio * 0.5;
+                ctx.beginPath();
+                ctx.arc(bowDist + 5, 0, 10 * lockRatio, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
                 ctx.fillStyle = `rgba(30, 144, 255, ${lockRatio * 0.8})`;
-                ctx.shadowBlur = 20 * lockRatio;
-                ctx.shadowColor = '#1E90FF';
 
                 // Arrow shape
                 ctx.beginPath();
@@ -670,8 +723,23 @@ export class Renderer {
                 ctx.globalAlpha = 0.6 + pulse;
                 ctx.strokeStyle = '#DC143C';
                 ctx.lineWidth = 3;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#DC143C';
+
+                // Optimized Domain Glow (Zero-Blur)
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#DC143C';
+                ctx.lineWidth = 8;
+                ctx.globalAlpha = 0.4;
+                ctx.beginPath();
+                const segmentsGlow = 18; // Simpler glow circle
+                for (let i = 0; i <= segmentsGlow; i++) {
+                    const angle = (i / segmentsGlow) * Math.PI * 2;
+                    const r = radius;
+                    if (i === 0) ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                    else ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                }
+                ctx.stroke();
+                ctx.restore();
 
                 ctx.beginPath();
                 const segments = 36;
@@ -698,6 +766,109 @@ export class Renderer {
 
                 ctx.restore();
             }
+        });
+
+        // Captain Levi - Twin Blades (Lore Accurate Box Cutter Stance)
+        this.registerAccessory('LEVI', (ctx, fighter) => {
+            const currentSpeed = Math.hypot(fighter.dx || 0, fighter.dy || 0);
+            const isHighSpeed = currentSpeed > 8;
+
+            ctx.save();
+
+            // Blade properties - Lore accurate box cutter shape
+            const bladeLength = 35;
+            const bladeWidth = 7;
+            const handleLength = 14;
+
+            // Helper function to draw a single box-cutter blade
+            const drawBlade = (isBackBlade = false) => {
+                ctx.save();
+
+                // Box cutter shape: Rectangular with a single angled tip
+                // Start from handle
+                ctx.fillStyle = '#B0BEC5'; // Steel body
+                ctx.strokeStyle = '#455A64';
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+                ctx.moveTo(0, -bladeWidth / 2); // Top left (at handle)
+                ctx.lineTo(bladeLength, -bladeWidth / 2); // Top edge
+                ctx.lineTo(bladeLength + 8, bladeWidth / 2); // Angled tip (Box cutter signature)
+                ctx.lineTo(0, bladeWidth / 2); // Bottom edge
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Blade segment lines (box cutter blades are segmented)
+                ctx.beginPath();
+                ctx.strokeStyle = '#90A4AE';
+                ctx.lineWidth = 0.5;
+                for (let x = 8; x < bladeLength; x += 6) {
+                    ctx.moveTo(x, -bladeWidth / 2);
+                    ctx.lineTo(x + 2, bladeWidth / 2);
+                }
+                ctx.stroke();
+
+                // Handle (Survey Corps trigger handle)
+                ctx.fillStyle = '#212121';
+                ctx.fillRect(-handleLength, -bladeWidth / 2 - 1, handleLength, bladeWidth + 2);
+                // Trigger guard
+                ctx.strokeStyle = '#757575';
+                ctx.strokeRect(-handleLength, -bladeWidth / 2 - 1, handleLength, bladeWidth + 2);
+
+                // Sharp edge highlight
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(bladeLength, -bladeWidth / 2 + 1);
+                ctx.lineTo(bladeLength + 7, bladeWidth / 2 - 1); // Tip edge
+                ctx.lineTo(0, bladeWidth / 2 - 1); // Bottom sharp edge
+                ctx.stroke();
+
+                ctx.restore();
+            };
+
+            // Stance: Back-to-back diagonal (Lore stance)
+            const stanceAngle = -Math.PI / 4; // 45 degree diagonal
+
+            const renderStance = () => {
+                // Front Blade (Pushed inward, closer to side edge)
+                ctx.save();
+                ctx.translate(12, -23);
+                ctx.rotate(stanceAngle);
+                drawBlade();
+                ctx.restore();
+
+                // Back Blade (Pushed inward, closer to side edge)
+                ctx.save();
+                ctx.translate(-12, 23);
+                ctx.rotate(stanceAngle + Math.PI);
+                drawBlade();
+                ctx.restore();
+            };
+
+            // High speed visual: Circular Saw afterimages
+            if (isHighSpeed) {
+                ctx.globalAlpha = 0.15;
+                for (let i = 1; i <= 3; i++) {
+                    ctx.save();
+                    ctx.rotate(-fighter.rotationSpeed * i * 3);
+                    renderStance();
+                    ctx.restore();
+                }
+                ctx.globalAlpha = 1.0;
+                // Optimized Glow (Zero-Blur)
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 0.3;
+                renderStance();
+            }
+
+            renderStance();
+
+            // End stance draw
+            ctx.restore();
         });
     }
 }

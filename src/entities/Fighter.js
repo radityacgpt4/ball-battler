@@ -755,14 +755,16 @@ export class Fighter {
         } else if (this.typeKey === 'SHIELDBEARER') {
             const halfArc = this.skills.def.arcAngle / 2;
 
-            if (this.wallBounceSpeed > this.baseSpeed) {
-                ctx.shadowBlur = this.wallBounceSpeed * 4;
-                ctx.shadowColor = '#8b5cf6';
-            }
-
-            if (this.ultWallSlamActive) {
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = '#ff4444';
+            if (this.wallBounceSpeed > this.baseSpeed || this.ultWallSlamActive) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = this.ultWallSlamActive ? '#ff4444' : '#8b5cf6';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius + 8, -halfArc, halfArc);
+                ctx.stroke();
+                ctx.restore();
             }
 
             ctx.beginPath();
@@ -784,7 +786,7 @@ export class Fighter {
             ctx.strokeStyle = this.ultWallSlamActive ? '#ff6666' : '#a78bfa';
             ctx.stroke();
 
-            ctx.shadowBlur = 0;
+            // End Shieldbearer draw
         } else if (this.typeKey === 'THUNDER_MAGE') {
             ctx.fillStyle = '#00FFFF';
             ctx.beginPath();
@@ -998,9 +1000,17 @@ export class Fighter {
 
                 // --- Shieldbearer 1:1 Visual Style ---
 
-                // Glow
-                ctx.shadowBlur = 5 + hpRatio * 10;
-                ctx.shadowColor = '#8B4513';
+                if (hpRatio < 1.0) {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : '#FF0000';
+                    ctx.lineWidth = 4;
+                    ctx.globalAlpha = 0.3 * (1 - hpRatio);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
+                    ctx.stroke();
+                    ctx.restore();
+                }
 
                 // 1. Thick Outer Base (lighter)
                 ctx.beginPath();
@@ -1037,7 +1047,7 @@ export class Fighter {
                 ctx.strokeText(Math.ceil(barrier.hp), textX, textY);
                 ctx.fillText(Math.ceil(barrier.hp), textX, textY);
 
-                ctx.shadowBlur = 0;
+                // End barrier draw
             }
 
             ctx.restore();
@@ -1111,13 +1121,20 @@ export class Fighter {
 
         ctx.fillStyle = this.color;
         if (this.activeEffects.ultActive) {
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = this.color;
+            // Optimized Ult Aura (Zero-Blur)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 4;
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 3, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
         }
         ctx.beginPath();
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
 
         ctx.rotate(this.angle);
         ctx.fillStyle = 'rgba(0,0,0,0.3)';

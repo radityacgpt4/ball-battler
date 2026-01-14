@@ -360,7 +360,7 @@ export class BalloonAbility extends Ability {
         if (!this.active) return false;
 
         const angle = Math.atan2(other.y - fighter.y, other.x - fighter.x);
-        const force = 25; // Massive bounce
+        const force = 22; // Massive bounce
 
         other.dx = Math.cos(angle) * force;
         other.dy = Math.sin(angle) * force;
@@ -412,9 +412,9 @@ export class ConquerorHakiAbility extends Ability {
             radius: 10,
             maxRadius: this.radius,
             life: 1.5,  // Much longer life for visibility
-            decay: 0.02, // Very slow decay
+            decay: 0.025, // Very slow decay
             color: '#ff0000',
-            lineWidth: 11 // Thick
+            lineWidth: 10 // Thick
         });
 
         // 3. MIDDLE BLACK PRESSURE WAVE
@@ -424,9 +424,9 @@ export class ConquerorHakiAbility extends Ability {
             radius: 15,
             maxRadius: this.radius * 0.85,
             life: 1.3,
-            decay: 0.025,
+            decay: 0.03,
             color: '#000000',
-            lineWidth: 8
+            lineWidth: 7
         });
 
         // 4. INNER WHITE-HOT CORE BURST
@@ -436,7 +436,7 @@ export class ConquerorHakiAbility extends Ability {
             radius: 20,
             maxRadius: this.radius * 0.5,
             life: 0.8,
-            decay: 0.04,
+            decay: 0.05,
             color: '#ffffff',
             lineWidth: 4
         });

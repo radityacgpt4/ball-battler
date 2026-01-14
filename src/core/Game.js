@@ -457,6 +457,11 @@ export class Game {
                                 this.particles.spawnExplosion(ent.x, ent.y); // Small explosion
                                 p.active = false;
                                 audioEngine.playExplosion(); // Or lighter explosion sound
+                            } else if (p.isZoltraak) {
+                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
+                                this.particles.spawnZoltraakImpact(ent.x, ent.y);
+                                audioEngine.playHit();
+                                p.active = false;
                             } else {
                                 ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
                                 if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
@@ -478,65 +483,7 @@ export class Game {
             }
 
 
-            // --- KING OF CURSES COLLISIONS ---
-            if (p.isFugaArrow && p.active) {
-                for (let ent of this.entities) {
-                    if (ent === p.owner || ent.isDead) continue;
-                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
-                        // Hit enemy
-                        ent.takeDamage(p.damage, false, false, p.owner);
 
-                        // Apply Burn Stack
-                        // Safety: If burn duration expired, reset stacks to 0 before applying new one
-                        if (ent.status.burn <= 0) ent.status.burnStacks = 0;
-
-                        if (!ent.status.burnStacks) ent.status.burnStacks = 0;
-                        if (ent.status.burnStacks < (p.maxStacks || 3)) {
-                            ent.status.burnStacks++;
-                        }
-                        ent.applyStatus('BURN', p.burnDuration || 180);
-                        logger.log(`${ent.name} BURNED by Fuga! (${ent.status.burnStacks} stacks)`, 'combat');
-
-                        this.spawnGroundBurn(ent.x, ent.y, p.owner);
-
-                        this.particles.spawnExplosion(p.x, p.y);
-                        audioEngine.playExplosion();
-                        p.active = false;
-                        break;
-                    }
-                }
-            }
-
-            if (p.isGroundBurn && p.active) {
-                // Ground Burn Hazard - disappears when struck, applies burn and adds timer
-                for (let ent of this.entities) {
-                    if (ent === p.owner || ent.isDead) continue;
-                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < (p.radius || 30) + ent.radius) {
-                        // Apply burn stack
-                        if (!ent.status.burnStacks) ent.status.burnStacks = 0;
-                        if (ent.status.burnStacks < 3) {
-                            ent.status.burnStacks++;
-                        }
-
-                        // ADD to burn timer (not refresh)
-                        const burnAddTime = 120; // 2 seconds added
-                        if (!ent.status.burn) ent.status.burn = 0;
-                        ent.status.burn += burnAddTime;
-                        // Cap burn duration to prevent infinite stacking
-                        if (ent.status.burn > 360) ent.status.burn = 360; // Max 6 seconds
-
-                        logger.log(`${ent.name} stepped in Ground Burn! (${ent.status.burnStacks} stacks, +${burnAddTime / 60}s burn)`, 'combat');
-
-                        // Explosion effect and deactivate
-                        this.particles.spawn(p.x, p.y, '#FF4500', 8);
-                        this.particles.spawn(p.x, p.y, '#FFD700', 5);
-                        audioEngine.playExplosion();
-
-                        p.active = false;
-                        break;
-                    }
-                }
-            }
 
             if (p.isWorldSlash && p.active) {
                 // Deflect enemy projectiles
@@ -764,16 +711,6 @@ export class Game {
             this.timeScale = 0.2; // SLOW MOTION
             audioEngine.playWin();
         }
-    }
-
-    spawnGroundBurn(x, y, owner) {
-        // Create a stationary "projectile" that acts as a hazard
-        const p = new Projectile(owner, x, y, 0, 0, 1, this);
-        p.isGroundBurn = true;
-        p.lifeTime = 240; // 4 seconds (buffed from 2)
-        p.radius = 30; // Bigger AoE (buffed from 15)
-        p.maxLifeTime = 240; // For visual fade
-        this.projectiles.push(p);
     }
 
     loop(currentTime) {

@@ -109,6 +109,10 @@ export class ZoltraakAbility extends Ability {
         p.lastY = startY;
         p.target = target;
 
+        // Unified impact properties
+        p.impactSound = 'hit';
+        p.impactParticle = 'zoltraakImpact';
+
         game.projectiles.push(p);
 
         // Visual: Muzzle Flash (Lighter for rapid fire)

@@ -54,6 +54,17 @@ export class Projectile {
         // Deflection props
         this.isDeflected = false;
         this.deflect = 0;
+
+        // ============================================
+        // UNIFIED IMPACT PROPERTIES (De-spaghettification)
+        // ============================================
+        // These properties allow the collision handler to process
+        // all projectile types with a single generic code path.
+        this.impactSound = 'hit';           // Sound ID: 'hit', 'zap', 'explosion', etc.
+        this.impactParticle = null;         // Particle spawner: 'quincyArrow', 'zoltraakImpact', 'explosion', etc.
+        this.statusEffect = null;           // Status effect: { type: 'STUN', duration: 30 } or null
+        this.piercing = false;              // If true, projectile continues after hitting
+        this.knockbackForce = 0;            // Force applied to hit entity
     }
 
     update(timeScale = 1.0) {

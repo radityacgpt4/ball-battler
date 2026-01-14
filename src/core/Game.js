@@ -359,6 +359,11 @@ export class Game {
             if (!p.isGrenade && !p.isFugaArrow && !p.isGroundBurn && !p.isWorldSlash) {
                 for (let ent of this.entities) {
                     if (ent === p.owner || ent.isDead) continue;
+
+                    // Z-Axis Check: Don't hit ground units if projectile is too high
+                    // E.g. Falling arrows shouldn't hit until they are close to the ground
+                    if (p.z !== undefined && p.z > (ent.height || 40)) continue;
+
                     if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
 
                         // Check if projectile is blocked by shield
@@ -401,23 +406,8 @@ export class Game {
                                     this.particles.spawn(ent.x, ent.y, '#ffd700', 3);
                                     audioEngine.playHit();
                                 }
-                            } else if (p.isQuincyArrow) {
-                                // Quincy arrows - piercing if perfect shot or Licht Regen
-                                if (p.piercing) {
-                                    if (!p.hitList.includes(ent.id)) {
-                                        ent.takeDamage(p.damage, false, false, p.owner);
-                                        p.hitList.push(ent.id);
-                                        this.particles.spawnQuincyArrow(ent.x, ent.y);
-                                        audioEngine.playZap();
-                                    }
-                                } else {
-                                    ent.takeDamage(p.damage, false, false, p.owner);
-                                    this.particles.spawnQuincyArrow(ent.x, ent.y);
-                                    audioEngine.playZap();
-                                    p.active = false;
-                                }
                             } else if (p.isBallistaBolt) {
-                                // Ballista bolt - damage and knockback
+                                // Ballista bolt - special knockback/pin mechanics (cannot be unified)
                                 ent.takeDamage(p.damage, false, false, p.owner);
                                 this.particles.spawn(ent.x, ent.y, '#8B4513', 5);
                                 audioEngine.playHit();
@@ -452,22 +442,57 @@ export class Game {
                                     // Already being knocked - just damage, deactivate bolt
                                     p.active = false;
                                 }
-                            } else if (p.isMissile) {
-                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
-                                this.particles.spawnExplosion(ent.x, ent.y); // Small explosion
-                                p.active = false;
-                                audioEngine.playExplosion(); // Or lighter explosion sound
-                            } else if (p.isZoltraak) {
-                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
-                                this.particles.spawnZoltraakImpact(ent.x, ent.y);
-                                audioEngine.playHit();
-                                p.active = false;
                             } else {
-                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
-                                if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
+                                // ================================================
+                                // UNIFIED HIT HANDLER (De-spaghettification)
+                                // ================================================
+                                // This handles: Quincy arrows, Zoltraak, Missiles, and all generic projectiles
 
-                                p.active = false;
-                                audioEngine.playHit();
+                                // Piercing projectiles use hit list to avoid double-hits
+                                if (p.piercing) {
+                                    if (p.hitList && p.hitList.includes(ent.id)) {
+                                        continue;  // Already hit this entity
+                                    }
+                                    if (!p.hitList) p.hitList = [];
+                                    p.hitList.push(ent.id);
+                                }
+
+                                // Apply damage
+                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
+
+                                // Apply status effect from unified property OR legacy stunDuration
+                                if (p.statusEffect) {
+                                    ent.applyStatus(p.statusEffect.type, p.statusEffect.duration);
+                                } else if (p.stunDuration > 0) {
+                                    ent.applyStatus('STUN', p.stunDuration);
+                                }
+
+                                // Play impact sound using unified property
+                                if (p.impactSound) {
+                                    const soundMethod = `play${p.impactSound.charAt(0).toUpperCase() + p.impactSound.slice(1)}`;
+                                    if (audioEngine[soundMethod]) {
+                                        audioEngine[soundMethod]();
+                                    } else {
+                                        audioEngine.playHit();
+                                    }
+                                } else {
+                                    audioEngine.playHit();
+                                }
+
+                                // Spawn impact particle using unified property
+                                if (p.impactParticle) {
+                                    const particleMethod = `spawn${p.impactParticle.charAt(0).toUpperCase() + p.impactParticle.slice(1)}`;
+                                    if (this.particles[particleMethod]) {
+                                        this.particles[particleMethod](ent.x, ent.y);
+                                    } else {
+                                        this.particles.spawn(ent.x, ent.y, '#ffffff', 5);
+                                    }
+                                }
+
+                                // Deactivate if not piercing
+                                if (!p.piercing) {
+                                    p.active = false;
+                                }
                             }
                         }
                         // Unblockable shots destroy shield logic (pierce through? or just ignore?)

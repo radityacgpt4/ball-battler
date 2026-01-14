@@ -139,6 +139,10 @@ export class QuincyAtkAbility extends Ability {
                 p.isPerfectShot = isPerfectLock;
                 p.radius = isPerfectLock ? this.perfectRadius : this.normalRadius;
 
+                // Unified impact properties
+                p.impactSound = 'zap';
+                p.impactParticle = 'quincyArrow';
+
                 // Perfect shots pierce
                 if (isPerfectLock) {
                         p.piercing = true;
@@ -331,6 +335,13 @@ export class QuincyUltAbility extends Ability {
                         p.piercing = true;
                         p.hitList = [];
                         p.stunDuration = this.stunDuration;
+                        p.plantedArrowLifeTime = this.plantedArrowLifeTime; // NEW: Configurable lifetime
+
+                        // Unified impact properties
+                        p.impactSound = 'zap';
+                        p.impactParticle = 'quincyArrow';
+                        p.statusEffect = { type: 'STUN', duration: this.stunDuration };
+
                         // Store destination for hit indicator (cosmetic only)
                         p.destX = destX;
                         p.destY = destY;

@@ -253,6 +253,10 @@ export class MissileBarrageAbility extends Ability {
             p.radius = this.radius;
             p.turnSpeed = this.turnSpeed;
 
+            // Unified impact properties
+            p.impactSound = 'explosion';
+            p.impactParticle = 'explosion';
+
             game.projectiles.push(p);
         }
 

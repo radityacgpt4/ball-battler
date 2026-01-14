@@ -3,6 +3,8 @@ import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { WorldSlashRenderer } from '../components/ProjectileRenderers.js';
+import { LinearMovement, WorldSlashBehavior } from '../components/ProjectileBehaviors.js';
 
 export class KingOfCursesAtkAbility extends Ability {
     constructor(config, slot) {
@@ -82,8 +84,12 @@ export class KingOfCursesAtkAbility extends Ability {
 
                 p.isWorldSlash = true;
                 p.radius = width / 2;
-                p.dragTarget = true;
                 p.dragStrength = drag;
+                p.dragTarget = true; // Enables drag logic in Game.js collision
+
+                p.renderer = new WorldSlashRenderer();
+                p.addComponent(new LinearMovement());
+                p.addComponent(new WorldSlashBehavior());
 
                 // Visuals for slash
                 game.particles.spawnSlash(

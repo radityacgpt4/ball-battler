@@ -11,7 +11,8 @@ import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
 
-import { HomingBehavior, LinearMovement } from '../components/ProjectileBehaviors.js';
+import { HomingBehavior, LinearMovement, BallisticBehavior, KunaiBehavior } from '../components/ProjectileBehaviors.js';
+import { MissileRenderer, KunaiRenderer, GrenadeRenderer } from '../components/ProjectileRenderers.js';
 
 export class BurstFireAbility extends Ability {
     constructor(config, slot) {
@@ -109,9 +110,12 @@ export class KunaiAbility extends Ability {
                 game
             );
 
-            p.isKunai = true;
+            p.isKunai = true; // Keep for ID checks if needed, but renderer is swapped
             p.isUlt = isUlt;
             p.radius = 6;
+
+            p.renderer = new KunaiRenderer();
+            p.addComponent(new KunaiBehavior());
             p.maxDist = this.maxDist + Math.random() * this.maxDistVariance;
 
             game.projectiles.push(p);
@@ -203,11 +207,13 @@ export class GrenadeAbility extends Ability {
         p.radius = this.radius;
         p.isGrenade = true;
         p.explosionRadius = this.explosionRadius;
+        // p.z = 10; // Handled by ballistic? No, need to init.
         p.z = 10;
-        // Calculate vz so it lands exactly at t = airTime
-        // 0 = 10 + v0*t - 0.5*0.5*t^2  => v0 = 0.25*t - 10/t
         const t = this.airTime;
         p.vz = 0.25 * t - 10 / t;
+
+        p.renderer = new GrenadeRenderer();
+        p.addComponent(new BallisticBehavior(0.5));
 
         // Store destination for hit indicator (cosmetic only)
         p.destX = fighter.x + Math.cos(fighter.angle) * dist;
@@ -258,13 +264,11 @@ export class MissileBarrageAbility extends Ability {
             p.addComponent(new HomingBehavior(this.turnSpeed));
             p.addComponent(new LinearMovement());
 
+            p.renderer = new MissileRenderer();
             // Legacy flag (removed for Missile, keeping cosmetic fallback if needed?)
             // p.isMissile = true; // REMOVED - Logic is now in HomingComponent
 
-            // Used for drawing only (Rendering System still checks flags? No, behaviors should work independent)
-            // Wait, RENDERING still checks flags in Projectile.js draw() loop!
-            // I must keep p.isMissile = true ONLY for drawing until I refactor drawing.
-            p.isMissile = true;
+            // p.isMissile = true; // Removed legacy flag as renderer handles it now
 
             // Unified impact properties
             p.impactSound = 'explosion';

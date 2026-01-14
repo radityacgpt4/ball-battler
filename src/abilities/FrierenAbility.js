@@ -11,7 +11,8 @@ import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
 
-// ============================================================================
+import { ZoltraakRenderer } from '../components/ProjectileRenderers.js';
+import { ZoltraakBehavior } from '../components/ProjectileBehaviors.js';
 // ATK: Zoltraak - Ordinary Offensive Magic (Homing Beam Projectile)
 // ============================================================================
 export class ZoltraakAbility extends Ability {
@@ -99,15 +100,10 @@ export class ZoltraakAbility extends Ability {
         const startY = fighter.y + Math.sin(aimAngle) * (fighter.radius + 15);
 
         const p = new Projectile(fighter, startX, startY, aimAngle, this.speed, this.damage, game);
-        p.radius = 4;
-        p.isZoltraak = true;
-        p.homingStrength = this.homingStrength;
-        p.maxDist = this.range;
-        p.startX = startX;
-        p.startY = startY;
-        p.lastX = startX;
-        p.lastY = startY;
         p.target = target;
+
+        p.renderer = new ZoltraakRenderer();
+        p.addComponent(new ZoltraakBehavior(this.homingStrength, this.range));
 
         // Unified impact properties
         p.impactSound = 'hit';
@@ -125,6 +121,11 @@ export class ZoltraakAbility extends Ability {
         });
 
         audioEngine.playZoltraak(); // Magical laser sound
+
+        // Set Magic Circle Visual State
+        fighter.magicCircleTimer = 20; // Lasts for 20 frames (approx cooldown)
+        // Lock angle to firing direction (independent of body spin)
+        fighter.magicCircleAngle = aimAngle;
     }
 }
 

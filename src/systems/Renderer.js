@@ -147,9 +147,15 @@ export class Renderer {
             this.drawBallistaBarriers(ctx, fighter);
         }
 
-        // Force Field (Cyborg)
         if (fighter.shieldHp > 0) {
             this.drawForceField(ctx, fighter);
+        }
+
+        // Frieren Magic Circle
+        if (fighter.magicCircleTimer > 0) {
+            this.drawMagicCircle(ctx, fighter);
+            // Decrement visual timer (client-side visual logic)
+            fighter.magicCircleTimer--;
         }
     }
 
@@ -288,6 +294,71 @@ export class Renderer {
         ctx.textAlign = "center";
         ctx.strokeText(`🛡️${Math.ceil(fighter.shieldHp)}`, 0, -fighter.radius - 15);
         ctx.fillText(`🛡️${Math.ceil(fighter.shieldHp)}`, 0, -fighter.radius - 15);
+        ctx.restore();
+    }
+
+    /**
+     * Draw Frieren's Zoltraak Magic Circle
+     */
+    drawMagicCircle(ctx, fighter) {
+        ctx.save();
+        // Use stored angle, independent of body rotation
+        const angle = fighter.magicCircleAngle || fighter.angle;
+        // Position: In front of the fighter
+        const dist = fighter.radius + 15;
+        const cx = Math.cos(angle) * dist;
+        const cy = Math.sin(angle) * dist;
+
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+
+        // PERSPECTIVE TRANSFORM: Squash X (depth), Scale Y (width)
+        // This makes it look like a vertical disk facing the target
+        ctx.scale(0.3, 1.25);
+
+        const alpha = Math.min(1, fighter.magicCircleTimer / 5); // Fade out last 5 frames
+
+        // 1. Main Ring
+        ctx.globalAlpha = 0.8 * alpha;
+        ctx.strokeStyle = '#4fc3f7';
+        ctx.lineWidth = 3; // Thicker to withstand scaling
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 2. Inner Square/Triangle (Geometric pattern)
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const r = 12;
+        ctx.moveTo(r, 0);
+        ctx.lineTo(0, r);
+        ctx.lineTo(-r, 0);
+        ctx.lineTo(0, -r);
+        ctx.closePath();
+        ctx.stroke();
+
+        // 3. Rotating inner bits
+        ctx.save();
+        ctx.rotate(Date.now() * 0.005);
+        ctx.strokeStyle = '#87CEEB';
+        ctx.beginPath();
+        ctx.moveTo(-8, -8);
+        ctx.lineTo(8, 8);
+        ctx.moveTo(8, -8);
+        ctx.lineTo(-8, 8);
+        ctx.stroke();
+        ctx.restore();
+
+        // 4. Glow
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowColor = '#4fc3f7';
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = '#E0FFFF';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.stroke();
+
         ctx.restore();
     }
 

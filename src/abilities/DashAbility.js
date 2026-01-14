@@ -9,6 +9,8 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { KunaiRenderer } from '../components/ProjectileRenderers.js';
+import { KunaiBehavior } from '../components/ProjectileBehaviors.js';
 
 export class DashAssaultAbility extends Ability {
     constructor(config, slot) {
@@ -267,6 +269,9 @@ export class FlashBarrageAbility extends Ability {
             p.isUlt = true;
             p.radius = 6;
             p.maxDist = maxDist;
+
+            p.renderer = new KunaiRenderer();
+            p.addComponent(new KunaiBehavior());
 
             game.projectiles.push(p);
             fighter.kunaiPending.push(p);

@@ -11,6 +11,8 @@ import { Ability } from './Ability.js';
 import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { SniperRenderer, ClaymoreRenderer } from '../components/ProjectileRenderers.js';
+import { LinearMovement, MineBehavior, SniperTrailBehavior } from '../components/ProjectileBehaviors.js';
 
 export class SniperAtkAbility extends Ability {
     constructor(config, slot) {
@@ -98,6 +100,12 @@ export class SniperAtkAbility extends Ability {
         p.stunDuration = this.stunDuration;
         p.radius = this.projectileRadius;
 
+        p.renderer = new SniperRenderer();
+        p.addComponent(new LinearMovement());
+        // Standard trail for normal shots or ult shots? 
+        // Logic in Projectile.js for isSniperShot used trail.
+        p.addComponent(new SniperTrailBehavior());
+
         // Check for ULT buff
         if (fighter.activeEffects.ultActive) {
             p.isUnblockable = true;
@@ -155,6 +163,9 @@ export class ClaymoreAbility extends Ability {
         p.lifeTime = this.lifeTime;
         p.slowDuration = this.slowDuration;
         p.radius = this.triggerRadius;
+
+        p.renderer = new ClaymoreRenderer();
+        p.addComponent(new MineBehavior(0.9));
 
         game.projectiles.push(p);
         audioEngine.playTone(600, 'sine', 0.1, 0.1);

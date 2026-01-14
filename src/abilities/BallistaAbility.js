@@ -12,6 +12,8 @@ import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { BallistaBoltRenderer } from '../components/ProjectileRenderers.js';
+import { LinearMovement, DragBehavior } from '../components/ProjectileBehaviors.js';
 
 export class BallistaAtkAbility extends Ability {
     constructor(config, slot) {
@@ -68,6 +70,10 @@ export class BallistaAtkAbility extends Ability {
                 p.radius = this.boltRadius;
                 p.dragTarget = null;
                 p.dragDuration = this.dragDuration;
+
+                p.renderer = new BallistaBoltRenderer();
+                p.addComponent(new LinearMovement());
+                p.addComponent(new DragBehavior());
 
                 game.projectiles.push(p);
             });

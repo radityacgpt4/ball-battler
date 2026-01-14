@@ -32,13 +32,17 @@ This engine is designed to support 50+ fighters. We cannot modify `Game.js` ever
 Projectiles no longer use "flags" (like `isMissile`) for behavior. Instead, they use a **Component Architecture**.
 
 *   **Logic components:** Attach behaviors to projectiles in the ability class.
+*   **Renderer components:** Define how the projectile looks (e.g., `new MissileRenderer()`).
 *   **Example (Homing Missile):**
     ```javascript
     const p = new Projectile(...);
+    p.renderer = new MissileRenderer();
     p.addComponent(new HomingBehavior(target));
     p.addComponent(new LinearMovement()); // Components run in order
     ```
-*   **Pre-built Behaviors:** See `src/components/ProjectileBehaviors.js` for `LinearMovement`, `HomingBehavior`, and `BallisticBehavior`.
+*   **Extensions:**
+    *   **Behaviors:** `src/components/ProjectileBehaviors.js`
+    *   **Renderers:** `src/components/ProjectileRenderers.js`
 
 ### 3. Module Responsibilities (Where to Touch)
 
@@ -46,6 +50,7 @@ Projectiles no longer use "flags" (like `isMissile`) for behavior. Instead, they
 |------|-----------------|--------------------|
 | **Add New Fighter** | `src/data/fighters.js`<br>`src/abilities/[New]Ability.js` | `Game.js`, `Fighter.js` |
 | **Add New Projectile** | `src/abilities/[New]Ability.js` (Config/Components) | `Game.js`, `Projectile.js` |
+| **New Projectile Renderer** | `src/components/ProjectileRenderers.js` | `Projectile.js`, `Game.js` |
 | **New Projectile Behavior** | `src/components/ProjectileBehaviors.js` | `Projectile.js`, `Game.js` |
 | **New Particle Effect** | `src/data/particleTemplates.js` | `Particles.js`, `Game.js` |
 | **New Sound Effect** | `src/systems/Audio.js` (Add only if new synthesis needed) | `Game.js` |
@@ -73,6 +78,9 @@ ball-battler/
 │   │   └── CollisionHandler.js # Generic Physics Resolver
 │   ├── entities/
 │   │   └── Projectile.js   # Composition container (Components/Properties)
+│   ├── components/     # Reusable logic/visuals
+│   │   ├── ProjectileBehaviors.js
+│   │   └── ProjectileRenderers.js
 │   ├── abilities/          # ALL fighter logic lives here
 │   └── data/
 │       ├── fighters.js     # Fighter balancing configs

@@ -12,6 +12,8 @@ import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { QuincyArrowRenderer, GintoTrapRenderer } from '../components/ProjectileRenderers.js';
+import { LinearMovement, QuincyTrailBehavior, StaticLifetimeBehavior, LichtRegenBehavior } from '../components/ProjectileBehaviors.js';
 
 // --- ATK: HEILIG PFEIL (Sacred Arrow) ---
 export class QuincyAtkAbility extends Ability {
@@ -140,8 +142,14 @@ export class QuincyAtkAbility extends Ability {
                 p.radius = isPerfectLock ? this.perfectRadius : this.normalRadius;
 
                 // Unified impact properties
+                // Unified impact properties
                 p.impactSound = 'zap';
                 p.impactParticle = 'quincyArrow';
+
+                // OCP Migration
+                p.renderer = new QuincyArrowRenderer();
+                p.addComponent(new LinearMovement());
+                p.addComponent(new QuincyTrailBehavior());
 
                 // Perfect shots pierce
                 if (isPerfectLock) {
@@ -248,8 +256,11 @@ export class QuincyDefAbility extends Ability {
                 trap.lifeTime = this.trapDuration;
                 trap.stunDuration = this.trapStunDuration;
                 trap.radius = this.trapRadius;
-                trap.dx = 0;
-                trap.dy = 0;
+                // trap.dx = 0; // Handled by behavior
+                // trap.dy = 0;
+
+                trap.renderer = new GintoTrapRenderer();
+                trap.addComponent(new StaticLifetimeBehavior(this.trapDuration));
 
                 game.projectiles.push(trap);
 
@@ -351,6 +362,9 @@ export class QuincyUltAbility extends Ability {
                         p.z = 10;
                         // Exact physics solution for landing at t=40
                         p.vz = 0.25 * airTime - 10 / airTime;
+
+                        p.renderer = new QuincyArrowRenderer();
+                        p.addComponent(new LichtRegenBehavior());
 
                         game.projectiles.push(p);
                 }

@@ -10,6 +10,8 @@ import { Projectile } from '../entities/Projectile.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
 import { Physics } from '../systems/Physics.js';
+import { RubberFistRenderer } from '../components/ProjectileRenderers.js';
+import { CurveBehavior } from '../components/ProjectileBehaviors.js';
 
 export class GatlingAbility extends Ability {
     constructor(config, slot) {
@@ -157,15 +159,14 @@ export class GatlingAbility extends Ability {
         const finalAngle = targetAngle + convergenceAdj + arcAdj + spreadAmt;
 
         const p = new Projectile(fighter, startX, startY, finalAngle, speed, this.fistDamage, context.game);
-        p.radius = 10;
-        p.isRubberFist = true;
-        p.maxDist = dist;
-        p.travelled = 0;
         p.startX = startX;
         p.startY = startY;
 
         // Curve mechanics
         p.curveSide = this.armSide;
+
+        p.renderer = new RubberFistRenderer();
+        p.addComponent(new CurveBehavior(this.armSide));
 
         // Toggle side
         this.armSide *= -1;

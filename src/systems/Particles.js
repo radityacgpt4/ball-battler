@@ -74,50 +74,8 @@ export class ParticleSystem {
         }
     }
 
-    // UPDATED: Distinct Reishi blink
-    spawnHirenkyaku(x, y) {
-        // === BOLD QUINCY BLINK ===
-
-        // 1. Solid Vertical Beam (The "Pillar" of light)
-        this.particles.push({
-            type: 'beam',
-            x1: x, y1: y + 80,
-            x2: x, y2: y - 80,
-            color: '#00BFFF', // Deep Sky Blue (Outer)
-            life: 0.6, decay: 0.05, width: 20
-        });
-
-        // 2. Blinding White Core (Inner)
-        this.particles.push({
-            type: 'beam',
-            x1: x, y1: y + 80,
-            x2: x, y2: y - 80,
-            color: '#FFFFFF', // Pure White
-            life: 0.6, decay: 0.05, width: 8
-        });
-
-        // 3. Ground Impact Ring (Thick)
-        this.particles.push({
-            type: 'shockwave',
-            x: x, y: y,
-            radius: 5, maxRadius: 60,
-            life: 0.5, decay: 0.05,
-            color: '#1E90FF', lineWidth: 8
-        });
-
-        // 4. Rising Reishi Squares (Data effect)
-        for (let i = 0; i < 8; i++) {
-            this.particles.push({
-                x: x + (Math.random() - 0.5) * 30,
-                y: y + (Math.random() - 0.5) * 10, // Start near feet
-                vx: 0,
-                vy: -8 - Math.random() * 5, // Shoot up very fast
-                life: 0.4, decay: 0.05,
-                size: 4, color: '#FFFFFF', // White sparks
-                type: 'dot'
-            });
-        }
-    }
+    // NOTE: spawnHirenkyaku is defined later in this file (line ~445)
+    // This duplicate was removed during de-spaghettification
 
     spawnBeam(x1, y1, x2, y2, color, width = 6, decay = 0.5) {
         this.particles.push({
@@ -157,47 +115,8 @@ export class ParticleSystem {
         });
     }
 
-    spawnHirenkyaku(x, y) {
-        // Clean "Reishi" Effect: Rising Energy + Shockwave (No massive pillars)
-
-        // 1. Blue Shockwave Ring
-        this.spawnShockwave(x, y, '#1E90FF');
-
-        // 2. Rising Energy Particles (Reishi flow)
-        for (let i = 0; i < 10; i++) {
-            this.particles.push({
-                x: x + (Math.random() - 0.5) * 25,
-                y: y + (Math.random() - 0.5) * 25,
-                vx: 0,
-                vy: -3 - Math.random() * 3, // Fast upward movement
-                life: 0.6, decay: 0.08,
-                size: 2, color: '#00BFFF',
-                type: 'dot'
-            });
-        }
-
-        // 3. Central Flash
-        this.particles.push({
-            x: x, y: y,
-            vx: 0, vy: 0,
-            life: 0.4, decay: 0.1,
-            size: 15, color: '#E0FFFF',
-            type: 'dot', alpha: 0.8
-        });
-    }
-
-    // Required for Quincy Attacks if missing
-    spawnQuincyArrow(x, y) {
-        this.particles.push({
-            type: 'shockwave', x: x, y: y,
-            radius: 5, maxRadius: 30,
-            life: 0.3, decay: 0.1, color: '#1E90FF'
-        });
-    }
-
-    spawnLichtRegen(x, y) {
-        this.spawnHirenkyaku(x, y); // Reuse the cool effect
-    }
+    // NOTE: spawnHirenkyaku, spawnQuincyArrow, spawnLichtRegen are defined
+    // later in this file. These duplicates were removed during de-spaghettification.
 
     spawnWallImpact(x, y) {
         for (let i = 0; i < 30; i++) {
@@ -345,59 +264,8 @@ export class ParticleSystem {
         // Screenshake simulated via particles if we had it, but here we just add text
         this.spawnText(x, y - 60, "MAX BLACK FLASH!!", "#FF0000");
     }
-
-    // Quincy Heilig Pfeil trail (Reishi Spirit Particles)
-    spawnQuincyArrow(x, y) {
-        // Core trail (dense bright)
-        for (let i = 0; i < 3; i++) {
-            this.particles.push({
-                x, y,
-                color: '#E0FFFF', // Light Cyan
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
-                life: 0.4, decay: 0.08,
-                size: 3, type: 'square'
-            });
-        }
-        // Aura trail (larger blue halo)
-        for (let i = 0; i < 2; i++) {
-            this.particles.push({
-                x, y,
-                color: '#1E90FF', // Dodger Blue
-                vx: (Math.random() - 0.5) * 5,
-                vy: (Math.random() - 0.5) * 5,
-                life: 0.3, decay: 0.05,
-                size: 5, type: 'square'
-            });
-        }
-    }
-
-    // Hirenkyaku blink effect (Reishi Platform)
-    spawnHirenkyaku(x, y) {
-        for (let i = 0; i < 10; i++) {
-            this.particles.push({
-                x: x + (Math.random() - 0.5) * 25,
-                y: y + (Math.random() - 0.5) * 25,
-                color: '#87CEEB',
-                vx: 0,
-                vy: -1 - Math.random(), // Float up
-                life: 0.8, decay: 0.05,
-                size: 4 + Math.random() * 4, type: 'square'
-            });
-        }
-        this.spawnShockwave(x, y, '#1E90FF');
-    }
-
-    // Licht Regen shockwave
-    spawnLichtRegen(x, y) {
-        this.particles.push({
-            type: 'shockwave',
-            x, y,
-            radius: 5, maxRadius: 80,
-            life: 0.8, decay: 0.08,
-            color: '#1E90FF'
-        });
-    }
+    // NOTE: spawnQuincyArrow, spawnHirenkyaku, spawnLichtRegen are defined
+    // after spawnBolt(). Duplicates removed during de-spaghettification.
 
     spawnBolt(segments, color, width = 5) {
         if (segments.length < 2) return;

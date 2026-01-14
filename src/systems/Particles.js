@@ -479,8 +479,8 @@ export class ParticleSystem {
             if (p.type === 'text') {
                 p.x += p.vx; p.y += p.vy;
                 ctx.save(); ctx.globalAlpha = p.life;
-                ctx.font = "bold 26px monospace"; ctx.textAlign = "center";
-                ctx.lineWidth = 3; ctx.strokeStyle = "black"; ctx.strokeText(p.text, p.x, p.y);
+                ctx.font = "bold 18px monospace"; ctx.textAlign = "center";
+                ctx.lineWidth = 2; ctx.strokeStyle = "black"; ctx.strokeText(p.text, p.x, p.y);
                 ctx.fillStyle = p.color; ctx.fillText(p.text, p.x, p.y);
                 ctx.restore();
             }

@@ -582,7 +582,7 @@ export const FIGHTER_TYPES = {
         }
     },
     RUBBER_CAPTAIN: {
-        name: "Rubber Captain",
+        name: "Pirate King",
         color: "#ff4500", // Orange/Red
         hp: 100, mass: 1.2, speed: 5.2, rotationSpeed: 0.14,
         skills: {
@@ -675,13 +675,13 @@ export const FIGHTER_TYPES = {
         }
     },
     LEVI: {
-        name: "Captain Levi",
+        name: "Titan Killer",
         color: "#4A5D4E", // Survey Corps Green
         hp: 90, mass: 0.8, speed: 4.0, rotationSpeed: 0.08,
         skills: {
             atk: {
                 name: "Sword Shred",
-                desc: "Rotation speed scales with movement speed. Shreds at max momentum.",
+                desc: "Rotation speed scales with movement speed. Every 8th hit is CRITICAL.",
                 type: "SWORD_SHRED",
                 isPassive: true,
                 // Configurable properties
@@ -690,11 +690,15 @@ export const FIGHTER_TYPES = {
                 attackCooldown: 12, // Base cooldown (decreases with speed)
                 minCooldown: 2,     // Minimum cooldown at max speed
                 maxRotationSpeed: 0.6, // Cap for rotation speed scaling
-                speedScaleFactor: 0.0372 // How much rotation increases per speed unit
+                speedScaleFactor: 0.0372, // How much rotation increases per speed unit
+                // Critical hit system
+                criticalHitCount: 8, // Every 8th hit is critical
+                criticalBonusDamage: 5, // +5 damage on critical
+                criticalResetTimer: 120 // 2 seconds to reset hit count
             },
             def: {
                 name: "ODM Maneuver",
-                desc: "Fires hook to walls. Builds speed over distance. Sticks to enemies.",
+                desc: "15% base evasion. +50% during flight. 1s linger after sticking.",
                 type: "ODM_MANEUVER",
                 isPassive: false,
                 // Configurable properties
@@ -703,7 +707,9 @@ export const FIGHTER_TYPES = {
                 hookSpeed: 22,
                 speedBuildupPerUnit: 0.025, // Reach max speed in 400 range ( (14-4)/400 )
                 maxSpeed: 14,
-                evasionChance: 0.5, // 50% dodge while in flight
+                baseEvasionChance: 0.15, // 15% base evasion always active
+                flightEvasionBonus: 0.50, // +50% during flight (total 65%)
+                evasionLingerTime: 60, // 1 second linger after sticking
                 stickDuration: 90, // 1.5 second
                 jumpAwayForce: 8
             },

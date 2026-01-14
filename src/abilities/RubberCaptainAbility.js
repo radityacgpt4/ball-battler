@@ -1,6 +1,6 @@
 /**
- * Rubber Captain Abilities (Luffy)
- * 
+ * Pirate King Abilities (formerly Rubber Captain)
+ *
  * ATK: Gomu Gomu Gatling (Rapid fire punches - locks rotation, targets enemy)
  * DEF: Balloon (Reflects projectiles and melee with inflation effect)
  * ULT: Conqueror Haki (Red aura explosion with shockwave)
@@ -305,7 +305,7 @@ export class BalloonAbility extends Ability {
 
             // Visual feedback for reflection
             if (Math.random() < 0.2) {
-                context.game.combatText.flash(fighter.x, fighter.y - 30, "REFLECT!");
+                context.game.combatText.text(fighter.x, fighter.y - 30, "REFLECT!", '#ffffff');
             }
         }
 
@@ -330,7 +330,7 @@ export class BalloonAbility extends Ability {
             // Visual feedback (Reduced count)
             fighter.game.particles.spawn(attackerX, attackerY, '#ffffff', 1);
             if (Math.random() < 0.1) {
-                fighter.game.combatText.flash(fighter.x, fighter.y - 30, "REFLECT!");
+                fighter.game.combatText.text(fighter.x, fighter.y - 30, "REFLECT!", '#ffffff');
             }
         }
 
@@ -402,8 +402,8 @@ export class ConquerorHakiAbility extends Ability {
 
         // === RED AURA EXPLOSION (Domain-style bomb shockwave) ===
 
-        // 1. Flash
-        game.combatText.flash(fighter.x, fighter.y - 50, "HAKI!");
+        // 1. HAKI text
+        game.combatText.text(fighter.x, fighter.y - 50, "HAKI!", '#ff0000');
 
         // 2. MAIN OUTER RED SHOCKWAVE (Slow expanding)
         game.particles.particles.push({

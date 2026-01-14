@@ -1,6 +1,8 @@
 /**
- * Levi Ackerman Abilities
+ * Titan Killer Abilities (formerly Captain Levi)
  * Physics-driven ODM gear system with speed-scaling combat.
+ * Features: 15% base evasion, +50% during flight, 1s linger after sticking.
+ * Critical hit system: Every 8th hit deals +5 bonus damage.
  * Optimized for performance with minimal particle overhead.
  */
 
@@ -12,6 +14,7 @@ import { logger } from '../systems/Logger.js';
 /**
  * ATK: Sword Shred
  * Passive melee that scales rotation and attack speed with movement speed.
+ * Every 8th consecutive hit deals 5 bonus critical damage.
  * Max DPS ~26 when at maximum momentum.
  */
 export class SwordShredAbility extends Ability {
@@ -19,11 +22,22 @@ export class SwordShredAbility extends Ability {
         super(config, slot);
         this.isPassive = true;
         this.attackTimer = 0;
+        // Critical hit tracking
+        this.consecutiveHits = 0;
+        this.hitResetTimer = 0;
     }
 
     update(fighter, context) {
         const { enemies, game, timeScale } = context;
         if (fighter.status.stun > 0) return;
+
+        // Update hit reset timer
+        if (this.hitResetTimer > 0) {
+            this.hitResetTimer -= timeScale;
+            if (this.hitResetTimer <= 0) {
+                this.consecutiveHits = 0; // Reset hit count after 2 seconds
+            }
+        }
 
         // Calculate current movement speed
         const currentSpeed = Math.hypot(fighter.dx, fighter.dy);
@@ -86,9 +100,38 @@ export class SwordShredAbility extends Ability {
                 return;
             }
 
+            // Track consecutive hits and reset timer
+            this.consecutiveHits++;
+            this.hitResetTimer = this.config.criticalResetTimer || 120; // 2 seconds
+
             // Deal damage scaled slightly by speed
             const speedDamageBonus = currentSpeed > 8 ? 1 : 0;
-            const damage = this.config.baseDamage + speedDamageBonus;
+            let damage = this.config.baseDamage + speedDamageBonus;
+
+            // Check for critical hit (every 8th consecutive hit)
+            const critHitCount = this.config.criticalHitCount || 8;
+            const isCritical = this.consecutiveHits % critHitCount === 0;
+
+            if (isCritical) {
+                const critBonusDamage = this.config.criticalBonusDamage || 5;
+                damage += critBonusDamage;
+
+                // Show CRITICAL! popup
+                game.combatText.criticalHit(target.x, target.y - target.radius);
+
+                // Extra visual feedback for critical
+                game.particles.spawn(target.x, target.y, '#ff0000', 8);
+                game.particles.particles.push({
+                    type: 'shockwave',
+                    x: target.x, y: target.y,
+                    radius: 10, maxRadius: 50,
+                    life: 0.5, decay: 0.1,
+                    color: '#ff0000', width: 3
+                });
+
+                audioEngine.playHeavyImpact();
+                logger.log(`${fighter.name} CRITICAL HIT on ${target.name}! (${this.consecutiveHits} hits)`, 'combat');
+            }
 
             target.takeDamage(damage, false, false, fighter);
 
@@ -125,10 +168,21 @@ export class ODMDefAbility extends Ability {
         this.stickTarget = null;
         this.stickTimer = 0;
         this.stickOffset = { x: 0, y: 0 };
+        // Evasion linger timer (1s after stick ends)
+        this.evasionLingerTimer = 0;
     }
 
     update(fighter, context) {
         const { enemies, game, timeScale } = context;
+
+        // Update evasion linger timer
+        if (this.evasionLingerTimer > 0) {
+            this.evasionLingerTimer -= timeScale;
+            fighter.odmEvasionLinger = true;
+            if (this.evasionLingerTimer <= 0) {
+                fighter.odmEvasionLinger = false;
+            }
+        }
 
         // Handle "Stick" state
         if (this.stickTarget && this.stickTimer > 0) {
@@ -367,7 +421,10 @@ export class ODMDefAbility extends Ability {
 
     endStick(fighter, game) {
         const target = this.stickTarget;
-        fighter.odmEvasionActive = false; // Evasion ends after jump-away
+        fighter.odmEvasionActive = false; // Flight evasion ends
+        // Start evasion linger timer (1s after stick ends)
+        this.evasionLingerTimer = this.config.evasionLingerTime || 60;
+        fighter.odmEvasionLinger = true;
 
         if (target && !target.isDead) {
             // Jump away - calculate escape direction
@@ -408,17 +465,30 @@ export class ODMDefAbility extends Ability {
     }
 
     onDamage(fighter, amount, context) {
-        // Evasion check while in ODM flight or sticking
-        if (fighter.odmEvasionActive && Math.random() < this.config.evasionChance) {
-            // Visual feedback - "MISS" pop-up
-            context.game.particles.spawnText(fighter.x, fighter.y - 40, "MISS", "#4A5D4E");
+        // Calculate evasion chance based on state
+        const baseEvasion = this.config.baseEvasionChance || 0.15; // 15% base
+        const flightBonus = this.config.flightEvasionBonus || 0.50; // +50% during flight
+
+        let evasionChance = baseEvasion; // Always have base evasion
+
+        // Add flight bonus during active flight, sticking, or linger period
+        if (fighter.odmEvasionActive || fighter.odmEvasionLinger) {
+            evasionChance += flightBonus; // Total 65% during flight/linger
+        }
+
+        // Evasion roll
+        if (Math.random() < evasionChance) {
+            // Visual feedback - "DODGE!" pop-up
+            context.game.combatText.dodged(fighter.x, fighter.y - fighter.radius);
 
             // Minimal particles for the dodge
             context.game.particles.spawn(fighter.x, fighter.y, '#ffffff', 5);
 
             audioEngine.playSwordSwing(); // Whoosh sound for evasion
 
-            logger.log(`>> ${fighter.name} EVADED using ODM maneuvers!`, 'combat');
+            const evasionType = fighter.odmEvasionActive ? "ODM flight" :
+                               fighter.odmEvasionLinger ? "ODM linger" : "base evasion";
+            logger.log(`>> ${fighter.name} EVADED (${evasionType})!`, 'combat');
             return false; // Damage negated
         }
         return amount;

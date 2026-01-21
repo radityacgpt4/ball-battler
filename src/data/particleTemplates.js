@@ -90,5 +90,31 @@ export const PARTICLE_TEMPLATES = {
             { type: 'burst', count: 48, color: ['#FF0000', '#000000'], speed: 28, life: 1.2, shape: 'dot' }, // Debris
             { type: 'text', text: 'MAX BLACK FLASH!!', color: '#FF0000', offset: { x: 0, y: -60 } }
         ]
+    },
+
+    // ============================================
+    // FIGHTER SPECIFIC: MECHA (Gundam)
+    // ============================================
+    'mechaExplosion': {
+        layers: [
+            // Fire/Energy explosion - lighter than Max Black Flash, more like beam rifle impact
+            { type: 'shockwave', color: '#FF8C00', maxRadius: 80, life: 0.6, lineWidth: 8 }, // Orange ring
+            { type: 'shockwave', color: '#FFD700', maxRadius: 60, life: 0.5, lineWidth: 4 }, // Gold inner ring
+            { type: 'burst', count: 20, color: ['#FF4500', '#FFD700', '#FFFF00'], speed: { min: 8, max: 16 }, life: 0.7, shape: 'dot' }, // Fire sparks
+            { type: 'burst', count: 8, color: '#FFFFFF', speed: { min: 4, max: 8 }, life: 0.4, shape: 'dot' }, // White core flash
+            { type: 'lightning', count: 8, color: '#FFD700', spread: 60, life: 0.4, width: 2 } // Energy crackle (less intense)
+        ]
+    },
+    'mechaDodge': {
+        layers: [
+            { type: 'shockwave', color: '#1E90FF', maxRadius: 40, life: 0.3, lineWidth: 4 },
+            { type: 'burst', count: 8, color: ['#FFD700', '#FF4500'], speed: { min: 4, max: 8 }, life: 0.4, shape: 'dot' }
+        ]
+    },
+    'mechaBoost': {
+        layers: [
+            { type: 'burst', count: 5, color: ['#FF4500', '#FFD700'], speed: { min: 2, max: 5 }, life: 0.5, shape: 'dot' },
+            { type: 'burst', count: 2, color: '#00BFFF', speed: { min: 1, max: 3 }, life: 0.3, shape: 'dot' }
+        ]
     }
 };

@@ -676,6 +676,51 @@ export const FIGHTER_TYPES = {
             }
         }
     },
+    MECHA: {
+        name: "Mecha",
+        color: "#1E90FF", // Gundam Blue (Wing Zero inspired)
+        hp: 100, mass: 1.3, speed: 4.2, rotationSpeed: 0.12,
+        skills: {
+            atk: {
+                name: "Beam Rifle",
+                desc: "Fires an energy projectile that explodes on impact, followed by a melee dash.",
+                type: "MECHA_BEAM",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 150, // 2.5 seconds at 60fps
+                projectileDamage: 10,
+                explosionDamage: 6,
+                stunDuration: 90, // 1.5 seconds
+                projectileSpeed: 16,
+                explosionRadius: 60,
+                // Melee dash properties
+                meleeDamage: 4,
+                dashSpeed: 18,
+                dashDuration: 12,
+                meleeRotationMultiplier: 3
+            },
+            def: {
+                name: "Thruster Dodge",
+                desc: "Side dashes when enemies or projectiles approach.",
+                type: "MECHA_DODGE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 90,
+                detectionRadius: 100,
+                approachThreshold: 0.6,
+                dodgeDistance: 80,
+                dodgeSpeed: 12
+            },
+            ult: {
+                name: "Counter Protocol",
+                desc: "Every dodge triggers a full attack sequence and resets ATK cooldown.",
+                type: "MECHA_COUNTER",
+                isPassive: true,
+                // This is passive - always active
+                cooldown: 0
+            }
+        }
+    },
     LEVI: {
         name: "Titan Killer",
         color: "#4A5D4E", // Survey Corps Green

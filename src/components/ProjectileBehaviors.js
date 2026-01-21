@@ -555,3 +555,107 @@ export class KunaiBehavior {
         }
     }
 }
+
+export class MechaBeamBehavior {
+    update(p, timeScale) {
+        // Move projectile
+        p.x += p.dx * timeScale;
+        p.y += p.dy * timeScale;
+
+        // Energy trail effect (Yellow Flash style but tangible)
+        if (p.lastTrailX !== undefined) {
+            const distSq = (p.x - p.lastTrailX) ** 2 + (p.y - p.lastTrailY) ** 2;
+            if (distSq > 64) { // Every 8px
+                p.game.particles.spawnBeam(
+                    p.lastTrailX, p.lastTrailY,
+                    p.x, p.y,
+                    '#FFD700', 5, 0.08
+                );
+                p.lastTrailX = p.x;
+                p.lastTrailY = p.y;
+            }
+        } else {
+            p.lastTrailX = p.x;
+            p.lastTrailY = p.y;
+        }
+
+        // Sparkle trail
+        if (Math.random() < 0.4) {
+            p.game.particles.particles.push({
+                x: p.x - Math.cos(p.angle) * 10,
+                y: p.y - Math.sin(p.angle) * 10,
+                vx: (Math.random() - 0.5) * 3,
+                vy: (Math.random() - 0.5) * 3,
+                life: 0.35, decay: 0.1,
+                size: 3 + Math.random() * 2,
+                color: Math.random() > 0.5 ? '#FFD700' : '#FFFFFF',
+                type: 'dot'
+            });
+        }
+
+        // Energy crackle particles
+        if (Math.random() < 0.15) {
+            const perpAngle = p.angle + Math.PI / 2;
+            const offset = (Math.random() > 0.5 ? 1 : -1) * 6;
+            p.game.particles.particles.push({
+                x: p.x + Math.cos(perpAngle) * offset,
+                y: p.y + Math.sin(perpAngle) * offset,
+                vx: Math.cos(perpAngle) * offset * 0.3,
+                vy: Math.sin(perpAngle) * offset * 0.3,
+                life: 0.25, decay: 0.1,
+                size: 2,
+                color: '#FFFF00',
+                type: 'square'
+            });
+        }
+
+        // Wall collision - explode on wall
+        const bounds = p.game.arenaBounds;
+        if (p.x < bounds.x || p.x > bounds.x + bounds.width ||
+            p.y < bounds.y || p.y > bounds.y + bounds.height) {
+
+            if (p.explodeOnWall && !p.hasExploded) {
+                // Clamp position to wall
+                p.x = Math.max(bounds.x, Math.min(bounds.x + bounds.width, p.x));
+                p.y = Math.max(bounds.y, Math.min(bounds.y + bounds.height, p.y));
+
+                p.hasExploded = true;
+                p.active = false;
+
+                // Trigger explosion
+                this.triggerExplosion(p);
+            } else {
+                p.active = false;
+            }
+        }
+    }
+
+    triggerExplosion(p) {
+        const game = p.game;
+
+        // Spawn explosion effect
+        game.particles.spawnEffect('mechaExplosion', p.x, p.y);
+
+        // AOE damage
+        const enemies = game.entities.filter(e => e !== p.owner && !e.isDead);
+        for (const enemy of enemies) {
+            const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
+            if (dist < p.explosionRadius + enemy.radius) {
+                enemy.takeDamage(p.explosionDamage, false, false, p.owner);
+                enemy.applyStatus('STUN', p.stunDuration);
+
+                // Knockback
+                const angle = Math.atan2(enemy.y - p.y, enemy.x - p.x);
+                enemy.dx += Math.cos(angle) * 6;
+                enemy.dy += Math.sin(angle) * 6;
+            }
+        }
+
+        audioEngine.playExplosion();
+
+        // Trigger melee follow-up on owner
+        if (p.owner && p.owner.abilities && p.owner.abilities.atk) {
+            p.owner.abilities.atk.triggerMeleeDash(p.owner, { game });
+        }
+    }
+}

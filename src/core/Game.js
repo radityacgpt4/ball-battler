@@ -407,6 +407,38 @@ export class Game {
                                     this.particles.spawn(ent.x, ent.y, '#ffd700', 3);
                                     audioEngine.playHit();
                                 }
+                            } else if (p.isMechaBeam) {
+                                // Mecha Beam - explodes on first contact, deals direct + AoE damage
+                                // Direct hit damage + stun
+                                ent.takeDamage(p.damage, false, false, p.owner);
+                                ent.applyStatus('STUN', p.stunDuration);
+
+                                // Trigger explosion AoE at impact point
+                                this.particles.spawnEffect('mechaExplosion', ent.x, ent.y);
+                                audioEngine.playExplosion();
+
+                                // AoE damage to nearby enemies (excluding direct hit target)
+                                for (const other of this.entities) {
+                                    if (other === p.owner || other.isDead || other === ent) continue;
+                                    const aoeD = Physics.dist(ent.x, ent.y, other.x, other.y);
+                                    if (aoeD < p.explosionRadius + other.radius) {
+                                        other.takeDamage(p.explosionDamage, false, false, p.owner);
+                                        other.applyStatus('STUN', p.stunDuration);
+                                        // Knockback
+                                        const angle = Math.atan2(other.y - ent.y, other.x - ent.x);
+                                        other.dx += Math.cos(angle) * 6;
+                                        other.dy += Math.sin(angle) * 6;
+                                    }
+                                }
+
+                                // Trigger melee follow-up on owner
+                                if (p.owner && p.owner.abilities && p.owner.abilities.atk) {
+                                    p.owner.abilities.atk.triggerMeleeDash(p.owner, { game: this });
+                                }
+
+                                p.hasExploded = true;
+                                p.active = false;
+                                logger.log(`${p.owner.name}'s Beam Rifle hit ${ent.name}!`, 'combat');
                             } else if (p.isBallistaBolt) {
                                 // Ballista bolt - special knockback/pin mechanics (cannot be unified)
                                 ent.takeDamage(p.damage, false, false, p.owner);

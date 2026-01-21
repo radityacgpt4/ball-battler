@@ -21,6 +21,7 @@ import { KingOfCursesAtkAbility, KingOfCursesDefAbility, KingOfCursesUltAbility 
 import { GatlingAbility, BalloonAbility, ConquerorHakiAbility } from '../abilities/RubberCaptainAbility.js';
 import { ZoltraakAbility, HexBarrierAbility, BlackholeAbility } from '../abilities/FrierenAbility.js';
 import { SwordShredAbility, ODMDefAbility, GodspeedODMAbility } from '../abilities/LeviAbility.js';
+import { MechaAtkAbility, MechaDefAbility, MechaUltAbility } from '../abilities/MechaAbility.js';
 
 class AbilityRegistryClass {
     constructor() {
@@ -141,6 +142,11 @@ class AbilityRegistryClass {
         this.register('SWORD_SHRED', SwordShredAbility);
         this.register('ODM_MANEUVER', ODMDefAbility);
         this.register('GODSPEED_ODM', GodspeedODMAbility);
+
+        // Mecha abilities
+        this.register('MECHA_BEAM', MechaAtkAbility);
+        this.register('MECHA_DODGE', MechaDefAbility);
+        this.register('MECHA_COUNTER', MechaUltAbility);
     }
 }
 

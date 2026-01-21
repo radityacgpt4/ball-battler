@@ -801,6 +801,132 @@ export class Fighter {
             ctx.beginPath();
             ctx.arc(this.radius, 0, 5, 0, Math.PI * 2); // Eye/Core
             ctx.fill();
+        } else if (this.typeKey === 'MECHA') {
+            // === GUNDAM-STYLE ENERGY BLADE (Beam Saber) ===
+            const bladeLength = 35;
+            const bladeStart = this.radius - 2;
+
+            // Blade jitter effect (anime-accurate energy vibration)
+            const jitter = this.mechaDashActive ? (Math.random() - 0.5) * 3 : (Math.random() - 0.5) * 1;
+
+            // Outer glow (additive)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = '#00FFFF';
+            ctx.beginPath();
+            ctx.moveTo(bladeStart, -4);
+            ctx.lineTo(bladeStart + bladeLength + jitter, 0);
+            ctx.lineTo(bladeStart, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // Main energy blade
+            ctx.fillStyle = '#00FFFF';
+            ctx.globalAlpha = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(bladeStart, -2.5);
+            ctx.lineTo(bladeStart + bladeLength * 0.9 + jitter, 0);
+            ctx.lineTo(bladeStart, 2.5);
+            ctx.closePath();
+            ctx.fill();
+
+            // White-hot core
+            ctx.fillStyle = '#FFFFFF';
+            ctx.globalAlpha = 1.0;
+            ctx.beginPath();
+            ctx.moveTo(bladeStart, -1);
+            ctx.lineTo(bladeStart + bladeLength * 0.7 + jitter, 0);
+            ctx.lineTo(bladeStart, 1);
+            ctx.closePath();
+            ctx.fill();
+
+            // Handle/Emitter
+            ctx.fillStyle = '#1E90FF';
+            ctx.fillRect(bladeStart - 8, -3, 10, 6);
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(bladeStart - 6, -2, 6, 4);
+
+            // Blade activation glow at base
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = '#00FFFF';
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.arc(bladeStart, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Rocket booster on back (Wing Zero style)
+            const boosterAngle = Math.PI; // Behind
+            const boosterX = Math.cos(boosterAngle) * (this.radius - 5);
+            const boosterY = Math.sin(boosterAngle) * (this.radius - 5);
+
+            // Booster housing
+            ctx.fillStyle = '#4A4A4A';
+            ctx.beginPath();
+            ctx.ellipse(boosterX, boosterY - 4, 4, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(boosterX, boosterY + 4, 4, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Wing-like fins (compact)
+            ctx.fillStyle = '#1E90FF';
+            ctx.beginPath();
+            ctx.moveTo(boosterX - 5, boosterY - 8);
+            ctx.lineTo(boosterX - 15, boosterY - 12);
+            ctx.lineTo(boosterX - 5, boosterY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(boosterX - 5, boosterY + 8);
+            ctx.lineTo(boosterX - 15, boosterY + 12);
+            ctx.lineTo(boosterX - 5, boosterY);
+            ctx.closePath();
+            ctx.fill();
+
+            // Active boost flames when dashing
+            if (this.mechaDashActive) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+
+                // Orange/Yellow flame
+                ctx.fillStyle = '#FF4500';
+                ctx.globalAlpha = 0.8;
+                const flameLen = 15 + Math.random() * 8;
+                ctx.beginPath();
+                ctx.moveTo(boosterX - 5, boosterY - 4);
+                ctx.lineTo(boosterX - flameLen, boosterY - 4 + (Math.random() - 0.5) * 4);
+                ctx.lineTo(boosterX - 5, boosterY - 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(boosterX - 5, boosterY + 4);
+                ctx.lineTo(boosterX - flameLen, boosterY + 4 + (Math.random() - 0.5) * 4);
+                ctx.lineTo(boosterX - 5, boosterY + 2);
+                ctx.closePath();
+                ctx.fill();
+
+                // Blue inner flame
+                ctx.fillStyle = '#00BFFF';
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.moveTo(boosterX - 5, boosterY - 3);
+                ctx.lineTo(boosterX - flameLen * 0.6, boosterY - 4);
+                ctx.lineTo(boosterX - 5, boosterY - 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(boosterX - 5, boosterY + 3);
+                ctx.lineTo(boosterX - flameLen * 0.6, boosterY + 4);
+                ctx.lineTo(boosterX - 5, boosterY + 2);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            }
         } else if (this.typeKey === 'AXEMAN') {
             // === DOUBLE-SIDED BATTLEAXE (Slim & Long) ===
             const handleLength = 48;

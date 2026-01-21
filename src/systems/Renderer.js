@@ -1001,7 +1001,7 @@ export class Renderer {
             };
 
             // Stance: Back-to-back diagonal (Lore stance)
-            const stanceAngle = -Math.PI / 4; // 45 degree diagonal
+            const stanceAngle = Math.PI / 4; // 45 degree diagonal
 
             const renderStance = () => {
                 // Front Blade (Pushed inward, closer to side edge)

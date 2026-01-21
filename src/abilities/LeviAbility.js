@@ -64,7 +64,7 @@ export class SwordShredAbility extends Ability {
 
         // --- PIXEL PERFECT BLADE COLLISION ---
         const bladeLen = this.config.range; // matches renderer 32-35
-        const stanceAngle = -Math.PI / 4;
+        const stanceAngle = Math.PI / 4;
 
         // Helper to check line-circle collision
         const checkBladeHit = (target, offsetX, offsetY, extraRot = 0) => {

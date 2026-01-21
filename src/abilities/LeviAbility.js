@@ -85,10 +85,10 @@ export class SwordShredAbility extends Ability {
         // Find targets hit by either blade
         const target = enemies.find(e => {
             if (e === fighter || e.isDead) return false;
-            // Check Front Blade (12, -23)
-            if (checkBladeHit(e, 12, -23)) return true;
-            // Check Back Blade (-12, 23, +PI)
-            if (checkBladeHit(e, -12, 23, Math.PI)) return true;
+            // Check Front Blade (12, 23) - Y flipped for mirrored blade
+            if (checkBladeHit(e, 12, 23)) return true;
+            // Check Back Blade (-12, -23, +PI) - Y flipped for mirrored blade
+            if (checkBladeHit(e, -12, -23, Math.PI)) return true;
             return false;
         });
 

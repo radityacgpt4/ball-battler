@@ -956,6 +956,9 @@ export class Renderer {
             const drawBlade = (isBackBlade = false) => {
                 ctx.save();
 
+                // Mirror the blade vertically so sharp edge is on top
+                ctx.scale(1, -1);
+
                 // Box cutter shape: Rectangular with a single angled tip
                 // Start from handle
                 ctx.fillStyle = '#B0BEC5'; // Steel body

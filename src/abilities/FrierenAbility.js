@@ -35,6 +35,8 @@ export class ZoltraakAbility extends Ability {
     }
 
     update(fighter, context) {
+        if (fighter.status.stun > 0) return;
+
         // Handle active burst
         if (this.currentBurst > 0) {
             this.burstFrameTimer--;

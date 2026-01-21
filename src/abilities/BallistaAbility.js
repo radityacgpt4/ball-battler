@@ -29,6 +29,8 @@ export class BallistaAtkAbility extends Ability {
     }
 
     update(fighter, context) {
+        if (fighter.status.stun > 0) return;
+
         const { game } = context;
 
         if (fighter.cooldowns.atk <= 0) {

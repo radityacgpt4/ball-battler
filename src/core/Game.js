@@ -176,6 +176,7 @@ export class Game {
 
         this.entities = [];
         this.projectiles = [];
+        this.blackholes = [];
         this.particles = new ParticleSystem();
         this.combatText = new CombatTextHelper(this.particles);
 

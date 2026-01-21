@@ -21,6 +21,8 @@ export class MeleeAbility extends Ability {
     }
 
     update(fighter, context) {
+        if (fighter.status.stun > 0) return;
+
         const { enemies, game } = context;
         const range = fighter.radius + this.range;
         const tipX = fighter.x + Math.cos(fighter.angle) * range;

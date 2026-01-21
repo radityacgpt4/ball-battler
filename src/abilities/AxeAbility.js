@@ -26,6 +26,8 @@ export class AxeAtkAbility extends Ability {
     }
 
     update(fighter, context) {
+        if (fighter.status.stun > 0) return;
+
         // Manage combo timer
         if (fighter.axemanComboTimer > 0) {
             fighter.axemanComboTimer--;

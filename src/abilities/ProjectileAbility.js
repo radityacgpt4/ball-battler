@@ -26,6 +26,8 @@ export class BurstFireAbility extends Ability {
     }
 
     update(fighter, context) {
+        if (fighter.status.stun > 0) return;
+
         const { game, timeScale } = context;
 
         if (fighter.cooldowns.atk <= 0 && fighter.activeEffects.burstCount === 0) {

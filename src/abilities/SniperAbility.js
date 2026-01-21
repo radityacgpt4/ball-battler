@@ -32,6 +32,8 @@ export class SniperAtkAbility extends Ability {
     }
 
     update(fighter, context) {
+        if (fighter.status.stun > 0) return;
+
         const { game } = context;
 
         // Sync laser color with Ult state

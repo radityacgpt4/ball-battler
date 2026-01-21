@@ -161,6 +161,7 @@ export class GatlingAbility extends Ability {
         const p = new Projectile(fighter, startX, startY, finalAngle, speed, this.fistDamage, context.game);
         p.startX = startX;
         p.startY = startY;
+        p.maxDist = this.range; // Set range limit for projectile cleanup
 
         // Curve mechanics
         p.curveSide = this.armSide;

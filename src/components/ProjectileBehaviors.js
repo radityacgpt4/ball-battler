@@ -231,7 +231,7 @@ export class CurveBehavior {
         const sin = Math.sin(curveSpeed);
 
         // Range Limit check (Rubber Fist)
-        if (p.startX && p.maxDist) {
+        if (p.startX !== undefined && p.maxDist > 0) {
             const travel = Math.hypot(p.x - p.startX, p.y - p.startY);
             if (travel >= p.maxDist) {
                 p.active = false;
@@ -251,6 +251,13 @@ export class CurveBehavior {
 
         p.x += p.dx * timeScale;
         p.y += p.dy * timeScale;
+
+        // Bounds check - deactivate if outside arena
+        const bounds = p.game.arenaBounds;
+        if (p.x < bounds.x || p.x > bounds.x + bounds.width ||
+            p.y < bounds.y || p.y > bounds.y + bounds.height) {
+            p.active = false;
+        }
     }
 }
 

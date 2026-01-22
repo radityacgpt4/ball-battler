@@ -617,58 +617,8 @@ export class MechaUltAbility extends Ability {
         }
     }
 
-    // Persistent visual effect for Counter Protocol - drawn every frame
-    draw(fighter, ctx) {
-        if (!fighter || !ctx) return;
-        if (!fighter.mechaCounterProtocolActive) return;
-
-        const pulseIntensity = Math.sin(Date.now() * 0.008) * 0.5 + 0.5; // 0 to 1 pulse
-
-        ctx.save();
-
-        // Outer pulsing aura ring
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.strokeStyle = '#00FF00';
-        ctx.lineWidth = 4 + pulseIntensity * 2;
-        ctx.globalAlpha = 0.3 + pulseIntensity * 0.2;
-        ctx.beginPath();
-        ctx.arc(0, 0, fighter.radius + 12 + pulseIntensity * 5, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Inner intense ring
-        ctx.strokeStyle = '#66FF66';
-        ctx.lineWidth = 2;
-        ctx.globalAlpha = 0.5 + pulseIntensity * 0.3;
-        ctx.beginPath();
-        ctx.arc(0, 0, fighter.radius + 6, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Orbiting energy orbs (6 orbs rotating around fighter)
-        const numOrbs = 6;
-        const orbRadius = fighter.radius + 18 + pulseIntensity * 4;
-        const baseAngle = (Date.now() * 0.003) % (Math.PI * 2);
-
-        ctx.fillStyle = '#00FF00';
-        for (let i = 0; i < numOrbs; i++) {
-            const orbAngle = baseAngle + (i * Math.PI * 2) / numOrbs;
-            const orbX = Math.cos(orbAngle) * orbRadius;
-            const orbY = Math.sin(orbAngle) * orbRadius;
-
-            ctx.globalAlpha = 0.7 + pulseIntensity * 0.3;
-            ctx.beginPath();
-            ctx.arc(orbX, orbY, 3 + pulseIntensity * 1.5, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // Energy core glow at center
-        ctx.globalAlpha = 0.15 + pulseIntensity * 0.1;
-        ctx.fillStyle = '#00FF00';
-        ctx.beginPath();
-        ctx.arc(0, 0, fighter.radius * (0.7 + pulseIntensity * 0.3), 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-    }
+    // NOTE: Counter Protocol visual effect is now rendered in Renderer.js
+    // via the MECHA accessory renderer (following Divine Brawler pattern)
 
     triggerCounterAttack(fighter, context) {
         const { game } = context;

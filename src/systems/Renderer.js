@@ -883,6 +883,102 @@ export class Renderer {
             // End stance draw
             ctx.restore();
         });
+
+        // Mecha - Energy Blade + Counter Protocol Visual
+        this.registerAccessory('MECHA', (ctx, fighter) => {
+            // Energy Blade visual (cyan beam sword)
+            const bladeLength = 40;
+            const bladeWidth = 6;
+
+            // Draw energy blade
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+
+            // Outer glow
+            ctx.strokeStyle = '#00BFFF';
+            ctx.lineWidth = bladeWidth + 6;
+            ctx.globalAlpha = 0.3;
+            ctx.beginPath();
+            ctx.moveTo(fighter.radius, 0);
+            ctx.lineTo(fighter.radius + bladeLength, 0);
+            ctx.stroke();
+
+            // Main blade
+            ctx.strokeStyle = '#00FFFF';
+            ctx.lineWidth = bladeWidth;
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(fighter.radius, 0);
+            ctx.lineTo(fighter.radius + bladeLength, 0);
+            ctx.stroke();
+
+            // Core
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 1.0;
+            ctx.beginPath();
+            ctx.moveTo(fighter.radius, 0);
+            ctx.lineTo(fighter.radius + bladeLength, 0);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Counter Protocol ULT Visual (when HP < 50%)
+            if (fighter.mechaCounterProtocolActive) {
+                ctx.save();
+                ctx.rotate(-fighter.angle); // Decouple from fighter rotation
+
+                const pulseIntensity = Math.sin(Date.now() * 0.008) * 0.5 + 0.5;
+
+                // Outer pulsing aura ring
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#00FF00';
+                ctx.lineWidth = 4 + pulseIntensity * 2;
+                ctx.globalAlpha = 0.3 + pulseIntensity * 0.2;
+                ctx.beginPath();
+                ctx.arc(0, 0, fighter.radius + 12 + pulseIntensity * 5, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Inner intense ring
+                ctx.strokeStyle = '#66FF66';
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.5 + pulseIntensity * 0.3;
+                ctx.beginPath();
+                ctx.arc(0, 0, fighter.radius + 6, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Orbiting energy orbs (6 orbs rotating around fighter)
+                const numOrbs = 6;
+                const orbRadius = fighter.radius + 18 + pulseIntensity * 4;
+                const baseAngle = (Date.now() * 0.003) % (Math.PI * 2);
+
+                ctx.fillStyle = '#00FF00';
+                for (let i = 0; i < numOrbs; i++) {
+                    const orbAngle = baseAngle + (i * Math.PI * 2) / numOrbs;
+                    const orbX = Math.cos(orbAngle) * orbRadius;
+                    const orbY = Math.sin(orbAngle) * orbRadius;
+
+                    ctx.globalAlpha = 0.7 + pulseIntensity * 0.3;
+                    ctx.beginPath();
+                    ctx.arc(orbX, orbY, 3 + pulseIntensity * 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // "COUNTER" indicator text
+                ctx.globalAlpha = 0.8;
+                ctx.fillStyle = '#00FF00';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.font = 'bold 10px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const textY = -fighter.radius - 22;
+                ctx.strokeText('COUNTER', 0, textY);
+                ctx.fillText('COUNTER', 0, textY);
+
+                ctx.restore();
+            }
+        });
     }
 }
 

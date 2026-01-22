@@ -606,11 +606,8 @@ export class Game {
 
         this.entities.forEach(ent => {
             renderer.drawFighter(this.ctx, ent);
-
-            // Draw Hex Barrier if fighter has it
-            if (ent.abilities && ent.abilities.def && ent.abilities.def.draw) {
-                ent.abilities.def.draw(ent, this.ctx);
-            }
+            // NOTE: Ability visuals (barriers, etc.) are already drawn via
+            // renderer.drawAbilityVisuals() inside drawFighter() with proper context
         });
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.particles.updateAndDraw(this.ctx);

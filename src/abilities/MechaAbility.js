@@ -33,7 +33,7 @@ export class MechaAtkAbility extends Ability {
         this.dashSpeed = config.dashSpeed || 18;
         this.dashDuration = config.dashDuration || 12;
         this.dashDelay = config.dashDelay || 60;
-        this.aimError = config.aimError || 0;
+        this.aimError = config.aimError !== undefined ? config.aimError : 0.28; // Slightly more than Frieren's 0.22
         this.meleeRotationMultiplier = config.meleeRotationMultiplier || 3;
     }
 
@@ -70,50 +70,91 @@ export class MechaAtkAbility extends Ability {
             return;
         }
 
-        // Auto-aim logic (Aimbot style)
-        // Track nearest opponent - store target angle separately from body rotation
-        const target = this.findAutoAimTarget(fighter, enemies);
-        if (target) {
-            const dx = target.x - fighter.x;
-            const dy = target.y - fighter.y;
-            const targetAngle = Math.atan2(dy, dx);
+        // Auto-aim logic (Smooth tracking like Frieren's Zoltraak, but slightly weaker)
+        const target = this.findBestTarget(fighter, enemies);
 
-            // Random error based on config
-            const error = (Math.random() - 0.5) * this.aimError;
-            // Store targeting angle separately - don't modify body rotation
-            fighter.mechaTargetAngle = targetAngle + error;
+        if (target) {
+            // Calculate ideal angle to target
+            const idealAngle = Math.atan2(target.y - fighter.y, target.x - fighter.x);
+
+            // Initialize tracking angle if not set
+            if (fighter.mechaTargetAngle === undefined) {
+                fighter.mechaTargetAngle = fighter.angle;
+            }
+
+            // Smooth interpolation towards target (slower than Frieren = weaker tracking)
+            const trackingSpeed = 0.08; // Frieren uses instant, Mecha uses smooth lerp
+            let angleDiff = idealAngle - fighter.mechaTargetAngle;
+
+            // Normalize angle difference to -PI to PI
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+            // Smoothly interpolate
+            fighter.mechaTargetAngle += angleDiff * trackingSpeed;
+
+            // Store target for firing
+            fighter.mechaCurrentTarget = target;
         } else {
-            // No target - use body angle for firing
-            fighter.mechaTargetAngle = fighter.angle;
+            // No target - smoothly return to body angle
+            if (fighter.mechaTargetAngle !== undefined) {
+                let angleDiff = fighter.angle - fighter.mechaTargetAngle;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                fighter.mechaTargetAngle += angleDiff * 0.05;
+            }
+            fighter.mechaCurrentTarget = null;
         }
 
         // Check cooldown for firing
         if (fighter.cooldowns.atk > 0) return;
 
-        // Fire the beam
+        // Fire the beam (error applied only when firing, not every frame)
         this.fireBeam(fighter, context);
     }
 
-    findAutoAimTarget(fighter, enemies) {
-        let nearest = null;
-        let minDist = 700; // Search range
+    findBestTarget(fighter, enemies) {
+        // Scoring system like Frieren's, but weights distance more (weaker aim assist)
+        let bestTarget = null;
+        let bestScore = -Infinity;
+        const range = 600; // Slightly shorter than Frieren's 700
 
         for (const enemy of enemies) {
             if (enemy === fighter || enemy.isDead) continue;
-            const d = Math.hypot(enemy.x - fighter.x, enemy.y - fighter.y);
-            if (d < minDist) {
-                minDist = d;
-                nearest = enemy;
+
+            const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
+            if (dist > range) continue;
+
+            const angleToEnemy = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
+            let angleDiff = angleToEnemy - (fighter.mechaTargetAngle || fighter.angle);
+
+            // Normalize
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+            // Score: Mecha prioritizes distance more than Frieren (0.5/0.5 vs 0.3/0.7)
+            const distScore = 1 - (dist / range);
+            const angleScore = 1 - (Math.abs(angleDiff) / Math.PI);
+            const score = distScore * 0.5 + angleScore * 0.5;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestTarget = enemy;
             }
         }
-        return nearest;
+
+        return bestTarget;
     }
 
     fireBeam(fighter, context, isCounterAttack = false) {
         const { game } = context;
 
-        // Use targeting angle for projectile (not body angle)
-        const fireAngle = fighter.mechaTargetAngle !== undefined ? fighter.mechaTargetAngle : fighter.angle;
+        // Base angle from smooth tracking
+        const baseAngle = fighter.mechaTargetAngle !== undefined ? fighter.mechaTargetAngle : fighter.angle;
+
+        // Apply error only when firing (like Frieren), not every frame
+        const errorMargin = (Math.random() - 0.5) * this.aimError;
+        const fireAngle = baseAngle + errorMargin;
 
         const p = new Projectile(
             fighter,

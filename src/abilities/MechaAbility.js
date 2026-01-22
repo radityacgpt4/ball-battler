@@ -71,7 +71,7 @@ export class MechaAtkAbility extends Ability {
         }
 
         // Auto-aim logic (Aimbot style)
-        // Track nearest opponent and fire when cooldown permits
+        // Track nearest opponent - store target angle separately from body rotation
         const target = this.findAutoAimTarget(fighter, enemies);
         if (target) {
             const dx = target.x - fighter.x;
@@ -80,7 +80,11 @@ export class MechaAtkAbility extends Ability {
 
             // Random error based on config
             const error = (Math.random() - 0.5) * this.aimError;
-            fighter.angle = targetAngle + error;
+            // Store targeting angle separately - don't modify body rotation
+            fighter.mechaTargetAngle = targetAngle + error;
+        } else {
+            // No target - use body angle for firing
+            fighter.mechaTargetAngle = fighter.angle;
         }
 
         // Check cooldown for firing
@@ -108,11 +112,14 @@ export class MechaAtkAbility extends Ability {
     fireBeam(fighter, context, isCounterAttack = false) {
         const { game } = context;
 
+        // Use targeting angle for projectile (not body angle)
+        const fireAngle = fighter.mechaTargetAngle !== undefined ? fighter.mechaTargetAngle : fighter.angle;
+
         const p = new Projectile(
             fighter,
-            fighter.x + Math.cos(fighter.angle) * 30,
-            fighter.y + Math.sin(fighter.angle) * 30,
-            fighter.angle,
+            fighter.x + Math.cos(fireAngle) * 30,
+            fighter.y + Math.sin(fireAngle) * 30,
+            fireAngle,
             this.projectileSpeed,
             this.projectileDamage,
             game
@@ -144,9 +151,9 @@ export class MechaAtkAbility extends Ability {
 
         audioEngine.playGunshot();
 
-        // Store dash direction for melee follow-up
+        // Store dash direction for melee follow-up (uses targeting angle)
         fighter.mechaPendingDash = {
-            angle: fighter.angle,
+            angle: fireAngle,
             triggered: false
         };
 

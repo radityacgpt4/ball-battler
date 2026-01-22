@@ -392,6 +392,11 @@ export class Fighter {
             this.abilities.def.update(this, context);
         }
 
+        // Update ultimate ability (for passive ULTs like Mecha Counter Protocol)
+        if (this.abilities.ult && this.abilities.ult.update) {
+            this.abilities.ult.update(this, context);
+        }
+
         // Check ultimate condition (HP < 50%)
         // Divine General (Mahoraga) triggers ULT on attack hit instead
         if (this.hp < this.maxHp * 0.5 && this.cooldowns.ult <= 0 && this.abilities.ult && this.typeKey !== 'DIVINE_GENERAL') {

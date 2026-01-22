@@ -886,7 +886,40 @@ export class Renderer {
 
         // Mecha - Energy Blade + Counter Protocol Visual
         this.registerAccessory('MECHA', (ctx, fighter) => {
-            // Energy Blade visual (cyan beam sword)
+            // Targeting Laser Sight (shows where beam will fire, independent of body)
+            if (fighter.mechaTargetAngle !== undefined) {
+                ctx.save();
+                ctx.rotate(-fighter.angle); // Cancel body rotation
+                ctx.rotate(fighter.mechaTargetAngle); // Apply target angle
+
+                ctx.strokeStyle = '#FF4444';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.4;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(fighter.radius + 10, 0);
+                ctx.lineTo(200, 0); // Laser sight range
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Targeting reticle at end
+                ctx.strokeStyle = '#FF4444';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath();
+                ctx.arc(120, 0, 8, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(112, 0);
+                ctx.lineTo(128, 0);
+                ctx.moveTo(120, -8);
+                ctx.lineTo(120, 8);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            // Energy Blade visual (cyan beam sword) - rotates with body
             const bladeLength = 40;
             const bladeWidth = 6;
 

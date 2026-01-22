@@ -13,8 +13,12 @@ export class ParticleSystem {
     /**
      * GENERIC SPAWNER (OCP Compliant)
      * Spawns an effect based on a string ID defined in particleTemplates.js
+     * @param {string} id - Template ID
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {Object} overrides - Optional property overrides for the layers
      */
-    spawnEffect(id, x, y) {
+    spawnEffect(id, x, y, overrides = null) {
         const template = PARTICLE_TEMPLATES[id];
         if (!template) {
             console.warn(`ParticleSystem: Unknown effect ID '${id}'`);
@@ -22,7 +26,9 @@ export class ParticleSystem {
         }
 
         for (let layer of template.layers) {
-            this.processLayer(layer, x, y);
+            // Apply overrides if provided (shallow merge)
+            const finalLayer = overrides ? { ...layer, ...overrides } : layer;
+            this.processLayer(finalLayer, x, y);
         }
     }
 

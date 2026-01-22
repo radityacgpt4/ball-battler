@@ -777,5 +777,53 @@ export const FIGHTER_TYPES = {
                 maxSpeedBoost: 18 // Increased max speed cap during ult
             }
         }
+    },
+    DEATH_GOD_SWORDSMAN: {
+        name: "Death God Swordsman",
+        color: "#FF6600", // Ichigo's orange spiritual pressure
+        hp: 100, mass: 1.2, speed: 4.8, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Zangetsu Slash",
+                desc: "Rotation-based melee attack with an oversized khyber knife.",
+                type: "ZANGETSU_SLASH",
+                isPassive: true,
+                // Configurable properties
+                range: 55,
+                damage: 7,
+                attackCooldown: 12
+            },
+            def: {
+                name: "Getsuga Tenshou",
+                desc: "Every 5 HP missing, unleash a crescent energy wave in facing direction.",
+                type: "GETSUGA_TENSHOU",
+                isPassive: true,
+                // Configurable properties
+                hpThreshold: 5,
+                damage: 6,
+                ultDamage: 8, // Damage in Bankai form
+                projectileSpeed: 12,
+                explosionRadius: 75,
+                explosionDamage: 5,
+                explosionUltDamage: 7,
+                stunDuration: 60, // 1 second stun
+                getsugaDelay: 8, // Frames between each getsuga (for sparse firing)
+                explodeOnWall: true
+            },
+            ult: {
+                name: "Bankai: Tensa Zangetsu",
+                desc: "Transform sword to thin black blade. +60% MS and +75% AS",
+                type: "BANKAI_MODE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 240,
+                duration: 480, // 8 seconds
+                speedBoost: 0.6, // 60% increase
+                rotationBoost: 0.75, // 75% increase
+                bankaiPulseInterval: 120, // Every 2 seconds (60fps)
+                bankaiPulseRadius: 180,
+                bankaiPulseStun: 60 // 1 second stun
+            }
+        }
     }
 };

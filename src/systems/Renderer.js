@@ -1152,6 +1152,171 @@ export class Renderer {
                 ctx.restore();
             }
         });
+
+        // Death God Swordsman (Ichigo) - Zangetsu / Tensa Zangetsu
+        this.registerAccessory('DEATH_GOD_SWORDSMAN', (ctx, fighter) => {
+            const isBankai = fighter.activeEffects && fighter.activeEffects.bankaiActive;
+
+            ctx.save();
+
+            if (isBankai) {
+                // ================================================================
+                // BANKAI: Tensa Zangetsu - Thin Black Blade
+                // ================================================================
+                const bladeLength = 48;
+                const bladeWidth = 4;
+
+                // Handle (wrapped in black bandage-like cloth)
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(fighter.radius - 12, -3, 14, 6);
+
+                // Guard (small tsuba - circular)
+                ctx.fillStyle = '#2a2a2a';
+                ctx.beginPath();
+                ctx.arc(fighter.radius + 2, 0, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Blade - Thin and compressed (black with purple energy edge)
+                ctx.beginPath();
+                ctx.moveTo(fighter.radius + 4, -bladeWidth / 2);
+                ctx.lineTo(fighter.radius + bladeLength, 0); // Sharp tip
+                ctx.lineTo(fighter.radius + 4, bladeWidth / 2);
+                ctx.closePath();
+
+                // Black blade gradient
+                const bankaiGrad = ctx.createLinearGradient(0, -bladeWidth / 2, 0, bladeWidth / 2);
+                bankaiGrad.addColorStop(0, '#0a0a0a');
+                bankaiGrad.addColorStop(0.5, '#1a1a2e');
+                bankaiGrad.addColorStop(1, '#0a0a0a');
+                ctx.fillStyle = bankaiGrad;
+                ctx.fill();
+
+                // Energy edge (purple glow)
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#8B00FF';
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.moveTo(fighter.radius + 4, -bladeWidth / 2 - 1);
+                ctx.lineTo(fighter.radius + bladeLength, 0);
+                ctx.lineTo(fighter.radius + 4, bladeWidth / 2 + 1);
+                ctx.stroke();
+                ctx.restore();
+
+                // White highlight on edge
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(fighter.radius + 8, 0);
+                ctx.lineTo(fighter.radius + bladeLength - 2, 0);
+                ctx.stroke();
+
+                // Bankai aura effect
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#4a0080';
+                ctx.lineWidth = 8;
+                ctx.globalAlpha = 0.2 + Math.sin(Date.now() * 0.01) * 0.1;
+                ctx.beginPath();
+                ctx.moveTo(fighter.radius + 4, 0);
+                ctx.lineTo(fighter.radius + bladeLength, 0);
+                ctx.stroke();
+                ctx.restore();
+
+            } else {
+                // ================================================================
+                // SHIKAI: Zangetsu - Oversized Khyber Knife (Trapezoid Shape)
+                // Right-angled trapezoid / scalene triangle with truncated base
+                // ================================================================
+                const bladeLength = 55;
+                const baseWidth = 14; // Wide at base
+                const tipWidth = 4; // Narrow at tip
+                const handleLength = 16;
+
+                // Handle (wrapped in white bandage)
+                ctx.fillStyle = '#f5f5f5';
+                ctx.fillRect(fighter.radius - handleLength, -4, handleLength, 8);
+                // Handle wrapping lines
+                ctx.strokeStyle = '#ccc';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < handleLength; i += 4) {
+                    ctx.beginPath();
+                    ctx.moveTo(fighter.radius - handleLength + i, -4);
+                    ctx.lineTo(fighter.radius - handleLength + i + 2, 4);
+                    ctx.stroke();
+                }
+
+                // Guard (simple crossguard)
+                ctx.fillStyle = '#333';
+                ctx.fillRect(fighter.radius - 2, -8, 4, 16);
+
+                // Blade - Trapezoid shape (like Ichigo's Shikai)
+                // The blade is asymmetrical - flat on one side, angled on the other
+                ctx.beginPath();
+                // Start at base (back of blade, flat side - top edge)
+                ctx.moveTo(fighter.radius + 2, -baseWidth / 2);
+                // Go to tip (pointed end)
+                ctx.lineTo(fighter.radius + bladeLength, -tipWidth / 2);
+                ctx.lineTo(fighter.radius + bladeLength + 6, 0); // Sharp tip point
+                ctx.lineTo(fighter.radius + bladeLength, tipWidth / 2);
+                // Bottom edge (angled/curved)
+                ctx.lineTo(fighter.radius + 2, baseWidth / 2);
+                ctx.closePath();
+
+                // Blade gradient (steel look)
+                const shikaiGrad = ctx.createLinearGradient(0, -baseWidth / 2, 0, baseWidth / 2);
+                shikaiGrad.addColorStop(0, '#C0C0C0'); // Silver top
+                shikaiGrad.addColorStop(0.3, '#E8E8E8'); // Bright center
+                shikaiGrad.addColorStop(0.5, '#F0F0F0'); // Highlight
+                shikaiGrad.addColorStop(0.7, '#D0D0D0'); // Mid
+                shikaiGrad.addColorStop(1, '#A0A0A0'); // Darker bottom
+                ctx.fillStyle = shikaiGrad;
+                ctx.fill();
+
+                // Edge outline
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Sharp edge highlight (cutting side)
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1.5;
+                ctx.globalAlpha = 0.7;
+                ctx.beginPath();
+                ctx.moveTo(fighter.radius + 10, baseWidth / 2 - 2);
+                ctx.lineTo(fighter.radius + bladeLength, tipWidth / 2);
+                ctx.lineTo(fighter.radius + bladeLength + 4, 0);
+                ctx.stroke();
+                ctx.restore();
+
+                // Back edge (spine) - darker line
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(fighter.radius + 2, -baseWidth / 2 + 1);
+                ctx.lineTo(fighter.radius + bladeLength, -tipWidth / 2 + 0.5);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // Spiritual Pressure Aura (when below 50% HP, hinting at Bankai availability)
+            if (!isBankai && fighter.hp < fighter.maxHp * 0.5) {
+                ctx.save();
+                ctx.rotate(-fighter.angle);
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#FF6600';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 0.2 + Math.sin(Date.now() * 0.005) * 0.1;
+                ctx.beginPath();
+                ctx.arc(0, 0, fighter.radius + 10, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+        });
     }
 }
 

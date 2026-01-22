@@ -299,7 +299,76 @@ export class AudioEngine {
         // Light noise for "magic dust" feel
         this.playNoise(0.15, 0.08, 6000);
     }
+
+    // ============================================
+    // DEATH GOD SWORDSMAN (Ichigo) SOUND EFFECTS
+    // ============================================
+
+    playGetsuga() {
+        // Blue Getsuga Tenshou - Whooshing energy wave
+        // 1. Sharp energy release
+        this.playTone(600, 'sawtooth', 0.3, 0.5, 200);
+        // 2. Deep power undertone
+        this.playTone(150, 'sine', 0.4, 0.4, 80);
+        // 3. Wind whoosh
+        this.playNoise(0.35, 0.4, 1500);
+        // 4. Energy shimmer (High ring)
+        this.playTone(1200, 'triangle', 0.25, 0.2, 800);
+    }
+
+    playGetsugaBankai() {
+        // Black Getsuga Tenshou - More intense, darker sound
+        // 1. Deep rumbling power
+        this.playTone(80, 'sawtooth', 0.5, 0.6, 40);
+        // 2. Sinister mid-frequency hum
+        this.playTone(400, 'square', 0.4, 0.4, 150);
+        this.playTone(600, 'sawtooth', 0.3, 0.3, 200);
+        // 3. High energy crackling
+        this.playTone(800, 'sawtooth', 0.2, 0.3, 400);
+        // 4. Heavy impact noise
+        this.playNoise(0.5, 0.5, 600);
+    }
+
+    playBankai() {
+        // Bankai transformation - Epic power-up sound
+        if (!this.enabled || !this.ctx) return;
+
+        // 1. Deep building power
+        const osc1 = this.ctx.createOscillator();
+        const gain1 = this.ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(60, this.ctx.currentTime);
+        osc1.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.8);
+        gain1.gain.setValueAtTime(0, this.ctx.currentTime);
+        gain1.gain.linearRampToValueAtTime(0.6, this.ctx.currentTime + 0.3);
+        gain1.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.0);
+        osc1.connect(gain1);
+        gain1.connect(this.masterGain);
+        osc1.start();
+        osc1.stop(this.ctx.currentTime + 1.0);
+
+        // 2. Rising energy sweep
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = 'sawtooth';
+        osc2.frequency.setValueAtTime(200, this.ctx.currentTime);
+        osc2.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.6);
+        gain2.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
+        osc2.connect(gain2);
+        gain2.connect(this.masterGain);
+        osc2.start();
+        osc2.stop(this.ctx.currentTime + 0.8);
+
+        // 3. Power burst noise
+        this.playNoise(0.6, 0.4, 800);
+
+        // 4. Ethereal chime (spiritual power)
+        setTimeout(() => this.playTone(880, 'triangle', 0.3, 0.3), 200);
+        setTimeout(() => this.playTone(1320, 'sine', 0.2, 0.2), 350);
+    }
 }
+
 
 // Singleton instance
 export const audioEngine = new AudioEngine();

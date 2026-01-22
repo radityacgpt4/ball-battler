@@ -838,3 +838,128 @@ export class MechaBeamBehavior {
         }
     }
 }
+
+// =============================================================================
+// ICHIGO - Getsuga Tenshou Behavior (Deflection + Trail)
+// =============================================================================
+export class GetsugaBehavior {
+    update(p, timeScale) {
+        p.handlesOwnCollision = true;
+
+        // Visual energy particles - wider spread for larger crescent
+        if (Math.random() < 0.4) {
+            const isBankai = p.isBankaiGetsuga;
+            const color = isBankai ? '#8B00FF' : '#00BFFF';
+            p.game.particles.particles.push({
+                x: p.x + (Math.random() - 0.5) * 70,
+                y: p.y + (Math.random() - 0.5) * 50,
+                vx: -Math.cos(p.angle) * 2,
+                vy: -Math.sin(p.angle) * 2,
+                life: 0.4, decay: 0.1,
+                size: 3 + Math.random() * 2, color: color, type: 'dot'
+            });
+        }
+
+        // Deflect enemy projectiles (like WorldSlashBehavior)
+        const deflectRadius = p.deflectRadius || 55; // Use dynamic radius from config or fallback
+        for (let j = p.game.projectiles.length - 1; j >= 0; j--) {
+            const other = p.game.projectiles[j];
+            if (other === p || !other.active) continue;
+            if (other.owner === p.owner) continue; // Don't deflect own
+            if (other.isGroundBurn) continue; // Don't deflect ground burns
+            if (other.isGetsugaTenshou) continue; // Don't deflect other Getsugas
+
+            if (Physics.dist(p.x, p.y, other.x, other.y) < deflectRadius + (other.radius || 4)) {
+                // Deflect the projectile
+                other.owner = p.owner;
+                other.hitList = [];
+
+                const speed = Math.hypot(other.dx, other.dy);
+                other.dx = Math.cos(p.angle) * speed * 1.2;
+                other.dy = Math.sin(p.angle) * speed * 1.2;
+                other.angle = p.angle;
+
+                other.isDeflected = true;
+                other.deflectLifetime = 180;
+
+                // Visual feedback
+                const isBankai = p.isBankaiGetsuga;
+                p.game.particles.spawn(other.x, other.y, isBankai ? '#8B00FF' : '#1E90FF', 8);
+                audioEngine.playBlock();
+            }
+        }
+
+        // Wall collision - explode on wall
+        const bounds = p.game.arenaBounds;
+        if (p.x < bounds.x || p.x > bounds.x + bounds.width ||
+            p.y < bounds.y || p.y > bounds.y + bounds.height) {
+
+            if (p.explodeOnWall && !p.hasExploded) {
+                // Clamp position to wall
+                p.x = Math.max(bounds.x, Math.min(bounds.x + bounds.width, p.x));
+                p.y = Math.max(bounds.y, Math.min(bounds.y + bounds.height, p.y));
+                p.triggerImpact(null);
+            } else {
+                p.active = false;
+            }
+        }
+
+        // Hit entities (similar to WorldSlash)
+        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead);
+        for (let ent of enemies) {
+            if (Physics.dist(p.x, p.y, ent.x, ent.y) < deflectRadius + ent.radius) {
+                p.triggerImpact(ent);
+                break; // Explode on first contact
+            }
+        }
+    }
+
+    onImpact(p, target) {
+        if (p.hasExploded) return;
+        p.hasHandledImpact = true;
+        p.hasExploded = true;
+        p.active = false;
+
+        // If hitting a target, apply direct damage + stun first
+        if (target) {
+            target.takeDamage(p.damage, false, false, p.owner);
+            if (p.statusEffect) {
+                target.applyStatus(p.statusEffect.type, p.statusEffect.duration);
+            }
+        }
+
+        this.triggerExplosion(p, target);
+    }
+
+    triggerExplosion(p, directTarget = null) {
+        const game = p.game;
+        const isBankai = p.isBankaiGetsuga;
+
+        // Spawn explosion effect
+        game.particles.spawnEffect(p.impactParticle, p.x, p.y);
+        audioEngine.play(isBankai ? 'getsugaBankai' : 'getsuga');
+
+        // AOE damage
+        const enemies = game.entities.filter(e => e !== p.owner && !e.isDead);
+        const aoeRadius = p.explosionRadius || 60;
+
+        for (const enemy of enemies) {
+            // Avoid double-hitting the direct target
+            if (directTarget && enemy === directTarget) continue;
+
+            const dist = Physics.dist(p.x, p.y, enemy.x, enemy.y);
+            if (dist < aoeRadius + enemy.radius) {
+                enemy.takeDamage(p.explosionDamage, false, false, p.owner);
+                if (p.statusEffect) {
+                    enemy.applyStatus(p.statusEffect.type, p.statusEffect.duration);
+                }
+
+                // Knockback
+                const angle = Math.atan2(enemy.y - p.y, enemy.x - p.x);
+                const force = 6;
+                enemy.dx += Math.cos(angle) * force;
+                enemy.dy += Math.sin(angle) * force;
+            }
+        }
+    }
+}

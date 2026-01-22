@@ -398,6 +398,11 @@ export class Fighter {
             this.abilities.ult.execute(this, context);
         }
 
+        // Update active ultimate ability
+        if (this.abilities.ult && this.abilities.ult.update) {
+            this.abilities.ult.update(this, context);
+        }
+
         // Handle active ultimate effects
         if (this.activeEffects.ultActive) {
             this.activeEffects.ultTimer--;

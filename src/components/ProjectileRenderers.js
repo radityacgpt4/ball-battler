@@ -609,3 +609,131 @@ export class MechaBeamRenderer {
         ctx.restore();
     }
 }
+// =============================================================================
+// ICHIGO - Getsuga Tenshou (Crescent Moon Fang)
+// =============================================================================
+// =============================================================================
+// ICHIGO - Getsuga Tenshou (Crescent Moon Fang)
+// =============================================================================
+export class GetsugaTenshouRenderer {
+    constructor(isBankai = false) {
+        this.isBankai = isBankai;
+    }
+
+    draw(ctx, p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+
+        // Modeled after WorldSlash curvature but with Ichigo layers
+        // Using "crescentHeight" as the span (like WorldSlash's slashWidth)
+        const span = 60;
+        const bulge = span * 0.15; // Matching WorldSlash control point ratio
+        const thickness = 18; // Blade thickness
+
+        // Determine colors based on Bankai state
+        const isBankai = p.isBankaiGetsuga || this.isBankai;
+        const primaryColor = isBankai ? '#1a1a2e' : '#1E90FF'; // Black or Blue
+        const secondaryColor = isBankai ? '#4a0080' : '#00BFFF'; // Purple accent or Cyan
+        const coreColor = isBankai ? '#8B00FF' : '#E0FFFF'; // Violet or Light Cyan
+        const glowColor = isBankai ? '#9400D3' : '#00BFFF'; // Dark Violet or Deep Sky Blue
+
+        // 1. Phatom Trail (Additional Visual Flare)
+        const time = Date.now() * 0.01;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.2 + Math.sin(time) * 0.1;
+        ctx.translate(-15, 0); // Shadow slightly behind
+        ctx.strokeStyle = secondaryColor;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, -span * 0.8);
+        ctx.quadraticCurveTo(bulge * 0.8, 0, 0, span * 0.8);
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. Outer Glow (Additive blending for energy effect)
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = glowColor;
+        ctx.lineWidth = 18;
+        ctx.lineCap = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(0, -span);
+        ctx.quadraticCurveTo(bulge, 0, 0, span);
+        ctx.stroke();
+        ctx.restore();
+
+        // 3. Main Crescent Body (Energy Wave)
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = primaryColor;
+        ctx.beginPath();
+        // Leading Edge
+        ctx.moveTo(0, -span);
+        ctx.quadraticCurveTo(bulge, 0, 0, span);
+        // Trailing Edge (Closed shape using thickness)
+        ctx.lineTo(-thickness * 0.5, span * 0.9);
+        ctx.quadraticCurveTo(bulge - thickness, 0, -thickness * 0.5, -span * 0.9);
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. Secondary Layer (Energy highlight)
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = secondaryColor;
+        ctx.beginPath();
+        ctx.moveTo(-thickness * 0.2, -span * 0.8);
+        ctx.quadraticCurveTo(bulge - thickness * 0.4, 0, -thickness * 0.2, span * 0.8);
+        ctx.quadraticCurveTo(bulge - thickness * 0.8, 0, -thickness * 0.2, -span * 0.8);
+        ctx.fill();
+
+        // 5. Core (Brightest center)
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = coreColor;
+        ctx.beginPath();
+        ctx.moveTo(0, -span * 0.5);
+        ctx.quadraticCurveTo(bulge * 0.6, 0, 0, span * 0.5);
+        ctx.quadraticCurveTo(bulge * 0.4, 0, 0, -span * 0.5);
+        ctx.fill();
+
+        // 6. Edge highlight (Sharp white leading edge)
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2.5;
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.moveTo(0, -span * 0.95);
+        ctx.quadraticCurveTo(bulge * 0.95, 0, 0, span * 0.95);
+        ctx.stroke();
+
+        // 7. Energy Crackle (Additional Visual Flare)
+        if (Math.random() < 0.4) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            const startY = (Math.random() - 0.5) * span;
+            ctx.moveTo(bulge * 0.5, startY);
+            ctx.lineTo(bulge * 0.5 + (Math.random() - 0.5) * 10, startY + (Math.random() - 0.5) * 10);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 8. Energy trail particles
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = glowColor;
+        ctx.globalAlpha = 0.6;
+        for (let i = 0; i < 4; i++) {
+            const trailX = -i * 12 - Math.random() * 5;
+            const trailY = (Math.random() - 0.5) * span * 0.8;
+            const trailSize = 1 + Math.random() * 3;
+            ctx.beginPath();
+            ctx.arc(trailX, trailY, trailSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
+

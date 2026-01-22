@@ -127,5 +127,56 @@ export const PARTICLE_TEMPLATES = {
             { type: 'burst', count: 5, color: ['#FF4500', '#FFD700'], speed: { min: 2, max: 5 }, life: 0.5, shape: 'dot' },
             { type: 'burst', count: 2, color: '#00BFFF', speed: { min: 1, max: 3 }, life: 0.3, shape: 'dot' }
         ]
+    },
+
+    // ============================================
+    // FIGHTER SPECIFIC: DEATH GOD SWORDSMAN (Ichigo)
+    // ============================================
+    'getsugaBlue': {
+        layers: [
+            // Modeled after frag grenade but with blue energy
+            { type: 'shockwave', color: '#1E90FF', maxRadius: 130, life: 0.8, lineWidth: 12 }, // Strong blue shockwave
+            { type: 'shockwave', color: '#00BFFF', maxRadius: 150, life: 1.0, lineWidth: 4 },  // Outer cyan pressure wave
+            { type: 'burst', count: 35, color: ['#1E90FF', '#00BFFF', '#E0FFFF'], speed: { min: 12, max: 25 }, life: 0.8, shape: 'flame' }, // Energy "flames"
+            { type: 'burst', count: 15, color: ['#FFFFFF', '#E0FFFF'], speed: { min: 4, max: 10 }, life: 0.6, shape: 'dot' }, // Spiritual dust
+            { type: 'burst', count: 10, color: '#FFFFFF', speed: { min: 2, max: 4 }, life: 0.4, shape: 'flash', size: 10 } // Core flashes
+        ]
+    },
+    'getsugaBankai': {
+        layers: [
+            // More intense, darker, and longer lasting for Bankai
+            { type: 'shockwave', color: '#1a1a2e', maxRadius: 150, life: 1.2, lineWidth: 15 }, // Massive black void shockwave
+            { type: 'shockwave', color: '#8B00FF', maxRadius: 180, life: 1.0, lineWidth: 6 },  // Intense purple energy ring
+            { type: 'burst', count: 50, color: ['#1a1a2e', '#4a0080', '#8B00FF'], speed: { min: 15, max: 30 }, life: 1.2, shape: 'flame' }, // Dark energy "flames"
+            { type: 'lightning', count: 20, color: '#9400D3', spread: 140, life: 0.7, width: 4 }, // Extreme energy discharge
+            { type: 'burst', count: 12, color: '#FFFFFF', speed: { min: 6, max: 15 }, life: 0.5, shape: 'flash', size: 12 } // Blinding flashes
+        ]
+    },
+    'getsugaMuzzle': {
+        layers: [
+            { type: 'burst', count: 8, color: ['#1E90FF', '#00BFFF'], speed: { min: 3, max: 8 }, life: 0.4, shape: 'dot' },
+            { type: 'burst', count: 1, color: '#E0FFFF', speed: 0, life: 0.3, shape: 'flash', size: 12 }
+        ]
+    },
+    'bankaiTransform': {
+        layers: [
+            { type: 'shockwave', color: '#1a1a2e', maxRadius: 150, life: 1.2, lineWidth: 15 },
+            { type: 'shockwave', color: '#8B00FF', maxRadius: 180, life: 1.0, lineWidth: 6 },
+            { type: 'burst', count: 40, color: ['#1a1a2e', '#4a0080', '#8B00FF'], speed: { min: 12, max: 28 }, life: 1.0, shape: 'dot' },
+            { type: 'lightning', count: 25, color: '#9400D3', spread: 160, life: 0.8, width: 4 },
+            { type: 'text', text: 'BANKAI!', color: '#8B00FF', offset: { x: 0, y: -50 } }
+        ]
+    },
+    'bankaiPulse': {
+        layers: [
+            // Black core shockwave
+            { type: 'shockwave', color: '#1a1a2e', maxRadius: 160, life: 0.8, lineWidth: 12 },
+            // Purple energy ring
+            { type: 'shockwave', color: '#8B00FF', maxRadius: 180, life: 0.6, lineWidth: 4 },
+            // Lightning crackles
+            { type: 'lightning', count: 8, color: '#9400D3', spread: 150, life: 0.5, width: 2 },
+            // Floating text
+            { type: 'text', text: 'BANKAI!', color: '#8B00FF', offset: { x: 0, y: -40 } }
+        ]
     }
 };

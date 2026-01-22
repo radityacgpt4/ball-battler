@@ -625,8 +625,8 @@ export class GetsugaTenshouRenderer {
         // Modeled after WorldSlash curvature but with Ichigo layers
         // Using "crescentHeight" as the span (like WorldSlash's slashWidth)
         const span = 60;
-        const bulge = span * 0.72; // Matching WorldSlash control point ratio
-        const thickness = 18; // Blade thickness
+        const bulge = span * 1; // Matching WorldSlash control point ratio
+        const thickness = 14; // Blade thickness
 
         // Determine colors based on Bankai state
         const isBankai = p.isBankaiGetsuga || this.isBankai;

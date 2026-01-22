@@ -569,8 +569,70 @@ export class MechaUltAbility extends Ability {
     }
 
     update(fighter, context) {
+        const { game } = context;
+
         // Only active when HP is below 50%
-        if (fighter.hp > fighter.maxHp * 0.5) return;
+        if (fighter.hp > fighter.maxHp * 0.5) {
+            // Reset visual state when above threshold
+            if (fighter.mechaCounterProtocolActive) {
+                fighter.mechaCounterProtocolActive = false;
+            }
+            return;
+        }
+
+        // Mark Counter Protocol as active
+        if (!fighter.mechaCounterProtocolActive) {
+            fighter.mechaCounterProtocolActive = true;
+            // Initial activation flash
+            game.particles.spawnShockwave(fighter.x, fighter.y, '#00FF00', 60, 0.5);
+            game.combatText.add(fighter.x, fighter.y - fighter.radius - 30, 'COUNTER PROTOCOL ACTIVE', '#00FF00');
+            audioEngine.playPowerUp();
+            logger.log(`${fighter.name} Counter Protocol VISUAL EFFECT ACTIVATED! HP: ${fighter.hp}/${fighter.maxHp}`, 'combat');
+        }
+
+        // Continuous pulsing aura effect while Counter Protocol is active
+        const pulseIntensity = Math.sin(Date.now() * 0.005) * 0.5 + 0.5; // 0 to 1 pulse
+
+        // Orbiting energy particles
+        if (game.frameCount % 3 === 0) {
+            const angle = (Date.now() * 0.003) % (Math.PI * 2);
+            const numOrbs = 6;
+            for (let i = 0; i < numOrbs; i++) {
+                const orbAngle = angle + (i * Math.PI * 2) / numOrbs;
+                const radius = fighter.radius + 20 + pulseIntensity * 10;
+                const orbX = fighter.x + Math.cos(orbAngle) * radius;
+                const orbY = fighter.y + Math.sin(orbAngle) * radius;
+
+                game.particles.particles.push({
+                    x: orbX,
+                    y: orbY,
+                    vx: 0,
+                    vy: 0,
+                    life: 0.4,
+                    decay: 0.15,
+                    size: 3 + pulseIntensity * 2,
+                    color: '#00FF00',
+                    type: 'dot',
+                    alpha: 0.6 + pulseIntensity * 0.4
+                });
+            }
+        }
+
+        // Pulsing energy core glow
+        if (game.frameCount % 5 === 0) {
+            game.particles.particles.push({
+                x: fighter.x,
+                y: fighter.y,
+                vx: 0,
+                vy: 0,
+                life: 0.3,
+                decay: 0.1,
+                size: fighter.radius * (0.8 + pulseIntensity * 0.4),
+                color: '#00FF00',
+                type: 'dot',
+                alpha: 0.15 + pulseIntensity * 0.1
+            });
+        }
 
         // Check if dodge was just triggered
         if (fighter.mechaJustDodged) {

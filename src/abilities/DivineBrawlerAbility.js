@@ -254,8 +254,8 @@ export class DivineBrawlerUltAbility extends Ability {
     }
 
     update(fighter, context) {
-        // Trigger logic
-        if (fighter.cooldowns.ult <= 0 && !fighter.activeEffects.focusActive) {
+        // Trigger logic - only when HP < 50%
+        if (fighter.hp < fighter.maxHp * 0.5 && fighter.cooldowns.ult <= 0 && !fighter.activeEffects.focusActive) {
             this.execute(fighter, context);
         }
 

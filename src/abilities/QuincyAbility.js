@@ -292,7 +292,9 @@ export class QuincyUltAbility extends Ability {
         }
 
         update(fighter, context) {
-                // Trigger when off cooldown
+                // Only trigger when HP < 50% and off cooldown
+                if (fighter.hp >= fighter.maxHp * 0.5) return;
+
                 if (fighter.cooldowns.ult <= 0) {
                         const { enemies } = context;
                         const target = enemies.find(e => e !== fighter && !e.isDead);

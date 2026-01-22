@@ -142,21 +142,12 @@ export class Renderer {
      * Draw ability-specific visual elements (barriers, shields, etc.)
      */
     drawAbilityVisuals(ctx, fighter) {
-        // Ballista Barriers
-        if (fighter.ballistaBarriers) {
-            this.drawBallistaBarriers(ctx, fighter);
-        }
-
-        if (fighter.shieldHp > 0) {
-            this.drawForceField(ctx, fighter);
-        }
-
-        // Frieren Magic Circle
-        if (fighter.magicCircleTimer > 0) {
-            this.drawMagicCircle(ctx, fighter);
-            // Decrement visual timer (client-side visual logic)
-            fighter.magicCircleTimer--;
-        }
+        // OCP: Let abilities handle their own visual effects
+        Object.values(fighter.abilities).forEach(ability => {
+            if (ability && ability.draw) {
+                ability.draw(fighter, ctx);
+            }
+        });
     }
 
     /**
@@ -207,159 +198,6 @@ export class Renderer {
         ctx.textBaseline = "middle";
         ctx.strokeText(Math.ceil(fighter.hp), 0, 1);
         ctx.fillText(Math.ceil(fighter.hp), 0, 1);
-    }
-
-    /**
-     * Draw Ballista barrier shields
-     */
-    drawBallistaBarriers(ctx, fighter) {
-        const barrierDist = fighter.radius + 3;  // Closer to body like Shieldbearer
-        const arcAngle = 1.22;
-        const halfArc = arcAngle / 2;
-
-        for (const barrier of fighter.ballistaBarriers) {
-            if (barrier.destroyed) continue;
-
-            const hpRatio = barrier.hp / barrier.maxHp;
-            const adjustedAngle = barrier.angle + fighter.angle;
-
-            if (hpRatio < 1.0) {
-                ctx.save();
-                ctx.globalCompositeOperation = 'lighter';
-                ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : '#FF0000';
-                ctx.lineWidth = 4;
-                ctx.globalAlpha = 0.3 * (1 - hpRatio);
-                ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            ctx.beginPath();
-            ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
-            ctx.lineWidth = 12;
-            ctx.strokeStyle = `rgba(210, 180, 140, ${0.6 + hpRatio * 0.4})`;
-            ctx.lineCap = 'round';
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
-            ctx.lineWidth = 5;
-            ctx.strokeStyle = '#8B4513';
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(0, 0, barrierDist + 7, adjustedAngle - halfArc * 0.85, adjustedAngle + halfArc * 0.85);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : (hpRatio > 0.25 ? '#FF8C00' : '#FF0000');
-            ctx.stroke();
-
-            // Draw HP text (same font size as Cyborg: 12px, no shield icon)
-            const textX = Math.cos(adjustedAngle) * (barrierDist + 18);
-            const textY = Math.sin(adjustedAngle) * (barrierDist + 18);
-            ctx.fillStyle = '#DAA520';
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2;
-            ctx.font = 'bold 12px monospace';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.strokeText(Math.ceil(barrier.hp), textX, textY);
-            ctx.fillText(Math.ceil(barrier.hp), textX, textY);
-
-            // End barrier draw
-        }
-    }
-
-    /**
-     * Draw Cyborg force field
-     */
-    drawForceField(ctx, fighter) {
-        ctx.save();
-        ctx.globalAlpha = 0.3 + (fighter.shieldHp / fighter.maxShield) * 0.3;
-        ctx.strokeStyle = '#00ffff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, fighter.radius + 6, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
-        ctx.fill();
-        ctx.restore();
-
-        // Shield HP UI
-        ctx.save();
-        ctx.fillStyle = "#00ffff";
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 2;
-        ctx.font = "bold 12px monospace";
-        ctx.textAlign = "center";
-        ctx.strokeText(`🛡️${Math.ceil(fighter.shieldHp)}`, 0, -fighter.radius - 15);
-        ctx.fillText(`🛡️${Math.ceil(fighter.shieldHp)}`, 0, -fighter.radius - 15);
-        ctx.restore();
-    }
-
-    /**
-     * Draw Frieren's Zoltraak Magic Circle
-     */
-    drawMagicCircle(ctx, fighter) {
-        ctx.save();
-        // Use stored angle, independent of body rotation
-        const angle = fighter.magicCircleAngle || fighter.angle;
-        // Position: In front of the fighter
-        const dist = fighter.radius + 15;
-        const cx = Math.cos(angle) * dist;
-        const cy = Math.sin(angle) * dist;
-
-        ctx.translate(cx, cy);
-        ctx.rotate(angle);
-
-        // PERSPECTIVE TRANSFORM: Squash X (depth), Scale Y (width)
-        // This makes it look like a vertical disk facing the target
-        ctx.scale(0.3, 1.25);
-
-        const alpha = Math.min(1, fighter.magicCircleTimer / 5); // Fade out last 5 frames
-
-        // 1. Main Ring
-        ctx.globalAlpha = 0.8 * alpha;
-        ctx.strokeStyle = '#4fc3f7';
-        ctx.lineWidth = 3; // Thicker to withstand scaling
-        ctx.beginPath();
-        ctx.arc(0, 0, 18, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // 2. Inner Square/Triangle (Geometric pattern)
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        const r = 12;
-        ctx.moveTo(r, 0);
-        ctx.lineTo(0, r);
-        ctx.lineTo(-r, 0);
-        ctx.lineTo(0, -r);
-        ctx.closePath();
-        ctx.stroke();
-
-        // 3. Rotating inner bits
-        ctx.save();
-        ctx.rotate(Date.now() * 0.005);
-        ctx.strokeStyle = '#87CEEB';
-        ctx.beginPath();
-        ctx.moveTo(-8, -8);
-        ctx.lineTo(8, 8);
-        ctx.moveTo(8, -8);
-        ctx.lineTo(-8, 8);
-        ctx.stroke();
-        ctx.restore();
-
-        // 4. Glow
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.shadowColor = '#4fc3f7';
-        ctx.shadowBlur = 15;
-        ctx.strokeStyle = '#E0FFFF';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, 16, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.restore();
     }
 
     /**
@@ -1003,21 +841,21 @@ export class Renderer {
                 ctx.restore();
             };
 
-            // Stance: Back-to-back diagonal (Lore stance)
-            const stanceAngle = Math.PI / 4; // 45 degree diagonal
+            // Stance: Vertical (blades pointing up/down)
+            const stanceAngle = Math.PI / 3.2;
 
             const renderStance = () => {
-                // Front Blade (Pushed inward, closer to side edge)
+                // Top Blade (pointing upward)
                 ctx.save();
-                ctx.translate(12, -23);
-                ctx.rotate(stanceAngle);
+                ctx.translate(0, -16); // Centered, sticking up
+                ctx.rotate(stanceAngle - Math.PI / 2); // Point upward
                 drawBlade();
                 ctx.restore();
 
-                // Back Blade (Pushed inward, closer to side edge)
+                // Bottom Blade (pointing downward)
                 ctx.save();
-                ctx.translate(-12, 23);
-                ctx.rotate(stanceAngle + Math.PI);
+                ctx.translate(0, 16); // Centered, sticking down
+                ctx.rotate(stanceAngle + Math.PI / 2); // Point downward
                 drawBlade();
                 ctx.restore();
             };

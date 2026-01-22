@@ -107,6 +107,23 @@ export class KingOfCursesAtkAbility extends Ability {
             }
         }
     }
+
+    modifyRotation(fighter, rotationSpeed) {
+        // Slow rotation when facing opponent (Aim Assist)
+        const enemies = fighter.game.entities;
+        for (const e of enemies) {
+            if (e === fighter || e.isDead) continue;
+
+            const angleToOpponent = Math.atan2(e.y - fighter.y, e.x - fighter.x);
+            let angleDiff = Math.abs(fighter.angle - angleToOpponent);
+            while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
+
+            if (angleDiff < Math.PI / 4) {
+                return rotationSpeed * 0.4;
+            }
+        }
+        return rotationSpeed;
+    }
 }
 
 

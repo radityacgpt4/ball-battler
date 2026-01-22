@@ -97,12 +97,12 @@ export const PARTICLE_TEMPLATES = {
     // ============================================
     'mechaExplosion': {
         layers: [
-            // Fire/Energy explosion - lighter than Max Black Flash, more like beam rifle impact
-            { type: 'shockwave', color: '#FF8C00', maxRadius: 80, life: 0.6, lineWidth: 8 }, // Orange ring
-            { type: 'shockwave', color: '#FFD700', maxRadius: 60, life: 0.5, lineWidth: 4 }, // Gold inner ring
-            { type: 'burst', count: 20, color: ['#FF4500', '#FFD700', '#FFFF00'], speed: { min: 8, max: 16 }, life: 0.7, shape: 'dot' }, // Fire sparks
-            { type: 'burst', count: 8, color: '#FFFFFF', speed: { min: 4, max: 8 }, life: 0.4, shape: 'dot' }, // White core flash
-            { type: 'lightning', count: 8, color: '#FFD700', spread: 60, life: 0.4, width: 2 } // Energy crackle (less intense)
+            // Fire/Energy explosion - Amplified for better impact visibility
+            { type: 'shockwave', color: '#FF8C00', maxRadius: 120, life: 0.8, lineWidth: 12 }, // Larger orange ring
+            { type: 'shockwave', color: '#FFD700', maxRadius: 90, life: 0.6, lineWidth: 6 }, // Larger gold inner ring
+            { type: 'burst', count: 35, color: ['#FF4500', '#FFD700', '#FFFF00'], speed: { min: 12, max: 24 }, life: 0.8, shape: 'flame' }, // More & faster fire sparks
+            { type: 'burst', count: 12, color: '#FFFFFF', speed: { min: 6, max: 12 }, life: 0.5, shape: 'dot', size: 5 }, // Bigger white core projectiles
+            { type: 'lightning', count: 12, color: '#FFD700', spread: 100, life: 0.5, width: 3 } // More intense energy crackle
         ]
     },
     'mechaDodge': {

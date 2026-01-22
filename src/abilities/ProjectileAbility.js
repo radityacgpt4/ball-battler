@@ -59,6 +59,16 @@ export class BurstFireAbility extends Ability {
             }
         }
     }
+
+    modifyRotation(fighter, rot) {
+        if (fighter.activeEffects.burstCount > 0) return rot * 0.2;
+        return rot;
+    }
+
+    modifySpeed(fighter, speed) {
+        if (fighter.activeEffects.ultActive) return speed * 1.5;
+        return speed;
+    }
 }
 
 export class KunaiAbility extends Ability {
@@ -128,7 +138,32 @@ export class KunaiAbility extends Ability {
     }
 
     update(fighter, context) {
-        const { game, enemies } = context;
+        const { game, enemies, timeScale } = context;
+
+        // 1. Handle Teleport Timer Logic (moved from Fighter.js)
+        if (fighter.teleportDelayTimer > 0) {
+            fighter.teleportDelayTimer = Math.max(0, fighter.teleportDelayTimer - 1 * timeScale);
+
+            if (fighter.teleportDelayTimer <= 0 && fighter.kunaiPending && fighter.kunaiPending.length > 0) {
+                fighter.chainDashQueue = [{ x: fighter.x, y: fighter.y }];
+                fighter.kunaiPending.forEach(p => {
+                    if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) {
+                        fighter.chainDashQueue.push({ x: p.x, y: p.y });
+                    }
+                });
+                fighter.kunaiPending = [];
+
+                if (fighter.chainDashQueue.length > 1) {
+                    fighter.isDashing = true;
+                    fighter.dashHandler = this; // Set ourselves as handler
+                    fighter.dashTimer = fighter.chainDashQueue.length * 4;
+                    fighter.dashTimerStart = fighter.dashTimer;
+                } else {
+                    fighter.teleportDelayTimer = 0;
+                    fighter.chainDashQueue = [];
+                }
+            }
+        }
 
         // Check for electricity zap between embedded kunai
         if (fighter.kunaiPending && fighter.kunaiPending.length >= 2) {
@@ -172,6 +207,159 @@ export class KunaiAbility extends Ability {
         if (this.canUse(fighter, context)) {
             this.execute(fighter, context, false);
         }
+    }
+
+    updateDash(fighter, timeScale) {
+        const game = fighter.game;
+
+        if (fighter.chainDashQueue.length > 1) {
+            if (Math.floor(fighter.dashTimer) % 4 === 0) {
+                const current = fighter.chainDashQueue.shift();
+                const next = fighter.chainDashQueue[0];
+
+                if (!next || !Number.isFinite(next.x) || !Number.isFinite(next.y)) {
+                    fighter.dashTimer = 0;
+                    fighter.isDashing = false;
+                    fighter.dashHandler = null;
+                    return;
+                }
+
+                // Visuals
+                game.particles.particles.push({
+                    x: current.x, y: current.y,
+                    vx: 0, vy: 0,
+                    life: 0.4, decay: 0.1,
+                    size: fighter.radius, color: '#ffd700', type: 'dot', alpha: 0.15
+                });
+
+                game.particles.spawnBeam(current.x, current.y, next.x, next.y, '#ffd700', 8, 0.08);
+
+                // Faint Parallel Lines
+                const px = current.y - next.y;
+                const py = next.x - current.x;
+                const len = Math.hypot(px, py) || 1;
+                const offX = (px / len) * 8;
+                const offY = (py / len) * 8;
+
+                game.particles.spawnBeam(
+                    current.x + offX, current.y + offY,
+                    next.x + offX, next.y + offY,
+                    '#ffd700', 2, 0.1
+                );
+
+                game.particles.particles.push({
+                    x: next.x, y: next.y,
+                    vx: 0, vy: 0,
+                    life: 0.3, decay: 0.1,
+                    size: fighter.radius, color: '#ffd700', type: 'dot', alpha: 0.15
+                });
+
+                audioEngine.playTeleport();
+
+                fighter.x = next.x;
+                fighter.y = next.y;
+
+                // Hit Detection
+                const enemies = game.entities.filter(e => e !== fighter && !e.isDead);
+                let hitTarget = null;
+                for (const e of enemies) {
+                    if (Physics.lineCircleIntersect(current.x, current.y, next.x, next.y, e.x, e.y, e.radius + 15)) {
+                        hitTarget = e;
+                        if (fighter.pendingRasengan) break;
+                    }
+                }
+
+                if (hitTarget) {
+                    if (fighter.pendingRasengan) {
+                        // Rasengan Hit
+                        const impactAngle = Math.atan2(hitTarget.y - current.y, hitTarget.x - current.x);
+                        const stopDist = hitTarget.radius + fighter.radius + 1;
+                        fighter.x = hitTarget.x - Math.cos(impactAngle) * stopDist;
+                        fighter.y = hitTarget.y - Math.sin(impactAngle) * stopDist;
+
+                        this.triggerRasengan(fighter, hitTarget);
+
+                        fighter.chainDashQueue = [];
+                        fighter.dashTimer = 0;
+                        fighter.isDashing = false;
+                        fighter.pendingRasengan = null;
+                        fighter.dashHandler = null;
+                        game.projectiles = game.projectiles.filter(p => !p.isKunai || p.owner !== fighter);
+                        return;
+                    } else {
+                        // Normal Dash Hit
+                        game.combatText.flash(hitTarget.x, hitTarget.y - hitTarget.radius);
+                        hitTarget.takeDamage(8);
+                        game.particles.spawn(hitTarget.x, hitTarget.y, '#ffd700', 5);
+                    }
+                }
+            }
+        }
+
+        // End of Dash Check
+        if (fighter.dashTimer <= 0) {
+            fighter.isDashing = false;
+            fighter.dashHandler = null;
+
+            game.projectiles = game.projectiles.filter(p => !p.isKunai || p.owner !== fighter);
+
+            if (fighter.pendingRasengan) {
+                this.triggerRasengan(fighter, null);
+                fighter.pendingRasengan = null;
+            }
+            fighter.chainDashQueue = [];
+        }
+    }
+
+    triggerRasengan(fighter, directHitTarget) {
+        const game = fighter.game;
+        const rasenganDamage = fighter.pendingRasengan || 12;
+        const rasenganRadius = 60;
+
+        // Spiral
+        for (let i = 0; i < 30; i++) {
+            const angle = (Math.PI * 2 / 30) * i;
+            const dist = 10 + Math.random() * 40;
+            game.particles.particles.push({
+                x: fighter.x + Math.cos(angle) * dist,
+                y: fighter.y + Math.sin(angle) * dist,
+                vx: Math.cos(angle + Math.PI / 2) * 8,
+                vy: Math.sin(angle + Math.PI / 2) * 8,
+                life: 0.8, decay: 0.04, size: 3 + Math.random() * 4,
+                color: '#00BFFF', type: 'dot'
+            });
+        }
+        game.particles.spawnExplosion(fighter.x, fighter.y);
+        game.particles.spawn(fighter.x, fighter.y, '#00BFFF', 20);
+        game.particles.spawn(fighter.x, fighter.y, '#ffffff', 10);
+
+        game.particles.particles.push({
+            type: 'shockwave', x: fighter.x, y: fighter.y,
+            radius: 10, maxRadius: 100, life: 1.0, decay: 0.05, color: '#00BFFF'
+        });
+
+        audioEngine.playHeavyImpact();
+
+        if (directHitTarget) {
+            logger.log(`${fighter.name} RASENGAN DIRECT HIT on ${directHitTarget.name}!`, 'combat');
+            directHitTarget.takeDamage(rasenganDamage * 1.5, true);
+        } else {
+            logger.log(`${fighter.name} Rasengan exploded!`, 'info');
+        }
+
+        const enemies = game.entities.filter(e => e !== fighter && !e.isDead);
+        enemies.forEach(e => {
+            const dist = Physics.dist(fighter.x, fighter.y, e.x, e.y);
+            if (dist < rasenganRadius + e.radius) {
+                // Avoid double damage if direct hit? Simplest is to just damage.
+                if (e !== directHitTarget) e.takeDamage(rasenganDamage, true);
+
+                const knockAngle = Math.atan2(e.y - fighter.y, e.x - fighter.x);
+                e.dx = Math.cos(knockAngle) * 12;
+                e.dy = Math.sin(knockAngle) * 12;
+                e.applyStatus('STUN', 45);
+            }
+        });
     }
 }
 

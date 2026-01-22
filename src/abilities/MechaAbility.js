@@ -31,13 +31,15 @@ export class MechaAtkAbility extends Ability {
         this.meleeDamage = config.meleeDamage || 4;
         this.dashSpeed = config.dashSpeed || 18;
         this.dashDuration = config.dashDuration || 12;
+        this.dashDelay = config.dashDelay || 60;
+        this.aimError = config.aimError || 0;
         this.meleeRotationMultiplier = config.meleeRotationMultiplier || 3;
     }
 
     update(fighter, context) {
         if (fighter.status.stun > 0) return;
 
-        const { game } = context;
+        const { game, enemies } = context;
 
         // Handle ongoing melee dash
         if (fighter.mechaDashActive) {
@@ -45,11 +47,61 @@ export class MechaAtkAbility extends Ability {
             return;
         }
 
+        // Handle dash delay after projectile impact (1-second delay)
+        if (fighter.mechaDashDelayTimer > 0) {
+            fighter.mechaDashDelayTimer--;
+
+            // Visual charging effect
+            if (fighter.mechaDashDelayTimer % 10 === 0) {
+                game.particles.particles.push({
+                    x: fighter.x + (Math.random() - 0.5) * 40,
+                    y: fighter.y + (Math.random() - 0.5) * 40,
+                    vx: (fighter.x - (fighter.x + (Math.random() - 0.5) * 40)) * 0.1,
+                    vy: (fighter.y - (fighter.y + (Math.random() - 0.5) * 40)) * 0.1,
+                    life: 0.4, decay: 0.05,
+                    size: 3, color: '#00FFFF', type: 'dot'
+                });
+            }
+
+            if (fighter.mechaDashDelayTimer <= 0) {
+                this.executeMeleeDash(fighter, context);
+            }
+            return;
+        }
+
+        // Auto-aim logic (Aimbot style)
+        // Track nearest opponent and fire when cooldown permits
+        const target = this.findAutoAimTarget(fighter, enemies);
+        if (target) {
+            const dx = target.x - fighter.x;
+            const dy = target.y - fighter.y;
+            const targetAngle = Math.atan2(dy, dx);
+
+            // Random error based on config
+            const error = (Math.random() - 0.5) * this.aimError;
+            fighter.angle = targetAngle + error;
+        }
+
         // Check cooldown for firing
         if (fighter.cooldowns.atk > 0) return;
 
         // Fire the beam
         this.fireBeam(fighter, context);
+    }
+
+    findAutoAimTarget(fighter, enemies) {
+        let nearest = null;
+        let minDist = 700; // Search range
+
+        for (const enemy of enemies) {
+            if (enemy === fighter || enemy.isDead) continue;
+            const d = Math.hypot(enemy.x - fighter.x, enemy.y - fighter.y);
+            if (d < minDist) {
+                minDist = d;
+                nearest = enemy;
+            }
+        }
+        return nearest;
     }
 
     fireBeam(fighter, context, isCounterAttack = false) {
@@ -66,7 +118,6 @@ export class MechaAtkAbility extends Ability {
         );
 
         p.radius = 8;
-        p.isMechaBeam = true;
         p.explosionDamage = this.explosionDamage;
         p.explosionRadius = this.explosionRadius;
         p.stunDuration = this.stunDuration;
@@ -107,16 +158,28 @@ export class MechaAtkAbility extends Ability {
         logger.log(`${fighter.name} fired Beam Rifle!`, 'combat');
     }
 
-    // Called when projectile hits something
+    // Called when projectile hits something - starts the delay from config
     triggerMeleeDash(fighter, context) {
         if (!fighter.mechaPendingDash || fighter.mechaPendingDash.triggered) return;
 
         fighter.mechaPendingDash.triggered = true;
-        fighter.mechaDashActive = true;
-        fighter.mechaDashTimer = this.dashDuration;
+
+        // Start delay from config
+        fighter.mechaDashDelayTimer = this.dashDelay;
         fighter.mechaDashAngle = fighter.mechaPendingDash.angle;
 
-        // Store original values
+        logger.log(`${fighter.name} preparing melee follow-up...`, 'combat');
+    }
+
+    // Actually executes the dash after the delay
+    executeMeleeDash(fighter, context) {
+        fighter.mechaDashActive = true;
+        fighter.mechaDashTimer = this.dashDuration;
+        fighter.mechaHitList = [];
+        fighter.mechaRotationAccumulator = 0;
+        fighter.mechaLastAngle = fighter.angle;
+
+        // Store original values for rotation
         fighter.mechaOriginalRotSpeed = fighter.rotationSpeed;
         fighter.rotationSpeed *= this.meleeRotationMultiplier;
 
@@ -132,9 +195,23 @@ export class MechaAtkAbility extends Ability {
     }
 
     handleMeleeDash(fighter, context) {
-        const { game, enemies } = context;
+        const { game, enemies, timeScale = 1.0 } = context;
 
         fighter.mechaDashTimer--;
+
+        // Track rotation for multi-hit (resets hit list every 360 degrees)
+        let angleDiff = fighter.angle - fighter.mechaLastAngle;
+        // Handle angle wrapping
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+        fighter.mechaRotationAccumulator += Math.abs(angleDiff);
+        fighter.mechaLastAngle = fighter.angle;
+
+        if (fighter.mechaRotationAccumulator >= Math.PI * 2) {
+            fighter.mechaHitList = [];
+            fighter.mechaRotationAccumulator -= Math.PI * 2;
+        }
 
         // Rocket boost trail
         if (fighter.mechaDashTimer % 2 === 0) {
@@ -158,7 +235,6 @@ export class MechaAtkAbility extends Ability {
                 enemy.takeDamage(this.meleeDamage, false, false, fighter);
 
                 // Blade slash effect
-                const slashAngle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
                 game.particles.spawnSlash(
                     fighter.x, fighter.y,
                     enemy.x, enemy.y,
@@ -210,42 +286,49 @@ export class MechaAtkAbility extends Ability {
 
     spawnRocketBoost(fighter, game) {
         const boostAngle = fighter.mechaDashAngle + Math.PI; // Behind the fighter
+        const offsets = [-0.5, 0.5]; // Twin thruster offsets (radians)
 
-        // Main thruster flame
-        for (let i = 0; i < 3; i++) {
-            const spread = (Math.random() - 0.5) * 0.4;
-            const speed = 4 + Math.random() * 3;
+        offsets.forEach(offset => {
+            const angle = boostAngle + offset;
+            const startX = fighter.x + Math.cos(angle) * (fighter.radius - 5);
+            const startY = fighter.y + Math.sin(angle) * (fighter.radius - 5);
+
+            // Main thruster flame - Bigger and longer
+            for (let i = 0; i < 3; i++) {
+                const spread = (Math.random() - 0.5) * 0.3;
+                const speed = 6 + Math.random() * 4;
+                game.particles.particles.push({
+                    x: startX,
+                    y: startY,
+                    vx: Math.cos(angle + spread) * speed,
+                    vy: Math.sin(angle + spread) * speed,
+                    life: 0.5,
+                    decay: 0.05,
+                    size: 6 + Math.random() * 4,
+                    color: Math.random() > 0.4 ? '#FF4500' : '#FFD700',
+                    type: 'dot'
+                });
+            }
+
+            // Blue core flame
             game.particles.particles.push({
-                x: fighter.x + Math.cos(boostAngle) * fighter.radius,
-                y: fighter.y + Math.sin(boostAngle) * fighter.radius,
-                vx: Math.cos(boostAngle + spread) * speed,
-                vy: Math.sin(boostAngle + spread) * speed,
-                life: 0.6,
+                x: startX,
+                y: startY,
+                vx: Math.cos(angle) * 3,
+                vy: Math.sin(angle) * 3,
+                life: 0.3,
                 decay: 0.08,
-                size: 4 + Math.random() * 3,
-                color: Math.random() > 0.5 ? '#FF4500' : '#FFD700',
+                size: 8,
+                color: '#00BFFF',
                 type: 'dot'
             });
-        }
-
-        // Blue core flame
-        game.particles.particles.push({
-            x: fighter.x + Math.cos(boostAngle) * (fighter.radius - 5),
-            y: fighter.y + Math.sin(boostAngle) * (fighter.radius - 5),
-            vx: Math.cos(boostAngle) * 2,
-            vy: Math.sin(boostAngle) * 2,
-            life: 0.4,
-            decay: 0.1,
-            size: 5,
-            color: '#00BFFF',
-            type: 'dot'
         });
     }
 
     spawnBladeTrail(fighter, game) {
-        // Energy blade trail particles
+        // Energy blade trail particles - Compact size
         const bladeAngle = fighter.angle;
-        const bladeLength = 35;
+        const bladeLength = 40; // 30% smaller feel
         const tipX = fighter.x + Math.cos(bladeAngle) * (fighter.radius + bladeLength);
         const tipY = fighter.y + Math.sin(bladeAngle) * (fighter.radius + bladeLength);
 
@@ -263,15 +346,21 @@ export class MechaAtkAbility extends Ability {
             type: 'square'
         });
 
-        // Trail beam
-        if (Math.random() < 0.5) {
-            game.particles.spawnBeam(
-                fighter.x + Math.cos(bladeAngle) * fighter.radius,
-                fighter.y + Math.sin(bladeAngle) * fighter.radius,
-                tipX, tipY,
-                '#00FFFF', 3, 0.15
-            );
-        }
+        // Continuous Trail beam
+        game.particles.spawnBeam(
+            fighter.x + Math.cos(bladeAngle) * fighter.radius,
+            fighter.y + Math.sin(bladeAngle) * fighter.radius,
+            tipX, tipY,
+            '#00FFFF', 6, 0.15 // Thinner beam
+        );
+
+        // Inner white core
+        game.particles.spawnBeam(
+            fighter.x + Math.cos(bladeAngle) * fighter.radius,
+            fighter.y + Math.sin(bladeAngle) * fighter.radius,
+            tipX, tipY,
+            '#FFFFFF', 2, 0.15
+        );
     }
 }
 
@@ -381,9 +470,9 @@ export class MechaDefAbility extends Ability {
 
         // Check which direction is safer (more in bounds)
         const leftInBounds = leftX > bounds.x + 50 && leftX < bounds.x + bounds.width - 50 &&
-                            leftY > bounds.y + 50 && leftY < bounds.y + bounds.height - 50;
+            leftY > bounds.y + 50 && leftY < bounds.y + bounds.height - 50;
         const rightInBounds = rightX > bounds.x + 50 && rightX < bounds.x + bounds.width - 50 &&
-                             rightY > bounds.y + 50 && rightY < bounds.y + bounds.height - 50;
+            rightY > bounds.y + 50 && rightY < bounds.y + bounds.height - 50;
 
         let dodgeAngle;
         if (leftInBounds && !rightInBounds) {
@@ -424,20 +513,39 @@ export class MechaDefAbility extends Ability {
         game.particles.spawnBeam(startX, startY, fighter.x, fighter.y, '#FF4500', 6, 0.12);
         game.particles.spawnBeam(startX, startY, fighter.x, fighter.y, '#FFD700', 3, 0.15);
 
-        // Rocket boost at destination
-        for (let i = 0; i < 5; i++) {
+        // Twin Afterburner effect (like dash rocket boost)
+        const boostAngle = dodgeAngle + Math.PI; // Behind the fighter
+        const offsets = [-0.5, 0.5]; // Twin thruster offsets
+        offsets.forEach(offset => {
+            const angle = boostAngle + offset;
+            for (let i = 0; i < 4; i++) {
+                const spread = (Math.random() - 0.5) * 0.3;
+                const speed = 5 + Math.random() * 4;
+                game.particles.particles.push({
+                    x: fighter.x + Math.cos(angle) * (fighter.radius - 5),
+                    y: fighter.y + Math.sin(angle) * (fighter.radius - 5),
+                    vx: Math.cos(angle + spread) * speed,
+                    vy: Math.sin(angle + spread) * speed,
+                    life: 0.5,
+                    decay: 0.06,
+                    size: 6 + Math.random() * 4,
+                    color: Math.random() > 0.4 ? '#FF4500' : '#FFD700',
+                    type: 'dot'
+                });
+            }
+            // Blue core
             game.particles.particles.push({
-                x: fighter.x + (Math.random() - 0.5) * 20,
-                y: fighter.y + (Math.random() - 0.5) * 20,
-                vx: (Math.random() - 0.5) * 4,
-                vy: (Math.random() - 0.5) * 4,
-                life: 0.5,
+                x: fighter.x + Math.cos(angle) * (fighter.radius - 5),
+                y: fighter.y + Math.sin(angle) * (fighter.radius - 5),
+                vx: Math.cos(angle) * 3,
+                vy: Math.sin(angle) * 3,
+                life: 0.3,
                 decay: 0.08,
-                size: 4 + Math.random() * 2,
-                color: Math.random() > 0.3 ? '#FFD700' : '#FF4500',
+                size: 8,
+                color: '#00BFFF',
                 type: 'dot'
             });
-        }
+        });
 
         // Shockwave at both positions
         game.particles.spawnShockwave(startX, startY, '#1E90FF', 40, 0.3);
@@ -459,6 +567,9 @@ export class MechaUltAbility extends Ability {
     }
 
     update(fighter, context) {
+        // Only active when HP is below 50%
+        if (fighter.hp > fighter.maxHp * 0.5) return;
+
         // Check if dodge was just triggered
         if (fighter.mechaJustDodged) {
             fighter.mechaJustDodged = false;

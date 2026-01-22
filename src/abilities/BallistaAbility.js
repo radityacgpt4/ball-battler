@@ -237,6 +237,66 @@ export class BallistaDefAbility extends Ability {
 
         return amount;
     }
+
+    draw(fighter, ctx) {
+        if (!fighter.ballistaBarriers) return;
+
+        const barrierDist = fighter.radius + 3; // Closer to body like Shieldbearer
+        const arcAngle = 1.22;
+        const halfArc = arcAngle / 2;
+
+        for (const barrier of fighter.ballistaBarriers) {
+            if (barrier.destroyed) continue;
+
+            const hpRatio = barrier.hp / barrier.maxHp;
+            const adjustedAngle = barrier.angle + fighter.angle;
+
+            if (hpRatio < 1.0) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : '#FF0000';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 0.3 * (1 - hpRatio);
+                ctx.beginPath();
+                ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
+            ctx.lineWidth = 12;
+            ctx.strokeStyle = `rgba(210, 180, 140, ${0.6 + hpRatio * 0.4})`;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#8B4513';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, barrierDist + 7, adjustedAngle - halfArc * 0.85, adjustedAngle + halfArc * 0.85);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : (hpRatio > 0.25 ? '#FF8C00' : '#FF0000');
+            ctx.stroke();
+
+            // Draw HP text (same font size as Cyborg: 12px, no shield icon)
+            const textX = Math.cos(adjustedAngle) * (barrierDist + 18);
+            const textY = Math.sin(adjustedAngle) * (barrierDist + 18);
+            ctx.fillStyle = '#DAA520';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.font = 'bold 12px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.strokeText(Math.ceil(barrier.hp), textX, textY);
+            ctx.fillText(Math.ceil(barrier.hp), textX, textY);
+            ctx.restore();
+        }
+    }
 }
 
 export class BallistaUltAbility extends Ability {

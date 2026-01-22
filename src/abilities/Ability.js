@@ -51,4 +51,52 @@ export class Ability {
     onDamage(fighter, damage, context) {
         return damage;
     }
+
+    /**
+     * Hook called when the fighter bounces off a wall.
+     * @param {Fighter} fighter 
+     */
+    onWallBounce(fighter) { }
+
+    /**
+     * Hook called when the fighter is dashing (fighter.isDashing = true).
+     * @param {Fighter} fighter 
+     * @param {number} timeScale 
+     */
+    updateDash(fighter, timeScale) { }
+
+    /**
+     * Hook to modify fighter's movement speed.
+     * @param {Fighter} fighter 
+     * @param {number} speed - Current calculated speed
+     * @returns {number} Modified speed
+     */
+    modifySpeed(fighter, speed) {
+        return speed;
+    }
+
+    /**
+     * Hook to modify fighter's rotation speed.
+     * @param {Fighter} fighter 
+     * @param {number} rotationSpeed 
+     * @returns {number}
+     */
+    modifyRotation(fighter, rotationSpeed) {
+        return rotationSpeed;
+    }
+
+    /**
+     * Hook called when the fighter collides with another fighter.
+     * @param {Fighter} fighter - The fighter owning this ability
+     * @param {Fighter} other - The other fighter in the collision
+     * @param {Object} context - Game context
+     */
+    onEntityCollision(fighter, other, context) { }
+
+    /**
+     * Hook called for rendering ability-specific effects.
+     * @param {Fighter} fighter - The fighter owning this ability
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     */
+    draw(fighter, ctx) { }
 }

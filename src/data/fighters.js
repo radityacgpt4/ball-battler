@@ -687,17 +687,19 @@ export const FIGHTER_TYPES = {
                 type: "MECHA_BEAM",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 150, // 2.5 seconds at 60fps
-                projectileDamage: 10,
+                cooldown: 120, // 2 seconds at 60fps
+                projectileDamage: 8,
                 explosionDamage: 6,
-                stunDuration: 90, // 1.5 seconds
-                projectileSpeed: 16,
+                stunDuration: 60, // 1 seconds
+                projectileSpeed: 30,
                 explosionRadius: 60,
                 // Melee dash properties
-                meleeDamage: 4,
-                dashSpeed: 18,
-                dashDuration: 12,
-                meleeRotationMultiplier: 3
+                meleeDamage: 3,
+                dashSpeed: 22,
+                dashDuration: 35,
+                dashDelay: 15,
+                aimError: 0.4, // Randomized error spread in radians
+                meleeRotationMultiplier: 5
             },
             def: {
                 name: "Thruster Dodge",
@@ -713,10 +715,10 @@ export const FIGHTER_TYPES = {
             },
             ult: {
                 name: "Counter Protocol",
-                desc: "Every dodge triggers a full attack sequence and resets ATK cooldown.",
+                desc: "Below 50% HP, every dodge triggers a full attack sequence.",
                 type: "MECHA_COUNTER",
-                isPassive: true,
-                // This is passive - always active
+                isPassive: false,
+                // Threshold-based activation handled by Fighter.js
                 cooldown: 0
             }
         }

@@ -570,70 +570,40 @@ export class MechaBeamRenderer {
         ctx.translate(p.x, p.y);
         ctx.rotate(p.angle);
 
-        // === GUNDAM BEAM RIFLE PROJECTILE ===
-        // Inspired by Wing Zero's twin buster rifle shots
+        // === GROWING LASER BEAM ===
+        // Grows from 0 to 300px based on distance traveled
+        const maxBeamLen = 300;
+        const distFromStart = Math.hypot(p.x - p.startX, p.y - p.startY);
+        const beamLen = Math.min(maxBeamLen, distFromStart);
 
-        // 1. Outer Glow (additive blending for energy effect)
         ctx.globalCompositeOperation = 'lighter';
-        ctx.fillStyle = '#FFD700';
-        ctx.globalAlpha = 0.4;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2);
-        ctx.fill();
 
-        // 2. Middle energy layer
-        ctx.fillStyle = '#FFFF00';
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 14, 7, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 3. Main projectile body (elongated energy capsule)
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 1.0;
-
-        // Yellow-gold energy body
-        const bodyGrad = ctx.createLinearGradient(-12, 0, 12, 0);
-        bodyGrad.addColorStop(0, '#FFA500');
-        bodyGrad.addColorStop(0.5, '#FFD700');
-        bodyGrad.addColorStop(1, '#FFFF00');
-        ctx.fillStyle = bodyGrad;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 12, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 4. White-hot core
-        ctx.fillStyle = '#FFFFFF';
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 8, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 5. Leading tip flash
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.globalAlpha = 0.8;
-        ctx.beginPath();
-        ctx.arc(10, 0, 4, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 6. Trailing energy wake (V-shape like beam discharge)
+        // 1. Wide Bloom (Golden Aura)
         ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 2;
-        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 16;
+        ctx.globalAlpha = 0.15;
+        ctx.lineCap = 'butt';
         ctx.beginPath();
-        ctx.moveTo(-8, 0);
-        ctx.lineTo(-16, -5);
-        ctx.moveTo(-8, 0);
-        ctx.lineTo(-16, 5);
+        ctx.moveTo(-beamLen, 0);
+        ctx.lineTo(0, 0);
         ctx.stroke();
 
-        // Secondary wake
-        ctx.globalAlpha = 0.3;
+        // 2. High-Energy Layer (Yellow)
+        ctx.strokeStyle = '#FFFFBB';
+        ctx.lineWidth = 8;
+        ctx.globalAlpha = 0.5;
         ctx.beginPath();
-        ctx.moveTo(-12, 0);
-        ctx.lineTo(-22, -4);
-        ctx.moveTo(-12, 0);
-        ctx.lineTo(-22, 4);
+        ctx.moveTo(-beamLen, 0);
+        ctx.lineTo(0, 0);
+        ctx.stroke();
+
+        // 3. Sharp Core (Laser Line)
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(-beamLen, 0);
+        ctx.lineTo(0, 0);
         ctx.stroke();
 
         ctx.restore();

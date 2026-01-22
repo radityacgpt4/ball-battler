@@ -385,6 +385,14 @@ export class ODMDefAbility extends Ability {
             return;
         }
 
+        // BUG FIX: Break stick if target blinks away
+        const distSq = (fighter.x - target.x) ** 2 + (fighter.y - target.y) ** 2;
+        const breakDist = fighter.radius + target.radius + 100; // Tolerance
+        if (distSq > breakDist * breakDist) {
+            this.endStick(fighter, game);
+            return;
+        }
+
         this.stickTimer -= timeScale;
         fighter.odmEvasionActive = true; // Ensure evasion remains active while stuck
 
@@ -487,7 +495,7 @@ export class ODMDefAbility extends Ability {
             audioEngine.playSwordSwing(); // Whoosh sound for evasion
 
             const evasionType = fighter.odmEvasionActive ? "ODM flight" :
-                               fighter.odmEvasionLinger ? "ODM linger" : "base evasion";
+                fighter.odmEvasionLinger ? "ODM linger" : "base evasion";
             logger.log(`>> ${fighter.name} EVADED (${evasionType})!`, 'combat');
             return false; // Damage negated
         }

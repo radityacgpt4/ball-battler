@@ -100,6 +100,18 @@ export class Projectile {
         }
     }
 
+    /**
+     * Trigger impact hook on all components
+     * @param {Entity} target - The entity hit (null if wall)
+     */
+    triggerImpact(target = null) {
+        for (const component of this.components) {
+            if (typeof component.onImpact === 'function') {
+                component.onImpact(this, target);
+            }
+        }
+    }
+
     draw(ctx) {
         // 0. COMPONENT RENDERER
         if (this.renderer) {

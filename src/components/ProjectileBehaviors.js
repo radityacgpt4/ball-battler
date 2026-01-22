@@ -133,6 +133,9 @@ export class BallisticBehavior {
             p.active = false;
             p.hasExploded = true; // Signals explosion spawner in Ability or Projectile
 
+            // Trigger impact logic (e.g. Grenade explosion)
+            p.triggerImpact(null);
+
             // Trigger impact immediately if defined
             if (p.impactParticle) {
                 p.game.particles.spawnEffect(p.impactParticle, p.x, p.y);
@@ -497,8 +500,163 @@ export class SniperTrailBehavior {
     }
 }
 
+
+
+
+
+export class GrenadeBehavior {
+    update(p) {
+        p.handlesOwnCollision = true;
+    }
+
+    onImpact(p, target) {
+        // Grenades explode on impact (ground or wall/target)
+        p.game.particles.spawnExplosion(p.x, p.y);
+        audioEngine.playExplosion();
+        // logger.log(`${p.owner.name}'s Grenade EXPLODED!`, 'combat'); // Optional log
+
+        const blastRadius = 60;
+        const enemies = p.game.entities.filter(ent => !ent.isDead && ent !== p.owner);
+
+        enemies.forEach(ent => {
+            const d = Math.hypot(p.x - ent.x, p.y - ent.y);
+            if (d < blastRadius + ent.radius) {
+                ent.takeDamage(p.damage, false, false, p.owner);
+                const angle = Math.atan2(ent.y - p.y, ent.x - p.x);
+                const force = 12;
+                ent.dx += Math.cos(angle) * force;
+                ent.dy += Math.sin(angle) * force;
+                ent.applyStatus('STUN');
+            }
+        });
+    }
+}
+
+export class ClaymoreBehavior {
+    update(p, timeScale) {
+        p.handlesOwnCollision = true;
+
+        // Proximity Check
+        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead);
+        for (let ent of enemies) {
+            if (Math.hypot(p.x - ent.x, p.y - ent.y) < ent.radius + p.radius + 5) {
+                // Trigger
+                ent.takeDamage(p.damage, false, false, p.owner);
+                if (p.slowDuration > 0) ent.applyStatus('SLOW', p.slowDuration);
+
+                p.game.particles.spawnExplosion(p.x, p.y);
+                audioEngine.playExplosion();
+                // logger.log(`${ent.name} triggered ${p.owner.name}'s CLAYMORE!`, 'combat');
+
+                p.active = false;
+                break;
+            }
+        }
+    }
+}
+
+export class GintoTrapBehavior {
+    update(p, timeScale) {
+        p.handlesOwnCollision = true;
+
+        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead);
+        for (let ent of enemies) {
+            if (Math.hypot(p.x - ent.x, p.y - ent.y) < ent.radius + p.radius) {
+                // Trigger
+                if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
+
+                p.game.particles.spawnHirenkyaku(p.x, p.y);
+                audioEngine.playZap();
+                // logger.log(`${ent.name} stepped on ${p.owner.name}'s GINTO TRAP!`, 'combat');
+
+                p.active = false;
+                break;
+            }
+        }
+    }
+}
+
+export class BallistaBehavior {
+    onImpact(p, target) {
+        if (!target) return; // Ignore walls
+        p.hasHandledImpact = true;
+
+        target.takeDamage(p.damage, false, false, p.owner);
+        p.game.particles.spawn(target.x, target.y, '#8B4513', 5);
+        audioEngine.playHit();
+
+        // Pin Logic
+        if (!target.pendingBallistaPinned && !p.dragTarget) {
+            const knockbackForce = 12;
+            const speed = knockbackForce / target.mass;
+            target.dx = Math.cos(p.angle) * speed;
+            target.dy = Math.sin(p.angle) * speed;
+
+            target.pendingBallistaPinned = { owner: p.owner };
+            p.dragTarget = target;
+
+            // Trails
+            for (let i = 0; i < 8; i++) {
+                p.game.particles.particles.push({
+                    x: target.x, y: target.y,
+                    vx: -Math.cos(p.angle) * (2 + Math.random() * 2),
+                    vy: -Math.sin(p.angle) * (2 + Math.random() * 2),
+                    life: 0.6, decay: 0.05, size: 4, color: '#8B4513', type: 'dot'
+                });
+            }
+        } else {
+            p.active = false;
+        }
+    }
+}
+
+export class KunaiBehavior {
+    update(p, timeScale) {
+        if (p.isEmbedded) return;
+
+        p.x += p.dx * timeScale;
+        p.y += p.dy * timeScale;
+        p.travelled = (p.travelled || 0) + Math.hypot(p.dx, p.dy) * timeScale;
+
+        // Wall Logic
+        const bounds = p.game.arenaBounds;
+        let hitWall = false;
+        if (p.x < bounds.x || p.x > bounds.x + bounds.width ||
+            p.y < bounds.y || p.y > bounds.y + bounds.height) {
+            hitWall = true;
+        }
+
+        if (hitWall || (p.maxDist && p.travelled >= p.maxDist)) {
+            p.dx = 0; p.dy = 0;
+            p.isEmbedded = true;
+            p.x = Math.max(bounds.x + 5, Math.min(bounds.x + bounds.width - 5, p.x));
+            p.y = Math.max(bounds.y + 5, Math.min(bounds.y + bounds.height - 5, p.y));
+            p.ignoreBounds = true;
+
+            if (!p.hasPlayedStickSound) {
+                audioEngine.playHit();
+                p.hasPlayedStickSound = true;
+            }
+        }
+    }
+
+    onImpact(p, target) {
+        if (!target) return;
+        p.hasHandledImpact = true;
+
+        if (!p.hitList.includes(target.id)) {
+            target.takeDamage(p.damage, false, false, p.owner);
+            p.hitList.push(target.id);
+            p.game.particles.spawn(target.x, target.y, '#ffd700', 3);
+            audioEngine.playHit();
+        }
+    }
+}
+
 export class WorldSlashBehavior {
     update(p, timeScale) {
+        p.handlesOwnCollision = true;
+
         // Visual particles
         if (Math.random() < 0.3) {
             p.game.particles.particles.push({
@@ -509,48 +667,53 @@ export class WorldSlashBehavior {
                 size: 3, color: '#DC143C', type: 'square'
             });
         }
-        // Linear movement handled by separated component
-    }
-}
 
-export class KunaiBehavior {
-    update(p, timeScale) {
-        if (p.isEmbedded) return; // Already stuck
+        // Deflect enemy projectiles
+        for (let j = p.game.projectiles.length - 1; j >= 0; j--) {
+            const other = p.game.projectiles[j];
+            if (other === p || !other.active) continue;
+            if (other.owner === p.owner) continue; // Don't deflect own
+            if (other.isGroundBurn) continue; // Don't deflect ground burns
 
-        // Manually move if not using LinearMovement, OR just let LinearMovement handle it?
-        // Issue: LinearMovement kills on wall. We want to STICK on wall.
-        // Solution: Use LinearMovement logic but override the kill.
-        // Or: Don't use LinearMovement for Kunai, use this.
+            if (Physics.dist(p.x, p.y, other.x, other.y) < (p.radius || 40) + (other.radius || 4)) {
+                // Deflect
+                other.owner = p.owner;
+                other.hitList = [];
 
-        p.x += p.dx * timeScale;
-        p.y += p.dy * timeScale;
+                const speed = Math.hypot(other.dx, other.dy);
+                other.dx = Math.cos(p.angle) * speed * 1.2;
+                other.dy = Math.sin(p.angle) * speed * 1.2;
+                other.angle = p.angle;
 
-        p.travelled = (p.travelled || 0) + Math.hypot(p.dx, p.dy) * timeScale;
+                other.isDeflected = true;
+                other.deflectLifetime = 180;
 
-        // Bounds Check -> Stick
-        const bounds = p.game.arenaBounds;
-        let hitWall = false;
-
-        if (p.x < bounds.x || p.x > bounds.x + bounds.width ||
-            p.y < bounds.y || p.y > bounds.y + bounds.height) {
-            hitWall = true;
+                p.game.particles.spawn(other.x, other.y, '#DC143C', 6);
+                audioEngine.playBlock();
+                // logger.log(`World Cutting Slash DEFLECTED projectile!`, 'combat');
+            }
         }
 
-        if (hitWall || (p.maxDist && p.travelled >= p.maxDist)) {
-            // Stick!
-            p.dx = 0;
-            p.dy = 0;
-            p.isEmbedded = true;
+        // Hit entities
+        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead);
+        for (let ent of enemies) {
+            if (Physics.dist(p.x, p.y, ent.x, ent.y) < (p.radius || 40) + ent.radius) {
+                // Drag Logic
+                if (p.dragTarget) { // Wait, dragTarget logic? WorldSlash usually pulls.
+                    // The old code had: if (p.dragTarget). But WorldSlash usually just applies drag.
+                    // Actually, let's just apply drag to everyone hit.
+                    ent.dx = p.dx * (p.dragStrength || 0.3) + (p.x - ent.x) * 0.1;
+                    ent.dy = p.dy * (p.dragStrength || 0.3) + (p.y - ent.y) * 0.1;
+                }
 
-            // Clamp
-            p.x = Math.max(bounds.x + 5, Math.min(bounds.x + bounds.width - 5, p.x));
-            p.y = Math.max(bounds.y + 5, Math.min(bounds.y + bounds.height - 5, p.y));
-
-            p.ignoreBounds = true; // Tell other systems not to kill it
-
-            if (!p.hasPlayedStickSound) {
-                audioEngine.playHit();
-                p.hasPlayedStickSound = true;
+                // Damage
+                if (!p.hitList) p.hitList = [];
+                if (!p.hitList.includes(ent.id)) {
+                    ent.takeDamage(p.damage, true, false, p.owner); // Unblockable
+                    p.hitList.push(ent.id);
+                    p.game.particles.spawnSlash(ent.x, ent.y, ent.x + (Math.random() - 0.5) * 20, ent.y + (Math.random() - 0.5) * 20, '#DC143C', 30);
+                    audioEngine.playSlash();
+                }
             }
         }
     }
@@ -619,18 +782,30 @@ export class MechaBeamBehavior {
                 p.x = Math.max(bounds.x, Math.min(bounds.x + bounds.width, p.x));
                 p.y = Math.max(bounds.y, Math.min(bounds.y + bounds.height, p.y));
 
-                p.hasExploded = true;
-                p.active = false;
-
-                // Trigger explosion
-                this.triggerExplosion(p);
+                // Trigger impact (generic)
+                p.triggerImpact(null);
             } else {
                 p.active = false;
             }
         }
     }
 
-    triggerExplosion(p) {
+    onImpact(p, target) {
+        if (p.hasExploded) return;
+        p.hasHandledImpact = true;
+        p.hasExploded = true;
+        p.active = false;
+
+        // If hitting a target, apply direct damage + stun first
+        if (target) {
+            target.takeDamage(p.damage, false, false, p.owner);
+            target.applyStatus('STUN', p.stunDuration);
+        }
+
+        this.triggerExplosion(p, target);
+    }
+
+    triggerExplosion(p, directTarget = null) {
         const game = p.game;
 
         // Spawn explosion effect
@@ -639,6 +814,9 @@ export class MechaBeamBehavior {
         // AOE damage
         const enemies = game.entities.filter(e => e !== p.owner && !e.isDead);
         for (const enemy of enemies) {
+            // Avoid double-hitting the direct target if it exists
+            if (directTarget && enemy === directTarget) continue;
+
             const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
             if (dist < p.explosionRadius + enemy.radius) {
                 enemy.takeDamage(p.explosionDamage, false, false, p.owner);
@@ -654,7 +832,7 @@ export class MechaBeamBehavior {
         audioEngine.playExplosion();
 
         // Trigger melee follow-up on owner
-        if (p.owner && p.owner.abilities && p.owner.abilities.atk) {
+        if (p.owner && p.owner.abilities && p.owner.abilities.atk && typeof p.owner.abilities.atk.triggerMeleeDash === 'function') {
             p.owner.abilities.atk.triggerMeleeDash(p.owner, { game });
         }
     }

@@ -147,29 +147,6 @@ export class Fighter {
             }
         }
 
-        // Ninja Teleport Trigger
-        if (this.teleportDelayTimer > 0) {
-            this.teleportDelayTimer = tick(this.teleportDelayTimer);
-            if (this.teleportDelayTimer <= 0 && this.kunaiPending.length > 0) {
-                this.chainDashQueue = [{ x: this.x, y: this.y }];
-                this.kunaiPending.forEach(p => {
-                    if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) {
-                        this.chainDashQueue.push({ x: p.x, y: p.y });
-                    }
-                });
-                this.kunaiPending = [];
-                if (this.chainDashQueue.length > 1) {
-                    this.isDashing = true;
-                } else {
-                    // Fail safe: if no valid targets, cancel dash
-                    this.teleportDelayTimer = 0;
-                    this.chainDashQueue = [];
-                }
-                this.dashTimer = this.chainDashQueue.length * 4;
-                this.dashTimerStart = this.dashTimer;
-            }
-        }
-
         // Evasion visual fade back
         if (this.activeEffects.evasionTimer > 0) this.activeEffects.evasionTimer = tick(this.activeEffects.evasionTimer);
 
@@ -182,25 +159,13 @@ export class Fighter {
 
         if (this.status.stun <= 0 && !this.isDashing) {
             let rot = this.rotationSpeed * timeScale;
-            if (this.typeKey === 'SOLDIER' && this.activeEffects.burstCount > 0) {
-                rot *= 0.2;
-            }
 
-            // King of Curses: Slow rotation by 60% when facing opponent (aiming mechanic)
-            if (this.typeKey === 'KING_OF_CURSES') {
-                const opponent = allEntities.find(e => e !== this && !e.isDead);
-                if (opponent) {
-                    const angleToOpponent = Math.atan2(opponent.y - this.y, opponent.x - this.x);
-                    let angleDiff = Math.abs(this.angle - angleToOpponent);
-                    // Normalize angle difference to [0, PI]
-                    while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
-
-                    // If facing opponent (within ~45 degrees), slow rotation
-                    if (angleDiff < Math.PI / 4) {
-                        rot *= 0.4; // 60% slow
-                    }
+            // OCP: Allow abilities to modify rotation (e.g. Soldier Burst, KOC Aim)
+            Object.values(this.abilities).forEach(ability => {
+                if (ability && ability.modifyRotation) {
+                    rot = ability.modifyRotation(this, rot);
                 }
-            }
+            });
 
             this.angle += rot;
         }
@@ -278,17 +243,11 @@ export class Fighter {
             this.pendingBallistaPinned = null;
         }
 
-        // SHIELDBEARER: Momentum on wall bounce
-        if (bounced && this.typeKey === 'SHIELDBEARER') {
-            const config = this.skills.atk;
-            if (this.wallBounceSpeed < config.maxSpeed) {
-                this.wallBounceSpeed = Math.min(this.wallBounceSpeed + config.speedGain, config.maxSpeed);
-                this.game.combatText.speedUp(this.x, this.y);
-                this.game.particles.spawn(this.x, this.y, '#8b5cf6', 5);
-                audioEngine.playSpeedUp();
-                this.spawnSonicBoom();
-                logger.log(`${this.name} SPEED UP! (${this.wallBounceSpeed.toFixed(1)}/${config.maxSpeed})`, 'info');
-            }
+        // OCP: Notify abilities of wall bounce
+        if (bounced) {
+            Object.values(this.abilities).forEach(ability => {
+                if (ability && ability.onWallBounce) ability.onWallBounce(this);
+            });
         }
 
         let speed = Math.hypot(this.dx, this.dy);
@@ -312,7 +271,7 @@ export class Fighter {
                 this.dy = Math.sin(restartAngle) * this.baseSpeed;
             } else if (speed > 0) {
                 // Normal movement driving
-                let mod = (this.activeEffects.ultActive && this.typeKey === 'SOLDIER') ? 1.5 : 1.0;
+                let mod = 1.0;
                 if (this.status.slow > 0) mod *= 0.75; // 25% slow
 
                 // Burn Slow (10% per stack)
@@ -321,7 +280,15 @@ export class Fighter {
                     mod *= (1 - burnSlow);
                 }
 
-                let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
+                let targetSpeed = this.baseSpeed;
+
+                // OCP: Allow abilities to modify base target speed (e.g. Shieldbearer Momentum)
+                Object.values(this.abilities).forEach(ability => {
+                    if (ability && ability.modifySpeed) {
+                        targetSpeed = ability.modifySpeed(this, targetSpeed);
+                    }
+                });
+
                 targetSpeed *= mod;
 
                 // GLOBAL SPEED CAP: Prevent physics "explosions" from overlapping teleports/dashes
@@ -351,119 +318,30 @@ export class Fighter {
     handleDash(timeScale) {
         this.dashTimer -= 1 * timeScale;
 
-        if (this.typeKey === 'NINJA' && this.chainDashQueue.length > 1) {
-            if (this.dashTimer % 4 === 0) {
-                const current = this.chainDashQueue.shift();
-                const next = this.chainDashQueue[0];
-
-                // Validate coordinates
-                if (!next || !Number.isFinite(next.x) || !Number.isFinite(next.y)) {
-                    this.dashTimer = 0;
-                    this.isDashing = false;
-                    return;
-                }
-
-                // === The Yellow Flash (Lore Accurate) ===
-                // 1. Afterimage at start
-                this.game.particles.particles.push({
-                    x: current.x, y: current.y,
-                    vx: 0, vy: 0,
-                    life: 0.4, decay: 0.1,
-                    size: this.radius, color: '#ffd700', type: 'dot', alpha: 0.15
-                });
-
-                // 2. Yellow Flash Streak (Solid Beam)
-                // Use 'beam' type for a cohesive glowing line with white core
-                // Decay 0.08 means it lasts ~12 frames (0.2s), much more visible than 2 frames
-                // Width 8: Sharp and thin, distinct from the ball body (diameter 50)
-                this.game.particles.spawnBeam(current.x, current.y, next.x, next.y, '#ffd700', 8, 0.08);
-
-                // Add faint parallel lines for speed illusion
-                const px = current.y - next.y; // Perpendicular vector (simple approximation)
-                const py = next.x - current.x;
-                const len = Math.hypot(px, py) || 1;
-                const offX = (px / len) * 8;
-                const offY = (py / len) * 8;
-
-                // Secondary faint beam
-                this.game.particles.spawnBeam(
-                    current.x + offX, current.y + offY,
-                    next.x + offX, next.y + offY,
-                    '#ffd700', 2, 0.1 // Thin line decays slightly faster
-                );
-
-                // 3. Subtle destination marker (No explosion)
-                this.game.particles.particles.push({
-                    x: next.x, y: next.y,
-                    vx: 0, vy: 0,
-                    life: 0.3, decay: 0.1,
-                    size: this.radius, color: '#ffd700', type: 'dot', alpha: 0.15
-                });
-
-                audioEngine.playTeleport();
-
-                this.x = next.x;
-                this.y = next.y;
-
-                const enemies = this.game.entities.filter(e => e !== this && !e.isDead);
-                let hitTarget = null;
-
-                // Check collisions
-                for (const e of enemies) {
-                    if (Physics.lineCircleIntersect(current.x, current.y, next.x, next.y, e.x, e.y, e.radius + 15)) {
-                        hitTarget = e;
-                        if (this.pendingRasengan) break; // Priority hit for Ult
-                    }
-                }
-
-                if (hitTarget) {
-                    if (this.pendingRasengan) {
-                        // === TRIGGER RASENGAN HIT ===
-                        // Move to impact point (not center, to avoid physics NaN issues)
-                        const impactAngle = Math.atan2(hitTarget.y - current.y, hitTarget.x - current.x);
-                        const stopDist = hitTarget.radius + this.radius + 1;
-                        this.x = hitTarget.x - Math.cos(impactAngle) * stopDist;
-                        this.y = hitTarget.y - Math.sin(impactAngle) * stopDist;
-
-                        this.triggerRasengan(hitTarget);
-
-                        // Stop Dash Immediately
-                        this.chainDashQueue = [];
-                        this.dashTimer = 0;
-                        this.isDashing = false;
-                        this.pendingRasengan = null;
-                        this.game.projectiles = this.game.projectiles.filter(p => !p.isKunai || p.owner !== this);
-                        return;
-                    } else {
-                        // Normal dash damage
-                        this.game.combatText.flash(hitTarget.x, hitTarget.y - hitTarget.radius);
-                        hitTarget.takeDamage(8);
-                        this.game.particles.spawn(hitTarget.x, hitTarget.y, '#ffd700', 5);
-                    }
-                }
-            }
-        } else if (this.typeKey === 'SWORD_MASTER') {
-            this.x += this.dx; this.y += this.dy;
-            if (Math.random() < 0.5) this.game.particles.spawn(this.x, this.y, '#ff0000', 1);
+        // OCP: Delegate dash logic to handling ability (e.g. Ninja Teleport)
+        if (this.dashHandler && this.dashHandler.updateDash) {
+            this.dashHandler.updateDash(this, timeScale);
         } else {
-            this.x += this.dx; this.y += this.dy;
-            this.game.particles.spawn(this.x, this.y, '#aaa', 1);
+            // Generic Dash Movement (Soldier Retreat, etc.)
+            this.x += this.dx;
+            this.y += this.dy;
+
+            // Simple visual trail
+            if (this.typeKey === 'SWORD_MASTER') {
+                if (Math.random() < 0.5) this.game.particles.spawn(this.x, this.y, '#ff0000', 1);
+            } else {
+                this.game.particles.spawn(this.x, this.y, '#aaa', 1);
+            }
         }
 
         if (this.dashTimer <= 0) {
             this.isDashing = false;
+            this.dashHandler = null; // Clear handler
 
-            if (this.typeKey === 'NINJA') {
-                this.game.projectiles = this.game.projectiles.filter(p => !p.isKunai || p.owner !== this);
-
-                // Rasengan effect at final position (if missed)
-                if (this.pendingRasengan) {
-                    this.triggerRasengan(null); // Null target = AOE at location
-                    this.pendingRasengan = null;
-                }
-            }
-
+            // Reset specialized queues if any remain (safety)
             this.chainDashQueue = [];
+
+            // Sword Master stop? (Legacy logic)
             if (this.typeKey === 'SWORD_MASTER') {
                 this.dx = Math.cos(this.angle) * this.baseSpeed;
                 this.dy = Math.sin(this.angle) * this.baseSpeed;
@@ -475,98 +353,7 @@ export class Fighter {
         this.y = Math.max(bounds.y + this.radius, Math.min(bounds.y + bounds.height - this.radius, this.y));
     }
 
-    triggerRasengan(directHitTarget = null) {
-        const rasenganDamage = this.pendingRasengan;
-        const rasenganRadius = 60;
 
-        // === Spectacular Visuals ===
-        // 1. Spiral
-        for (let i = 0; i < 30; i++) {
-            const angle = (Math.PI * 2 / 30) * i;
-            const dist = 10 + Math.random() * 40;
-            this.game.particles.particles.push({
-                x: this.x + Math.cos(angle) * dist,
-                y: this.y + Math.sin(angle) * dist,
-                vx: Math.cos(angle + Math.PI / 2) * 8, // Faster spin
-                vy: Math.sin(angle + Math.PI / 2) * 8,
-                life: 0.8,
-                decay: 0.04,
-                size: 3 + Math.random() * 4,
-                color: '#00BFFF',
-                type: 'dot'
-            });
-        }
-        // 2. Core Burst
-        this.game.particles.spawnExplosion(this.x, this.y); // Add fiery burst center
-        this.game.particles.spawn(this.x, this.y, '#00BFFF', 20); // Blue burst
-        this.game.particles.spawn(this.x, this.y, '#ffffff', 10); // White core
-
-        // 3. Shockwave
-        this.game.particles.particles.push({
-            type: 'shockwave', x: this.x, y: this.y,
-            radius: 10, maxRadius: 100,
-            life: 1.0, decay: 0.05, color: '#00BFFF'
-        });
-
-        audioEngine.playHeavyImpact();
-
-        if (directHitTarget) {
-            logger.log(`${this.name} RASENGAN DIRECT HIT on ${directHitTarget.name}!`, 'combat');
-            directHitTarget.takeDamage(rasenganDamage * 1.5, true); // Bonus dmg for direct hit? Or just ensure hit.
-            // Let's stick to base damage or slight bonus. Prompt didn't specify bonus but direct hit usually implies it.
-            // I'll stick to rasenganDamage to be safe, but apply it.
-            // Actually, let's just do AOE to ensure everyone near gets hit, including target.
-        } else {
-            logger.log(`${this.name} Rasengan exploded!`, 'info');
-        }
-
-        // AOE damage
-        const enemies = this.game.entities.filter(e => e !== this && !e.isDead);
-        enemies.forEach(e => {
-            const dist = Physics.dist(this.x, this.y, e.x, e.y);
-            if (dist < rasenganRadius + e.radius) {
-                // If direct hit, we already logged, but maybe didn't damage yet.
-                // To avoid double damage, we can check.
-                // Simple approach: Just deal damage here to all in AOE.
-                e.takeDamage(rasenganDamage, true); // Unblockable? Rasengan breaks guards usually.
-
-                // Heavy Knockback
-                const knockAngle = Math.atan2(e.y - this.y, e.x - this.x);
-                e.dx = Math.cos(knockAngle) * 12;
-                e.dy = Math.sin(knockAngle) * 12;
-                e.applyStatus('STUN', 45); // Add stun
-            }
-        });
-    }
-
-    spawnSonicBoom() {
-        const moveAngle = Math.atan2(this.dy, this.dx);
-        for (let i = 0; i < 12; i++) {
-            const angle = moveAngle + Math.PI + (Math.random() - 0.5) * 1.5;
-            const speed = 3 + Math.random() * 3;
-            this.game.particles.particles.push({
-                x: this.x - Math.cos(moveAngle) * this.radius,
-                y: this.y - Math.sin(moveAngle) * this.radius,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 1.0,
-                decay: 0.06,
-                size: 4 + Math.random() * 4,
-                color: '#ffffff',
-                type: 'dot'
-            });
-        }
-        this.game.particles.particles.push({
-            type: 'shockwave',
-            x: this.x,
-            y: this.y,
-            radius: this.radius,
-            maxRadius: 80,
-            life: 1.0,
-            decay: 0.08,
-            color: '#8b5cf6'
-        });
-    }
 
     /**
      * SHIELD SYSTEM - Check if a ray hits the shield arc

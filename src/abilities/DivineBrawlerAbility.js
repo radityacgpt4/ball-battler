@@ -11,6 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { checkWeaponHit } from '../data/weaponGeometry.js';
 
 // --- ATK: BLACK FLASH (Passive) ---
 export class DivineBrawlerAtkAbility extends Ability {
@@ -34,7 +35,6 @@ export class DivineBrawlerAtkAbility extends Ability {
     }
 
     update(fighter, context) {
-        const meleeRange = fighter.radius + this.range;
         let hit = false;
 
         if (fighter.cooldowns.atk > 0) return;
@@ -42,8 +42,8 @@ export class DivineBrawlerAtkAbility extends Ability {
         for (const enemy of context.enemies) {
             if (enemy === fighter || enemy.isDead) continue;
 
-            const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
-            if (dist < meleeRange + enemy.radius) {
+            // Use weapon geometry registry for fist collision
+            if (checkWeaponHit('DIVINE_BRAWLER_FISTS', fighter, enemy)) {
                 this.performAttack(fighter, enemy);
                 hit = true;
                 break;

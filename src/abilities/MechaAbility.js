@@ -12,6 +12,7 @@ import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { checkWeaponHit } from '../data/weaponGeometry.js';
 
 import { MechaBeamBehavior } from '../components/ProjectileBehaviors.js';
 import { MechaBeamRenderer } from '../components/ProjectileRenderers.js';
@@ -221,13 +222,14 @@ export class MechaAtkAbility extends Ability {
         // Energy blade trail
         this.spawnBladeTrail(fighter, game);
 
-        // Check for melee hits
+        // --- PIXEL PERFECT DIRECTIONAL BLADE COLLISION (Using Weapon Geometry Registry) ---
+        // Check for melee hits using weapon registry
         for (const enemy of enemies) {
             if (enemy === fighter || enemy.isDead) continue;
             if (fighter.mechaHitList && fighter.mechaHitList.includes(enemy.id)) continue;
 
-            const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
-            if (dist < fighter.radius + enemy.radius + 25) {
+            // Directional blade collision check using registry
+            if (checkWeaponHit('MECHA_BLADE', fighter, enemy)) {
                 // Hit!
                 if (!fighter.mechaHitList) fighter.mechaHitList = [];
                 fighter.mechaHitList.push(enemy.id);

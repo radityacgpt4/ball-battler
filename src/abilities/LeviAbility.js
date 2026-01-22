@@ -10,6 +10,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { checkWeaponHit } from '../data/weaponGeometry.js';
 
 /**
  * ATK: Sword Shred
@@ -62,34 +63,11 @@ export class SwordShredAbility extends Ability {
             return;
         }
 
-        // --- PIXEL PERFECT BLADE COLLISION ---
-        const bladeLen = this.config.range; // matches renderer 32-35
-        const stanceAngle = Math.PI / 4;
-
-        // Helper to check line-circle collision
-        const checkBladeHit = (target, offsetX, offsetY, extraRot = 0) => {
-            // Calculate absolute start and end points of the blade
-            const angle = fighter.angle + stanceAngle + extraRot;
-
-            // Start point (at handle/edge of body)
-            const sX = fighter.x + offsetX * Math.cos(fighter.angle) - offsetY * Math.sin(fighter.angle);
-            const sY = fighter.y + offsetX * Math.sin(fighter.angle) + offsetY * Math.cos(fighter.angle);
-
-            // End point (tip)
-            const eX = sX + bladeLen * Math.cos(angle);
-            const eY = sY + bladeLen * Math.sin(angle);
-
-            return Physics.lineCircleIntersect(sX, sY, eX, eY, target.x, target.y, target.radius);
-        };
-
-        // Find targets hit by either blade
+        // --- PIXEL PERFECT BLADE COLLISION (Using Weapon Geometry Registry) ---
+        // Find targets hit by either blade using registry
         const target = enemies.find(e => {
             if (e === fighter || e.isDead) return false;
-            // Check Front Blade (12, 23) - Y flipped for mirrored blade
-            if (checkBladeHit(e, 12, 23)) return true;
-            // Check Back Blade (-12, -23, +PI) - Y flipped for mirrored blade
-            if (checkBladeHit(e, -12, -23, Math.PI)) return true;
-            return false;
+            return checkWeaponHit('LEVI_BLADES', fighter, e);
         });
 
         if (target) {

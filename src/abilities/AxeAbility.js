@@ -11,6 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { checkWeaponHit } from '../data/weaponGeometry.js';
 
 export class AxeAtkAbility extends Ability {
     constructor(config, slot) {
@@ -37,14 +38,12 @@ export class AxeAtkAbility extends Ability {
         }
 
         const { enemies, game } = context;
-        const range = fighter.radius + this.range;
-        const tipX = fighter.x + Math.cos(fighter.angle) * range;
-        const tipY = fighter.y + Math.sin(fighter.angle) * range;
 
         for (let enemy of enemies) {
             if (enemy === fighter || enemy.isDead) continue;
 
-            if (Physics.lineCircleIntersect(fighter.x, fighter.y, tipX, tipY, enemy.x, enemy.y, enemy.radius + 5)) {
+            // Use weapon geometry registry for collision
+            if (checkWeaponHit('AXEMAN_AXE', fighter, enemy)) {
                 // Check shield block
                 if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                     if (fighter.cooldowns.atk <= 0) {

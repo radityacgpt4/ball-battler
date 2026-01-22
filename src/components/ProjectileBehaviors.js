@@ -3,6 +3,7 @@
  * Defines isolated, reusable behaviors for projectiles.
  */
 import { audioEngine } from '../systems/Audio.js';
+import { Physics } from '../systems/Physics.js';
 
 // BASE COMPONENT INTERFACE
 // class Behavior {

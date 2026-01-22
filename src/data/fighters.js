@@ -735,7 +735,7 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 baseDamage: 2,
-                range: 33,
+                range: 35, // Matches visual blade length (updated from 33)
                 attackCooldown: 12, // Base cooldown (decreases with speed)
                 minCooldown: 2,     // Minimum cooldown at max speed
                 maxRotationSpeed: 0.6, // Cap for rotation speed scaling

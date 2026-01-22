@@ -70,28 +70,27 @@ export class MechaAtkAbility extends Ability {
             return;
         }
 
-        // Auto-aim logic (Smooth tracking like Frieren's Zoltraak, but slightly weaker)
+        // Auto-aim logic (Smooth position tracking - eliminates jitter)
         const target = this.findBestTarget(fighter, enemies);
 
         if (target) {
-            // Calculate ideal angle to target
-            const idealAngle = Math.atan2(target.y - fighter.y, target.x - fighter.x);
-
-            // Initialize tracking angle if not set
-            if (fighter.mechaTargetAngle === undefined) {
-                fighter.mechaTargetAngle = fighter.angle;
+            // Initialize smooth tracking position if not set
+            if (fighter.mechaTrackX === undefined) {
+                fighter.mechaTrackX = target.x;
+                fighter.mechaTrackY = target.y;
             }
 
-            // Smooth interpolation towards target (slower than Frieren = weaker tracking)
-            const trackingSpeed = 0.08; // Frieren uses instant, Mecha uses smooth lerp
-            let angleDiff = idealAngle - fighter.mechaTargetAngle;
+            // Smoothly lerp tracked position towards target (not angle!)
+            // This handles moving targets much better than angle lerping
+            const trackingSpeed = 0.06; // Lower = smoother but slower tracking
+            fighter.mechaTrackX += (target.x - fighter.mechaTrackX) * trackingSpeed;
+            fighter.mechaTrackY += (target.y - fighter.mechaTrackY) * trackingSpeed;
 
-            // Normalize angle difference to -PI to PI
-            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-
-            // Smoothly interpolate
-            fighter.mechaTargetAngle += angleDiff * trackingSpeed;
+            // Calculate angle from smoothed position (stable, no jitter)
+            fighter.mechaTargetAngle = Math.atan2(
+                fighter.mechaTrackY - fighter.y,
+                fighter.mechaTrackX - fighter.x
+            );
 
             // Store target for firing
             fighter.mechaCurrentTarget = target;
@@ -101,9 +100,12 @@ export class MechaAtkAbility extends Ability {
                 let angleDiff = fighter.angle - fighter.mechaTargetAngle;
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                fighter.mechaTargetAngle += angleDiff * 0.05;
+                fighter.mechaTargetAngle += angleDiff * 0.03;
             }
             fighter.mechaCurrentTarget = null;
+            // Reset tracking position
+            fighter.mechaTrackX = undefined;
+            fighter.mechaTrackY = undefined;
         }
 
         // Check cooldown for firing
@@ -114,31 +116,16 @@ export class MechaAtkAbility extends Ability {
     }
 
     findBestTarget(fighter, enemies) {
-        // Scoring system like Frieren's, but weights distance more (weaker aim assist)
+        // Simple nearest target (no angle in scoring to prevent flip-flopping)
         let bestTarget = null;
-        let bestScore = -Infinity;
-        const range = 600; // Slightly shorter than Frieren's 700
+        let minDist = 600; // Range
 
         for (const enemy of enemies) {
             if (enemy === fighter || enemy.isDead) continue;
 
             const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
-            if (dist > range) continue;
-
-            const angleToEnemy = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
-            let angleDiff = angleToEnemy - (fighter.mechaTargetAngle || fighter.angle);
-
-            // Normalize
-            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-
-            // Score: Mecha prioritizes distance more than Frieren (0.5/0.5 vs 0.3/0.7)
-            const distScore = 1 - (dist / range);
-            const angleScore = 1 - (Math.abs(angleDiff) / Math.PI);
-            const score = distScore * 0.5 + angleScore * 0.5;
-
-            if (score > bestScore) {
-                bestScore = score;
+            if (dist < minDist) {
+                minDist = dist;
                 bestTarget = enemy;
             }
         }

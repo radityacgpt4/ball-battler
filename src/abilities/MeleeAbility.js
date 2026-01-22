@@ -47,7 +47,11 @@ export class MeleeAbility extends Ability {
                 if (fighter.cooldowns.atk <= 0) {
                     fighter.meleeHits++;
                     enemy.takeDamage(this.damage, false, false, fighter);
+
+                    const tipX = fighter.x + Math.cos(fighter.angle) * (fighter.radius + this.range);
+                    const tipY = fighter.y + Math.sin(fighter.angle) * (fighter.radius + this.range);
                     game.particles.spawn(tipX, tipY, '#fff', 5);
+
                     audioEngine.playSwordSwing();
                     audioEngine.playHit();
                     logger.log(`${fighter.name} hit ${enemy.name} for ${this.damage} dmg`, 'combat');

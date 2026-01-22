@@ -512,11 +512,11 @@ export class GrenadeBehavior {
 
     onImpact(p, target) {
         // Grenades explode on impact (ground or wall/target)
-        p.game.particles.spawnExplosion(p.x, p.y);
+        p.game.particles.spawnEffect('fragGrenadeExplosion', p.x, p.y);
         audioEngine.playExplosion();
-        // logger.log(`${p.owner.name}'s Grenade EXPLODED!`, 'combat'); // Optional log
 
-        const blastRadius = 60;
+        const blastRadius = p.explosionRadius || 80;
+        const stunDur = p.stunDuration || 60;
         const enemies = p.game.entities.filter(ent => !ent.isDead && ent !== p.owner);
 
         enemies.forEach(ent => {
@@ -527,7 +527,7 @@ export class GrenadeBehavior {
                 const force = 12;
                 ent.dx += Math.cos(angle) * force;
                 ent.dy += Math.sin(angle) * force;
-                ent.applyStatus('STUN');
+                ent.applyStatus('STUN', stunDur);
             }
         });
     }

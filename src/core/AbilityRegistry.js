@@ -146,7 +146,7 @@ class AbilityRegistryClass {
         // Mecha abilities
         this.register('MECHA_BEAM', MechaAtkAbility);
         this.register('MECHA_DODGE', MechaDefAbility);
-        this.register('MECHA_COUNTER', MechaUltAbility);
+        this.register('MECHA_ULT_MODE', MechaUltAbility);
     }
 }
 

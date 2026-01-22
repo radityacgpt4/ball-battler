@@ -40,14 +40,14 @@ export const weaponGeometry = {
     // ========================================================================
     MECHA_BLADE: {
         type: 'single_blade',
-        bladeLength: 40,
-        bladeWidth: 6,
-        glowSize: 3,
+        bladeLength: 52.5, // 55 (base) + 2 (offset) + 0.5 (rounded core tip)
+        bladeWidth: 7,
+        glowSize: 2,
         startFromEdge: true, // Blade starts from fighter's edge (radius), not center
 
         // Single blade extending forward from fighter angle
         bladeOffsets: [
-            { x: 0, y: 0, rotation: 0 } // Extends directly from fighter.angle
+            { x: 2, y: 0, rotation: 0 } // Offset by 2 to match renderer's startX
         ]
     },
 

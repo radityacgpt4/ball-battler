@@ -27,14 +27,16 @@ export class MechaAtkAbility extends Ability {
         this.stunDuration = config.stunDuration || 90;
         this.projectileSpeed = config.projectileSpeed || 16;
         this.explosionRadius = config.explosionRadius || 60;
+        this.twinBarrelOffset = config.twinBarrelOffset || 12;
 
         // Melee dash properties
         this.meleeDamage = config.meleeDamage || 4;
         this.dashSpeed = config.dashSpeed || 18;
-        this.dashDuration = config.dashDuration || 12;
-        this.dashDelay = config.dashDelay || 60;
-        this.aimError = config.aimError !== undefined ? config.aimError : 0.28; // Slightly more than Frieren's 0.22
-        this.meleeRotationMultiplier = config.meleeRotationMultiplier || 3;
+        this.dashDistance = config.dashDistance || 600;
+        this.ultDashDistance = config.ultDashDistance || 800;
+        this.dashDelay = config.dashDelay || 15;
+        this.aimError = config.aimError !== undefined ? config.aimError : 0.4;
+        this.meleeRotationMultiplier = config.meleeRotationMultiplier || 5;
     }
 
     update(fighter, context) {
@@ -60,7 +62,7 @@ export class MechaAtkAbility extends Ability {
                     vx: (fighter.x - (fighter.x + (Math.random() - 0.5) * 40)) * 0.1,
                     vy: (fighter.y - (fighter.y + (Math.random() - 0.5) * 40)) * 0.1,
                     life: 0.4, decay: 0.05,
-                    size: 3, color: '#00FFFF', type: 'dot'
+                    size: 3, color: '#39FF14', type: 'dot'
                 });
             }
 
@@ -139,47 +141,96 @@ export class MechaAtkAbility extends Ability {
         // Base angle from smooth tracking
         const baseAngle = fighter.mechaTargetAngle !== undefined ? fighter.mechaTargetAngle : fighter.angle;
 
-        // Apply error only when firing (like Frieren), not every frame
+        // Apply error only when firing
         const errorMargin = (Math.random() - 0.5) * this.aimError;
         const fireAngle = baseAngle + errorMargin;
 
-        const p = new Projectile(
-            fighter,
-            fighter.x + Math.cos(fireAngle) * 30,
-            fighter.y + Math.sin(fireAngle) * 30,
-            fireAngle,
-            this.projectileSpeed,
-            this.projectileDamage,
-            game
-        );
+        // ULT: Twin Cannon Protocol - Fire 2 projectiles from side barrels
+        if (fighter.mechaUltActive) {
+            const offsets = [-this.twinBarrelOffset, this.twinBarrelOffset];
 
-        p.radius = 8;
-        p.explosionDamage = this.explosionDamage;
-        p.explosionRadius = this.explosionRadius;
-        p.stunDuration = this.stunDuration;
-        p.explodeOnWall = true;
+            offsets.forEach(offsetY => {
+                // Calculate barrel position relative to fighter
+                const localX = 30;
+                const localY = offsetY;
 
-        // Custom renderer and behavior
-        p.renderer = new MechaBeamRenderer();
-        p.addComponent(new MechaBeamBehavior());
+                // Rotate barrel position to match fireAngle
+                const cos = Math.cos(fireAngle);
+                const sin = Math.sin(fireAngle);
+                const worldX = fighter.x + (localX * cos - localY * sin);
+                const worldY = fighter.y + (localX * sin + localY * cos);
 
-        // Unified impact properties
-        p.impactSound = 'explosion';
-        p.impactParticle = 'mechaExplosion';
+                const p = new Projectile(
+                    fighter,
+                    worldX,
+                    worldY,
+                    fireAngle,
+                    this.projectileSpeed,
+                    this.projectileDamage,
+                    game
+                );
 
-        game.projectiles.push(p);
+                p.radius = 8;
+                p.explosionDamage = this.explosionDamage;
+                p.explosionRadius = this.explosionRadius;
+                p.stunDuration = this.stunDuration;
+                p.explodeOnWall = true;
 
-        // Muzzle flash effect
-        game.particles.spawn(p.x, p.y, '#FFD700', 8);
-        game.particles.spawnBeam(
-            fighter.x, fighter.y,
-            p.x, p.y,
-            '#FFD700', 4, 0.15
-        );
+                p.renderer = new MechaBeamRenderer();
+                p.addComponent(new MechaBeamBehavior());
+                p.impactSound = 'explosion';
+                p.impactParticle = 'mechaExplosion';
 
-        audioEngine.playGunshot();
+                game.projectiles.push(p);
 
-        // Store dash direction for melee follow-up (uses targeting angle)
+                // Muzzle flash for each barrel
+                game.particles.spawn(worldX, worldY, '#00BFFF', 10);
+                game.particles.spawnBeam(
+                    worldX - cos * 10, worldY - sin * 10,
+                    worldX, worldY,
+                    '#FFFFFF', 5, 0.15
+                );
+            });
+
+            audioEngine.playGunshot();
+            audioEngine.playGunshot(); // Double sound for twin barrels
+        } else {
+            // Regular single Beam Rifle
+            const p = new Projectile(
+                fighter,
+                fighter.x + Math.cos(fireAngle) * 30,
+                fighter.y + Math.sin(fireAngle) * 30,
+                fireAngle,
+                this.projectileSpeed,
+                this.projectileDamage,
+                game
+            );
+
+            p.radius = 8;
+            p.explosionDamage = this.explosionDamage;
+            p.explosionRadius = this.explosionRadius;
+            p.stunDuration = this.stunDuration;
+            p.explodeOnWall = true;
+
+            p.renderer = new MechaBeamRenderer();
+            p.addComponent(new MechaBeamBehavior());
+            p.impactSound = 'explosion';
+            p.impactParticle = 'mechaExplosion';
+
+            game.projectiles.push(p);
+
+            // Muzzle flash
+            game.particles.spawn(p.x, p.y, '#FFD700', 8);
+            game.particles.spawnBeam(
+                fighter.x, fighter.y,
+                p.x, p.y,
+                '#FFD700', 4, 0.15
+            );
+
+            audioEngine.playGunshot();
+        }
+
+        // Store dash direction for melee follow-up
         fighter.mechaPendingDash = {
             angle: fireAngle,
             triggered: false
@@ -191,7 +242,7 @@ export class MechaAtkAbility extends Ability {
             fighter.maxCooldowns.atk = this.cooldown;
         }
 
-        logger.log(`${fighter.name} fired Beam Rifle!`, 'combat');
+        logger.log(`${fighter.name} fired ${fighter.mechaUltActive ? 'Twin Cannons' : 'Beam Rifle'}!`, 'combat');
     }
 
     // Called when projectile hits something - starts the delay from config
@@ -210,7 +261,12 @@ export class MechaAtkAbility extends Ability {
     // Actually executes the dash after the delay
     executeMeleeDash(fighter, context) {
         fighter.mechaDashActive = true;
-        fighter.mechaDashTimer = this.dashDuration;
+
+        // Calculate duration based on Distance / Speed
+        const distance = fighter.mechaUltActive ? this.ultDashDistance : this.dashDistance;
+        const duration = Math.ceil(distance / this.dashSpeed);
+        fighter.mechaDashTimer = duration;
+
         fighter.mechaHitList = [];
         fighter.mechaRotationAccumulator = 0;
         fighter.mechaLastAngle = fighter.angle;
@@ -249,10 +305,8 @@ export class MechaAtkAbility extends Ability {
             fighter.mechaRotationAccumulator -= Math.PI * 2;
         }
 
-        // Rocket boost trail
-        if (fighter.mechaDashTimer % 2 === 0) {
-            this.spawnRocketBoost(fighter, game);
-        }
+        // Rocket boost trail (Spawn every frame for smooth trail)
+        this.spawnRocketBoost(fighter, game);
 
         // Energy blade trail
         this.spawnBladeTrail(fighter, game);
@@ -322,79 +376,139 @@ export class MechaAtkAbility extends Ability {
     }
 
     spawnRocketBoost(fighter, game) {
+        // High-intensity Afterburner (Wing Zero Style)
         const boostAngle = fighter.mechaDashAngle + Math.PI; // Behind the fighter
-        const offsets = [-0.5, 0.5]; // Twin thruster offsets (radians)
+        const offsets = [-0.65, 0.65]; // Twin thruster offsets (Wider stance for "Thick" look)
 
         offsets.forEach(offset => {
+            // Calculate nozzle position
             const angle = boostAngle + offset;
-            const startX = fighter.x + Math.cos(angle) * (fighter.radius - 5);
-            const startY = fighter.y + Math.sin(angle) * (fighter.radius - 5);
+            const startX = fighter.x + Math.cos(angle) * (fighter.radius - 2);
+            const startY = fighter.y + Math.sin(angle) * (fighter.radius - 2);
 
-            // Main thruster flame - Bigger and longer
-            for (let i = 0; i < 3; i++) {
-                const spread = (Math.random() - 0.5) * 0.3;
-                const speed = 6 + Math.random() * 4;
-                game.particles.particles.push({
-                    x: startX,
-                    y: startY,
-                    vx: Math.cos(angle + spread) * speed,
-                    vy: Math.sin(angle + spread) * speed,
-                    life: 0.5,
-                    decay: 0.05,
-                    size: 6 + Math.random() * 4,
-                    color: Math.random() > 0.4 ? '#FF4500' : '#FFD700',
-                    type: 'dot'
-                });
-            }
+            const flameLen = 70; // Longer flame
 
-            // Blue core flame
+            // Main Afterburner Flame Particle
             game.particles.particles.push({
                 x: startX,
                 y: startY,
-                vx: Math.cos(angle) * 3,
-                vy: Math.sin(angle) * 3,
-                life: 0.3,
+                vx: (Math.random() - 0.5) * 2, // Slight drift
+                vy: (Math.random() - 0.5) * 2,
+                life: 0.35, // Live long enough to trail
                 decay: 0.08,
-                size: 8,
+                size: 20, // Thicker base
                 color: '#00BFFF',
-                type: 'dot'
+                type: 'custom',
+                draw: (ctx, p) => {
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(angle);
+                    ctx.globalCompositeOperation = 'lighter'; // Key for "Energy" look
+
+                    const lifeRatio = p.life / 0.35; // Normalized 0-1
+                    const scale = 1 + (1 - lifeRatio) * 0.5; // Expands slightly as it dies
+                    const currentLen = flameLen * lifeRatio * scale;
+                    const currentWidth = 12 * lifeRatio * scale; // Thicker base (12px)
+
+                    // 1. Outer Plasma Cone (Blue)
+                    const gradient = ctx.createLinearGradient(0, 0, currentLen, 0);
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                    gradient.addColorStop(0.2, 'rgba(0, 191, 255, 0.8)'); // Deep Sky Blue
+                    gradient.addColorStop(0.7, 'rgba(0, 0, 255, 0.4)');
+                    gradient.addColorStop(1, 'rgba(0, 0, 100, 0)');
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -currentWidth / 2); // Nozzle top
+                    ctx.lineTo(currentLen, 0); // Tip
+                    ctx.lineTo(0, currentWidth / 2); // Nozzle bottom
+                    ctx.arc(0, 0, currentWidth / 2, Math.PI / 2, -Math.PI / 2); // Round nozzle base
+                    ctx.fill();
+
+                    // 2. Mach Diamonds (Bright shockwaves in the flow)
+                    // Only visible if flame is healthy
+                    if (lifeRatio > 0.3) {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+
+                        // Diamond 1
+                        const d1Pos = currentLen * 0.3;
+                        const d1Size = currentWidth * 0.6;
+                        ctx.beginPath();
+                        ctx.moveTo(d1Pos, -d1Size / 2);
+                        ctx.lineTo(d1Pos + d1Size, 0);
+                        ctx.lineTo(d1Pos, d1Size / 2);
+                        ctx.lineTo(d1Pos - d1Size, 0);
+                        ctx.fill();
+
+                        // Diamond 2
+                        const d2Pos = currentLen * 0.6;
+                        const d2Size = currentWidth * 0.4;
+                        ctx.beginPath();
+                        ctx.moveTo(d2Pos, -d2Size / 2);
+                        ctx.lineTo(d2Pos + d2Size, 0);
+                        ctx.lineTo(d2Pos, d2Size / 2);
+                        ctx.lineTo(d2Pos - d2Size, 0);
+                        ctx.fill();
+                    }
+
+                    ctx.restore();
+                }
             });
+
+            // Occasional high-speed sparks for "Force"
+            if (Math.random() < 0.3) {
+                const speed = 10 + Math.random() * 10;
+                game.particles.particles.push({
+                    x: startX,
+                    y: startY,
+                    vx: Math.cos(angle + (Math.random() - 0.5) * 0.2) * speed,
+                    vy: Math.sin(angle + (Math.random() - 0.5) * 0.2) * speed,
+                    life: 0.2,
+                    decay: 0.1,
+                    size: 2,
+                    color: '#FFFFFF',
+                    type: 'line', // Streaks
+                    length: 15
+                });
+            }
         });
     }
 
     spawnBladeTrail(fighter, game) {
-        // Energy blade trail particles - Compact size
+        // Energy blade trail particles - Synchronized with hitbox and renderer
         const bladeAngle = fighter.angle;
-        const bladeLength = 40; // 30% smaller feel
-        const tipX = fighter.x + Math.cos(bladeAngle) * (fighter.radius + bladeLength);
-        const tipY = fighter.y + Math.sin(bladeAngle) * (fighter.radius + bladeLength);
+        const startOffset = 2; // Matches Renderer startX offset
+        const totalHitLength = 54.5; // (Hitbox 52.5 + Offset 2)
+
+        const startX = fighter.x + Math.cos(bladeAngle) * (fighter.radius + startOffset);
+        const startY = fighter.y + Math.sin(bladeAngle) * (fighter.radius + startOffset);
+        const tipX = fighter.x + Math.cos(bladeAngle) * (fighter.radius + totalHitLength);
+        const tipY = fighter.y + Math.sin(bladeAngle) * (fighter.radius + totalHitLength);
 
         // Jittering glow effect for energy blade
-        const jitter = (Math.random() - 0.5) * 4;
+        const jitter = (Math.random() - 0.5) * 2;
         game.particles.particles.push({
             x: tipX + jitter,
             y: tipY + jitter,
             vx: (Math.random() - 0.5) * 2,
             vy: (Math.random() - 0.5) * 2,
-            life: 0.3,
+            life: 0.25,
             decay: 0.1,
             size: 3 + Math.random() * 2,
-            color: '#00FFFF',
+            color: '#39FF14', // Neon Green
             type: 'square'
         });
 
         // Continuous Trail beam
         game.particles.spawnBeam(
-            fighter.x + Math.cos(bladeAngle) * fighter.radius,
-            fighter.y + Math.sin(bladeAngle) * fighter.radius,
+            startX, startY,
             tipX, tipY,
-            '#00FFFF', 6, 0.15 // Thinner beam
+            '#39FF14', 6, 0.15 // Neon Green Beam
         );
 
         // Inner white core
         game.particles.spawnBeam(
-            fighter.x + Math.cos(bladeAngle) * fighter.radius,
-            fighter.y + Math.sin(bladeAngle) * fighter.radius,
+            startX, startY,
             tipX, tipY,
             '#FFFFFF', 2, 0.15
         );
@@ -555,47 +669,46 @@ export class MechaDefAbility extends Ability {
             size: fighter.radius, color: '#1E90FF', type: 'dot', alpha: 0.3
         });
 
-        // Thruster trail
-        game.particles.spawnBeam(startX, startY, fighter.x, fighter.y, '#FF4500', 6, 0.12);
-        game.particles.spawnBeam(startX, startY, fighter.x, fighter.y, '#FFD700', 3, 0.15);
-
-        // Twin Afterburner effect (like dash rocket boost)
-        const boostAngle = dodgeAngle + Math.PI; // Behind the fighter
-        const offsets = [-0.5, 0.5]; // Twin thruster offsets
-        offsets.forEach(offset => {
-            const angle = boostAngle + offset;
-            for (let i = 0; i < 4; i++) {
-                const spread = (Math.random() - 0.5) * 0.3;
-                const speed = 5 + Math.random() * 4;
-                game.particles.particles.push({
-                    x: fighter.x + Math.cos(angle) * (fighter.radius - 5),
-                    y: fighter.y + Math.sin(angle) * (fighter.radius - 5),
-                    vx: Math.cos(angle + spread) * speed,
-                    vy: Math.sin(angle + spread) * speed,
-                    life: 0.5,
-                    decay: 0.06,
-                    size: 6 + Math.random() * 4,
-                    color: Math.random() > 0.4 ? '#FF4500' : '#FFD700',
-                    type: 'dot'
-                });
-            }
-            // Blue core
-            game.particles.particles.push({
-                x: fighter.x + Math.cos(angle) * (fighter.radius - 5),
-                y: fighter.y + Math.sin(angle) * (fighter.radius - 5),
-                vx: Math.cos(angle) * 3,
-                vy: Math.sin(angle) * 3,
-                life: 0.3,
-                decay: 0.08,
-                size: 8,
-                color: '#00BFFF',
-                type: 'dot'
-            });
-        });
-
         // Shockwave at both positions
         game.particles.spawnShockwave(startX, startY, '#1E90FF', 40, 0.3);
         game.particles.spawnShockwave(fighter.x, fighter.y, '#FFD700', 30, 0.3);
+
+        // --- ANIME ACCURATE THRUSTER DODGE VISUAL ---
+        const boostAngle = dodgeAngle + Math.PI;
+        const offsets = [-0.6, 0.6];
+        offsets.forEach(offset => {
+            const angle = boostAngle + offset;
+            const sX = fighter.x + Math.cos(angle) * (fighter.radius - 4);
+            const sY = fighter.y + Math.sin(angle) * (fighter.radius - 4);
+
+            const flameLen = 40;
+            game.particles.particles.push({
+                x: sX, y: sY, vx: 0, vy: 0,
+                life: 0.2, decay: 0.08, size: 12,
+                color: '#E0FFFF', type: 'custom',
+                draw: (ctx, p) => {
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(angle);
+                    const width = 6 * (1 - p.life);
+                    const length = flameLen * (1 - p.life);
+                    const gradient = ctx.createLinearGradient(0, 0, length, 0);
+                    gradient.addColorStop(0, '#FFFFFF');
+                    gradient.addColorStop(0.3, '#00BFFF');
+                    gradient.addColorStop(1, 'rgba(0, 0, 139, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -width * 0.2);
+                    ctx.lineTo(0, width * 0.2);
+                    ctx.lineTo(length * 0.7, width);
+                    ctx.lineTo(length, 0);
+                    ctx.lineTo(length * 0.7, -width);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+        });
 
         audioEngine.playTeleport();
 
@@ -626,33 +739,54 @@ export class MechaDefAbility extends Ability {
     }
 }
 
-// --- ULT: COUNTER PROTOCOL (Passive - triggers ATK on dodge when HP < 50%) ---
+// --- ULT: TWIN CANNON PROTOCOL (Active - fires 2 lasers and increases dash range) ---
 export class MechaUltAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        this.cooldown = config.cooldown || 999999; // Activates once per fight
+        this.duration = config.duration || 600;
+        this.cooldown = config.cooldown || 1800; // 30 seconds
     }
 
-    // Called by Fighter.js when HP < 50% and cooldown <= 0
+    update(fighter, context) {
+        if (fighter.mechaUltTimer > 0) {
+            fighter.mechaUltTimer--;
+
+            // Visual pulse every few frames
+            if (fighter.mechaUltTimer % 60 === 0) {
+                context.game.particles.spawnShockwave(fighter.x, fighter.y, '#00BFFF', 40, 0.2);
+            }
+
+            if (fighter.mechaUltTimer <= 0) {
+                this.deactivate(fighter, context);
+            }
+        }
+    }
+
     execute(fighter, context) {
         const { game } = context;
 
-        // Activate Counter Protocol
-        fighter.mechaCounterProtocolActive = true;
+        // Activate Twin Cannon Protocol
+        fighter.mechaUltActive = true;
+        fighter.mechaUltTimer = this.duration;
+        fighter.activeEffects.ultActive = true; // For general visual hooks
 
         // Activation visuals
-        game.particles.spawnShockwave(fighter.x, fighter.y, '#00FF00', 60, 0.5);
-        game.combatText.text(fighter.x, fighter.y - fighter.radius - 30, 'COUNTER PROTOCOL ACTIVE', '#00FF00');
+        game.particles.spawnShockwave(fighter.x, fighter.y, '#FFFFFF', 80, 0.5);
+        game.particles.spawn(fighter.x, fighter.y, '#00BFFF', 20);
+        game.combatText.text(fighter.x, fighter.y - fighter.radius - 30, 'TWIN CANNON PROTOCOL', '#00BFFF');
         audioEngine.playPowerUp();
 
-        // Set high cooldown (one-time activation)
+        // Set cooldown
         fighter.cooldowns.ult = this.cooldown;
         fighter.maxCooldowns.ult = this.cooldown;
 
-        logger.log(`${fighter.name} Counter Protocol ACTIVATED! HP: ${fighter.hp}/${fighter.maxHp}`, 'combat');
+        logger.log(`${fighter.name} Twin Cannon Protocol ACTIVATED!`, 'combat');
     }
 
-    // NOTE: Counter Protocol visual effect is rendered in Renderer.js
-    // via the MECHA accessory renderer (following Divine Brawler pattern)
-    // NOTE: Counter-attack trigger on dodge is handled in MechaDefAbility.update()
+    deactivate(fighter, context) {
+        fighter.mechaUltActive = false;
+        fighter.activeEffects.ultActive = false;
+        context.game.combatText.text(fighter.x, fighter.y - fighter.radius - 30, 'ULT EXPIRED', '#888888');
+        logger.log(`${fighter.name} Twin Cannon Protocol deactivated.`, 'combat');
+    }
 }

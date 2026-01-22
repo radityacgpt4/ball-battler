@@ -679,7 +679,7 @@ export const FIGHTER_TYPES = {
     MECHA: {
         name: "Mecha",
         color: "#1E90FF", // Gundam Blue (Wing Zero inspired)
-        hp: 100, mass: 1.3, speed: 4.2, rotationSpeed: 0.12,
+        hp: 100, mass: 1.3, speed: 4.2, rotationSpeed: 0.14,
         skills: {
             atk: {
                 name: "Beam Rifle",
@@ -687,19 +687,21 @@ export const FIGHTER_TYPES = {
                 type: "MECHA_BEAM",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 120, // 2 seconds at 60fps
-                projectileDamage: 8,
-                explosionDamage: 6,
-                stunDuration: 60, // 1 seconds
-                projectileSpeed: 30,
-                explosionRadius: 60,
+                cooldown: 90,
+                projectileDamage: 6,
+                explosionDamage: 4,
+                stunDuration: 30, //
+                projectileSpeed: 36,
+                explosionRadius: 80,
                 // Melee dash properties
                 meleeDamage: 3,
-                dashSpeed: 22,
-                dashDuration: 35,
-                dashDelay: 15,
-                aimError: 0.4, // Randomized error spread in radians
-                meleeRotationMultiplier: 5
+                dashSpeed: 24,
+                dashDistance: 1000,
+                ultDashDistance: 1400,
+                dashDelay: 12,
+                aimError: 0.5,
+                meleeRotationMultiplier: 5,
+                twinBarrelOffset: 10
             },
             def: {
                 name: "Thruster Dodge",
@@ -708,18 +710,18 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 90,
-                detectionRadius: 100,
+                detectionRadius: 90,
                 approachThreshold: 0.6,
-                dodgeDistance: 80,
-                dodgeSpeed: 12
+                dodgeDistance: 30,
+                dodgeSpeed: 14
             },
             ult: {
-                name: "Counter Protocol",
-                desc: "Below 50% HP, every dodge triggers a full attack sequence.",
-                type: "MECHA_COUNTER",
+                name: "Twin Cannon Protocol",
+                desc: "Activates twin-barreled cannons and boosted thrusters. Fires 2 lasers at once and increases melee dash range by 30%.",
+                type: "MECHA_ULT_MODE",
                 isPassive: false,
-                // Threshold-based activation handled by Fighter.js
-                cooldown: 0
+                cooldown: 300,
+                duration: 600 // 10 seconds
             }
         }
     },

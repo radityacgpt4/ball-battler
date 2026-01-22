@@ -105,6 +105,17 @@ export const PARTICLE_TEMPLATES = {
             { type: 'lightning', count: 12, color: '#FFD700', spread: 100, life: 0.5, width: 3 } // More intense energy crackle
         ]
     },
+    'fragGrenadeExplosion': {
+        layers: [
+            // HE Frag Explosion (Higher count of debris + thick smoke)
+            { type: 'shockwave', color: '#FF4500', maxRadius: 130, life: 1.0, lineWidth: 15 }, // Fiery orange shockwave
+            { type: 'shockwave', color: '#8B0000', maxRadius: 150, life: 1.2, lineWidth: 2 },  // Outer dark red pressure wave
+            { type: 'burst', count: 40, color: ['#FF0000', '#FF4500', '#2F4F4F'], speed: { min: 14, max: 28 }, life: 1.2, shape: 'flame' }, // Fire + Charcoal debris
+            { type: 'burst', count: 20, color: ['#555555', '#777777'], speed: { min: 2, max: 6 }, life: 1.5, shape: 'dot', size: 8 }, // Thick smoke clouds
+            { type: 'burst', count: 15, color: '#FFFFFF', speed: { min: 10, max: 20 }, life: 0.4, shape: 'dot', size: 3 }, // Shrapnel flashes
+            { type: 'lightning', count: 8, color: '#FF0000', spread: 120, life: 0.4, width: 3 } // Heat crackle
+        ]
+    },
     'mechaDodge': {
         layers: [
             { type: 'shockwave', color: '#1E90FF', maxRadius: 40, life: 0.3, lineWidth: 4 },

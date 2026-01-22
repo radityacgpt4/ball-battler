@@ -61,6 +61,8 @@ export class AxeAtkAbility extends Ability {
 
                     // Damage
                     enemy.takeDamage(this.damage, false, false, fighter);
+                    const tipX = fighter.x + Math.cos(fighter.angle) * (fighter.radius + this.range);
+                    const tipY = fighter.y + Math.sin(fighter.angle) * (fighter.radius + this.range);
                     game.particles.spawn(tipX, tipY, '#ff0000', 5);
                     audioEngine.playSwordSwing();
                     audioEngine.playHit();

@@ -204,10 +204,96 @@ export class Renderer {
      * Register default accessory renderers for all fighter types
      */
     registerDefaults() {
-        // Sword Master - Sword
+        // Sword Master - Premium Katana Design
         this.registerAccessory('SWORD_MASTER', (ctx, fighter) => {
-            ctx.fillStyle = '#e0e0e0';
-            ctx.fillRect(fighter.radius - 5, -4, fighter.skills.atk.range, 8);
+            const range = fighter.skills.atk.range;
+            const hiltLen = 15;
+            const guardSize = 10;
+            const bladeLen = range - 5; // Adjust so total reach remains the same
+
+            ctx.save();
+
+            // 1. Hilt (Tsuka) - Traditional wrapped look
+            ctx.fillStyle = '#1a1a1a'; // Black wrap
+            ctx.fillRect(fighter.radius - hiltLen, -3, hiltLen, 6);
+
+            // Hilt details (Diamond wrap pattern)
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < hiltLen; i += 4) {
+                ctx.beginPath();
+                ctx.moveTo(fighter.radius - hiltLen + i, -3);
+                ctx.lineTo(fighter.radius - hiltLen + i + 2, 3);
+                ctx.stroke();
+            }
+
+            // 2. Guard (Tsuba)
+            ctx.fillStyle = '#FFD700'; // Gold-ish
+            ctx.strokeStyle = '#B8860B';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(fighter.radius - 2, -guardSize / 2, 4, guardSize, 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 3. Blade (Nagasa) - Curved & Sharp
+            ctx.beginPath();
+            ctx.moveTo(fighter.radius + 2, -2.5); // Back edge start
+
+            // Curve the blade slightly
+            ctx.quadraticCurveTo(
+                fighter.radius + bladeLen / 2, -3.5, // Control point (slight curve up)
+                fighter.radius + bladeLen, -1.5     // Tip (back edge side)
+            );
+
+            // Tip shape
+            ctx.lineTo(fighter.radius + bladeLen + 4, 1); // Sharp tip point
+
+            // Cutting edge (Ha)
+            ctx.quadraticCurveTo(
+                fighter.radius + bladeLen / 2, 3.5,
+                fighter.radius + 2, 2.5
+            );
+            ctx.closePath();
+
+            // Blade Metal Gradient
+            const gradient = ctx.createLinearGradient(0, -3, 0, 3);
+            gradient.addColorStop(0, '#B0BEC5'); // Steel Back
+            gradient.addColorStop(0.5, '#ECEFF1'); // Middle
+            gradient.addColorStop(1, '#90A4AE'); // Edge Side
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // 4. Premium Details: Hamon & Edge Highlight
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+
+            // Edge Highlight (Super Sharp Look)
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1.2;
+            ctx.globalAlpha = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(fighter.radius + 10, 2); // Start after guard
+            ctx.quadraticCurveTo(
+                fighter.radius + bladeLen / 2, 2.8,
+                fighter.radius + bladeLen + 2.5, 0.5
+            );
+            ctx.stroke();
+
+            // Hamon (Temper Line - Wavy pattern)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 0.8;
+            ctx.setLineDash([4, 2]);
+            ctx.beginPath();
+            ctx.moveTo(fighter.radius + 5, 0.5);
+            for (let x = 5; x < bladeLen; x += 5) {
+                ctx.lineTo(fighter.radius + x, 0.5 + Math.sin(x * 0.5) * 1);
+            }
+            ctx.stroke();
+
+            ctx.restore();
+
+            ctx.restore();
         });
 
         // Soldier - Gun
@@ -886,129 +972,183 @@ export class Renderer {
 
         // Mecha - Energy Blade + Counter Protocol Visual
         this.registerAccessory('MECHA', (ctx, fighter) => {
-            // Targeting Laser Sight (shows where beam will fire, independent of body)
-            if (fighter.mechaTargetAngle !== undefined) {
+            // === MECHA UNIT DESIGN (Wing Zero inspired) ===
+            const time = Date.now();
+            const isUlt = fighter.mechaUltActive;
+
+            // 1. Rocket boosters on back (Wing Zero style)
+            const boosterAngle = Math.PI; // Directly behind
+            const boosterX = Math.cos(boosterAngle) * (fighter.radius - 5);
+            const boosterY = Math.sin(boosterAngle) * (fighter.radius - 5);
+
+            // Booster housing (Grey metal)
+            ctx.fillStyle = '#4A4A4A';
+            ctx.beginPath();
+            ctx.ellipse(boosterX, boosterY - 4, 4, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(boosterX, boosterY + 4, 4, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+
+
+            // 2. Twin Shoulder Cannons (Only visible during ULT)
+            if (isUlt) {
+                ctx.fillStyle = '#757575';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 1;
+
+                // Left shoulder cannon
+                ctx.fillRect(5, -18, 25, 6);
+                ctx.strokeRect(5, -18, 25, 6);
+
+                // Right shoulder cannon
+                ctx.fillRect(5, 12, 25, 6);
+                ctx.strokeRect(5, 12, 25, 6);
+
+                // Muzzle glow
                 ctx.save();
-                ctx.rotate(-fighter.angle); // Cancel body rotation
-                ctx.rotate(fighter.mechaTargetAngle); // Apply target angle
-
-                ctx.strokeStyle = '#FF4444';
-                ctx.lineWidth = 1;
-                ctx.globalAlpha = 0.4;
-                ctx.setLineDash([4, 4]);
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = '#00BFFF';
+                ctx.globalAlpha = 0.5 + Math.sin(time * 0.01) * 0.2;
                 ctx.beginPath();
-                ctx.moveTo(fighter.radius + 10, 0);
-                ctx.lineTo(200, 0); // Laser sight range
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                // Targeting reticle at end
-                ctx.strokeStyle = '#FF4444';
-                ctx.lineWidth = 1;
-                ctx.globalAlpha = 0.5;
-                ctx.beginPath();
-                ctx.arc(120, 0, 8, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(112, 0);
-                ctx.lineTo(128, 0);
-                ctx.moveTo(120, -8);
-                ctx.lineTo(120, 8);
-                ctx.stroke();
-
+                ctx.arc(30, -15, 3, 0, Math.PI * 2);
+                ctx.arc(30, 15, 3, 0, Math.PI * 2);
+                ctx.fill();
                 ctx.restore();
             }
 
-            // Energy Blade visual (cyan beam sword) - rotates with body
-            const bladeLength = 40;
-            const bladeWidth = 6;
+            // 3. Energy Blade visual (Lightsaber Style)
+            const bladeLength = 51.25; // Aligns visual tip with hitbox (52.5 length + 2 offset)
+            const startX = fighter.radius + 2;
 
-            // Draw energy blade
+            // Hilt Glow
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
-
-            // Outer glow
-            ctx.strokeStyle = '#00BFFF';
-            ctx.lineWidth = bladeWidth + 6;
-            ctx.globalAlpha = 0.3;
+            ctx.shadowColor = '#39FF14';
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = '#CCFFCC';
             ctx.beginPath();
-            ctx.moveTo(fighter.radius, 0);
-            ctx.lineTo(fighter.radius + bladeLength, 0);
-            ctx.stroke();
+            ctx.arc(startX, 0, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
 
-            // Main blade
-            ctx.strokeStyle = '#00FFFF';
-            ctx.lineWidth = bladeWidth;
-            ctx.globalAlpha = 0.7;
+            // Draw Energy Blade (Lightsaber)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.lineCap = 'round';
+
+            // 1. Outer Aura (Neon Green - Thinner & Softer)
+            ctx.strokeStyle = '#39FF14';
+            ctx.shadowColor = '#39FF14';
+            ctx.shadowBlur = 8;        // Reduced from 15
+            ctx.lineWidth = 8;         // Reduced from 14
+            ctx.globalAlpha = 0.3;     // Slightly lower alpha for softness
             ctx.beginPath();
-            ctx.moveTo(fighter.radius, 0);
-            ctx.lineTo(fighter.radius + bladeLength, 0);
+            ctx.moveTo(startX, 0);
+            ctx.lineTo(startX + bladeLength, 0);
             ctx.stroke();
-
-            // Core
+            // 2. Inner Glow (Brighter/Lighter)
+            ctx.strokeStyle = '#88FF88';
+            ctx.shadowBlur = 4;        // Reduced from 5
+            ctx.lineWidth = 5;         // Reduced from 10
+            ctx.globalAlpha = 0.5;
+            ctx.stroke();
+            // 3. Core (Solid White)
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 2;
-            ctx.globalAlpha = 1.0;
-            ctx.beginPath();
-            ctx.moveTo(fighter.radius, 0);
-            ctx.lineTo(fighter.radius + bladeLength, 0);
+            ctx.shadowBlur = 2;
+            ctx.lineWidth = 2.5;       // Reduced from 5 (The actual "beam" width)
+            ctx.globalAlpha = 0.9;
             ctx.stroke();
 
             ctx.restore();
 
-            // Counter Protocol ULT Visual (when HP < 50%)
-            if (fighter.mechaCounterProtocolActive) {
-                ctx.save();
-                ctx.rotate(-fighter.angle); // Decouple from fighter rotation
+            // OLD LOGIC (Skipped)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
 
-                const pulseIntensity = Math.sin(Date.now() * 0.008) * 0.5 + 0.5;
-
-                // Outer pulsing aura ring
-                ctx.globalCompositeOperation = 'lighter';
-                ctx.strokeStyle = '#00FF00';
-                ctx.lineWidth = 4 + pulseIntensity * 2;
-                ctx.globalAlpha = 0.3 + pulseIntensity * 0.2;
+            // Function to draw the blade shape
+            const drawPlasmaBlade = (widthScale, color, alpha, isCore) => {
+                ctx.fillStyle = color;
+                ctx.globalAlpha = alpha;
                 ctx.beginPath();
-                ctx.arc(0, 0, fighter.radius + 12 + pulseIntensity * 5, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.moveTo(startX, 0); // Center start
 
-                // Inner intense ring
-                ctx.strokeStyle = '#66FF66';
-                ctx.lineWidth = 2;
-                ctx.globalAlpha = 0.5 + pulseIntensity * 0.3;
-                ctx.beginPath();
-                ctx.arc(0, 0, fighter.radius + 6, 0, Math.PI * 2);
-                ctx.stroke();
+                const segments = 20;
 
-                // Orbiting energy orbs (6 orbs rotating around fighter)
-                const numOrbs = 6;
-                const orbRadius = fighter.radius + 18 + pulseIntensity * 4;
-                const baseAngle = (Date.now() * 0.003) % (Math.PI * 2);
+                // Top edge
+                for (let i = 0; i <= segments; i++) {
+                    const ratio = i / segments; // 0 to 1
+                    const x = startX + ratio * bladeLength;
 
-                ctx.fillStyle = '#00FF00';
-                for (let i = 0; i < numOrbs; i++) {
-                    const orbAngle = baseAngle + (i * Math.PI * 2) / numOrbs;
-                    const orbX = Math.cos(orbAngle) * orbRadius;
-                    const orbY = Math.sin(orbAngle) * orbRadius;
+                    // Width profile: Thick base -> Needle point
+                    // Base thickness is high, tapers quickly then gradually to 0
+                    const baseWidth = isCore ? 4 : 10;
+                    const taper = Math.pow(1 - ratio, 1.5); // Concave taper for needle point
+                    let currentWidth = baseWidth * taper * widthScale;
 
-                    ctx.globalAlpha = 0.7 + pulseIntensity * 0.3;
-                    ctx.beginPath();
-                    ctx.arc(orbX, orbY, 3 + pulseIntensity * 1.5, 0, Math.PI * 2);
-                    ctx.fill();
+                    // Jagged effect (Raw, vibrating appearance)
+                    // Stronger at base, zero at tip (needle-fine)
+                    const jagIntensity = isCore ? 0 : (2.5 * (1 - ratio));
+                    const jag = (Math.random() - 0.5) * jagIntensity;
+                    const flicker = Math.sin(time * 0.05 + i * 1.5) * jagIntensity;
+
+                    const y = -(currentWidth / 2) + jag + flicker;
+
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
                 }
 
-                // "COUNTER" indicator text
+                ctx.lineTo(startX + bladeLength, 0); // Tip
+
+                // Bottom edge
+                for (let i = segments; i >= 0; i--) {
+                    const ratio = i / segments;
+                    const x = startX + ratio * bladeLength;
+
+                    const baseWidth = isCore ? 4 : 10;
+                    const taper = Math.pow(1 - ratio, 1.5);
+                    let currentWidth = baseWidth * taper * widthScale;
+
+                    const jagIntensity = isCore ? 0 : (2.5 * (1 - ratio));
+                    const jag = (Math.random() - 0.5) * jagIntensity;
+                    const flicker = Math.sin(time * 0.05 + i * 1.5 + Math.PI) * jagIntensity; // Opposing flicker
+
+                    const y = (currentWidth / 2) + jag + flicker;
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.closePath();
+                ctx.fill();
+            };
+
+            /* // Outer Aura (Neon Green)
+            drawPlasmaBlade(1.2, '#39FF14', 0.4, false);
+
+            // Mid glow
+            drawPlasmaBlade(0.8, '#AAFF88', 0.6, false);
+
+            // Bright White Core
+            drawPlasmaBlade(0.6, '#FFFFFF', 0.9, true);
+
+            */
+            ctx.restore();
+
+            // 4. Counter Indicator (If ULT is active)
+            if (isUlt) {
+                ctx.save();
+                ctx.rotate(-fighter.angle);
+                const pulseIntensity = Math.sin(time * 0.008) * 0.5 + 0.5;
                 ctx.globalAlpha = 0.8;
-                ctx.fillStyle = '#00FF00';
+                ctx.fillStyle = '#00BFFF';
                 ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 2;
                 ctx.font = 'bold 10px monospace';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 const textY = -fighter.radius - 22;
-                ctx.strokeText('COUNTER', 0, textY);
-                ctx.fillText('COUNTER', 0, textY);
-
+                ctx.strokeText('TWIN-CANNON', 0, textY);
+                ctx.fillText('TWIN-CANNON', 0, textY);
                 ctx.restore();
             }
         });

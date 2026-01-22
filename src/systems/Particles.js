@@ -370,6 +370,10 @@ export class ParticleSystem {
 
                 ctx.restore();
             }
+            else if (p.type === 'custom' && typeof p.draw === 'function') {
+                p.x += p.vx; p.y += p.vy;
+                p.draw(ctx, p);
+            }
             else {
                 p.x += p.vx; p.y += p.vy;
                 ctx.globalAlpha = p.life; ctx.fillStyle = p.color;

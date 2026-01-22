@@ -11,7 +11,7 @@ import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
 
-import { HomingBehavior, LinearMovement, BallisticBehavior, KunaiBehavior } from '../components/ProjectileBehaviors.js';
+import { HomingBehavior, LinearMovement, BallisticBehavior, KunaiBehavior, GrenadeBehavior } from '../components/ProjectileBehaviors.js';
 import { MissileRenderer, KunaiRenderer, GrenadeRenderer } from '../components/ProjectileRenderers.js';
 
 export class BurstFireAbility extends Ability {
@@ -372,6 +372,7 @@ export class GrenadeAbility extends Ability {
         this.airTime = config.airTime || 60;
         this.maxDistance = config.maxDistance || 400;
         this.radius = config.radius || 6;
+        this.stunDuration = config.stunDuration || 60;
     }
 
     execute(fighter, context) {
@@ -404,6 +405,8 @@ export class GrenadeAbility extends Ability {
 
         p.renderer = new GrenadeRenderer();
         p.addComponent(new BallisticBehavior(0.5));
+        p.addComponent(new GrenadeBehavior());
+        p.stunDuration = this.stunDuration;
 
         // Store destination for hit indicator (cosmetic only)
         p.destX = fighter.x + Math.cos(fighter.angle) * dist;

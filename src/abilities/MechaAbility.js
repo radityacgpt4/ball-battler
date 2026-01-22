@@ -590,47 +590,21 @@ export class MechaUltAbility extends Ability {
             logger.log(`${fighter.name} Counter Protocol VISUAL EFFECT ACTIVATED! HP: ${fighter.hp}/${fighter.maxHp}`, 'combat');
         }
 
-        // Continuous pulsing aura effect while Counter Protocol is active
-        const pulseIntensity = Math.sin(Date.now() * 0.005) * 0.5 + 0.5; // 0 to 1 pulse
-
-        // Orbiting energy particles
-        if (game.frameCount % 3 === 0) {
-            const angle = (Date.now() * 0.003) % (Math.PI * 2);
-            const numOrbs = 6;
-            for (let i = 0; i < numOrbs; i++) {
-                const orbAngle = angle + (i * Math.PI * 2) / numOrbs;
-                const radius = fighter.radius + 20 + pulseIntensity * 10;
-                const orbX = fighter.x + Math.cos(orbAngle) * radius;
-                const orbY = fighter.y + Math.sin(orbAngle) * radius;
-
-                game.particles.particles.push({
-                    x: orbX,
-                    y: orbY,
-                    vx: 0,
-                    vy: 0,
-                    life: 0.4,
-                    decay: 0.15,
-                    size: 3 + pulseIntensity * 2,
-                    color: '#00FF00',
-                    type: 'dot',
-                    alpha: 0.6 + pulseIntensity * 0.4
-                });
-            }
-        }
-
-        // Pulsing energy core glow
-        if (game.frameCount % 5 === 0) {
+        // Spawn occasional energy particles for ambient effect
+        if (Math.random() < 0.15) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = fighter.radius + 15 + Math.random() * 10;
             game.particles.particles.push({
-                x: fighter.x,
-                y: fighter.y,
-                vx: 0,
-                vy: 0,
-                life: 0.3,
+                x: fighter.x + Math.cos(angle) * radius,
+                y: fighter.y + Math.sin(angle) * radius,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                life: 0.5,
                 decay: 0.1,
-                size: fighter.radius * (0.8 + pulseIntensity * 0.4),
+                size: 3 + Math.random() * 3,
                 color: '#00FF00',
                 type: 'dot',
-                alpha: 0.15 + pulseIntensity * 0.1
+                alpha: 0.8
             });
         }
 
@@ -641,6 +615,59 @@ export class MechaUltAbility extends Ability {
             // Trigger counter attack
             this.triggerCounterAttack(fighter, context);
         }
+    }
+
+    // Persistent visual effect for Counter Protocol - drawn every frame
+    draw(fighter, ctx) {
+        if (!fighter || !ctx) return;
+        if (!fighter.mechaCounterProtocolActive) return;
+
+        const pulseIntensity = Math.sin(Date.now() * 0.008) * 0.5 + 0.5; // 0 to 1 pulse
+
+        ctx.save();
+
+        // Outer pulsing aura ring
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = '#00FF00';
+        ctx.lineWidth = 4 + pulseIntensity * 2;
+        ctx.globalAlpha = 0.3 + pulseIntensity * 0.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, fighter.radius + 12 + pulseIntensity * 5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner intense ring
+        ctx.strokeStyle = '#66FF66';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.5 + pulseIntensity * 0.3;
+        ctx.beginPath();
+        ctx.arc(0, 0, fighter.radius + 6, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Orbiting energy orbs (6 orbs rotating around fighter)
+        const numOrbs = 6;
+        const orbRadius = fighter.radius + 18 + pulseIntensity * 4;
+        const baseAngle = (Date.now() * 0.003) % (Math.PI * 2);
+
+        ctx.fillStyle = '#00FF00';
+        for (let i = 0; i < numOrbs; i++) {
+            const orbAngle = baseAngle + (i * Math.PI * 2) / numOrbs;
+            const orbX = Math.cos(orbAngle) * orbRadius;
+            const orbY = Math.sin(orbAngle) * orbRadius;
+
+            ctx.globalAlpha = 0.7 + pulseIntensity * 0.3;
+            ctx.beginPath();
+            ctx.arc(orbX, orbY, 3 + pulseIntensity * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Energy core glow at center
+        ctx.globalAlpha = 0.15 + pulseIntensity * 0.1;
+        ctx.fillStyle = '#00FF00';
+        ctx.beginPath();
+        ctx.arc(0, 0, fighter.radius * (0.7 + pulseIntensity * 0.3), 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
     }
 
     triggerCounterAttack(fighter, context) {

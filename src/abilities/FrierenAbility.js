@@ -271,6 +271,7 @@ export class HexBarrierAbility extends Ability {
     }
 
     // Draw visual for hexagonal shield
+    // NOTE: Context is already translated to fighter position by Renderer.drawFighter()
     draw(fighter, ctx) {
         if (!fighter || !ctx) return;
 
@@ -278,7 +279,7 @@ export class HexBarrierAbility extends Ability {
         const halfArc = this.arcAngle / 2;
 
         ctx.save();
-        ctx.translate(fighter.x, fighter.y);
+        // DO NOT translate - context is already at fighter position
         ctx.rotate(fighter.angle);
 
         // Draw hexagonal segments
@@ -306,6 +307,15 @@ export class HexBarrierAbility extends Ability {
             ctx.arc(nodeX, nodeY, 3, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // End node for the last segment
+        const lastNodeAngle = halfArc;
+        const lastNodeX = Math.cos(lastNodeAngle) * shieldRadius;
+        const lastNodeY = Math.sin(lastNodeAngle) * shieldRadius;
+        ctx.fillStyle = '#4fc3f7';
+        ctx.beginPath();
+        ctx.arc(lastNodeX, lastNodeY, 3, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.restore();
     }

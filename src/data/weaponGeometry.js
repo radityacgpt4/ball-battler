@@ -43,6 +43,7 @@ export const weaponGeometry = {
         bladeLength: 40,
         bladeWidth: 6,
         glowSize: 3,
+        startFromEdge: true, // Blade starts from fighter's edge (radius), not center
 
         // Single blade extending forward from fighter angle
         bladeOffsets: [
@@ -180,12 +181,18 @@ function getBladeHitboxLines(weapon, fighter) {
     const lines = [];
 
     for (const offset of weapon.bladeOffsets) {
-        // Calculate blade start position (relative to fighter)
-        const startX = offset.x * Math.cos(fighter.angle) - offset.y * Math.sin(fighter.angle);
-        const startY = offset.x * Math.sin(fighter.angle) + offset.y * Math.cos(fighter.angle);
-
         // Calculate blade direction angle
         const bladeAngle = fighter.angle + (weapon.stanceAngle || 0) + offset.rotation;
+
+        // Calculate blade start position (relative to fighter)
+        let startX = offset.x * Math.cos(fighter.angle) - offset.y * Math.sin(fighter.angle);
+        let startY = offset.x * Math.sin(fighter.angle) + offset.y * Math.cos(fighter.angle);
+
+        // If startFromEdge is true, start blade from fighter's edge (radius) instead of center
+        if (weapon.startFromEdge) {
+            startX += Math.cos(bladeAngle) * fighter.radius;
+            startY += Math.sin(bladeAngle) * fighter.radius;
+        }
 
         // Calculate blade end position (relative to fighter)
         const endX = startX + weapon.bladeLength * Math.cos(bladeAngle);

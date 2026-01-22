@@ -592,7 +592,7 @@ export class MechaUltAbility extends Ability {
             fighter.mechaCounterProtocolActive = true;
             // Initial activation flash
             game.particles.spawnShockwave(fighter.x, fighter.y, '#00FF00', 60, 0.5);
-            game.combatText.add(fighter.x, fighter.y - fighter.radius - 30, 'COUNTER PROTOCOL ACTIVE', '#00FF00');
+            game.combatText.text(fighter.x, fighter.y - fighter.radius - 30, 'COUNTER PROTOCOL ACTIVE', '#00FF00');
             audioEngine.playPowerUp();
             logger.log(`${fighter.name} Counter Protocol VISUAL EFFECT ACTIVATED! HP: ${fighter.hp}/${fighter.maxHp}`, 'combat');
         }
@@ -640,7 +640,7 @@ export class MechaUltAbility extends Ability {
 
         // Visual feedback
         game.particles.spawn(fighter.x, fighter.y, '#00FF00', 10);
-        game.combatText.add(fighter.x, fighter.y - fighter.radius - 20, 'COUNTER!', '#00FF00');
+        game.combatText.text(fighter.x, fighter.y - fighter.radius - 20, 'COUNTER!', '#00FF00');
 
         audioEngine.playPowerUp();
         logger.log(`${fighter.name} Counter Protocol activated!`, 'combat');

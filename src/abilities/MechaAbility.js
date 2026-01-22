@@ -384,11 +384,20 @@ export class MechaDefAbility extends Ability {
     }
 
     update(fighter, context) {
+        const { game, enemies } = context;
+
+        // Counter Protocol: Trigger counter-attack after dodge (when ULT is active)
+        if (fighter.mechaJustDodged && fighter.mechaCounterProtocolActive) {
+            fighter.mechaJustDodged = false;
+            this.triggerCounterAttack(fighter, context);
+        } else if (fighter.mechaJustDodged) {
+            // Clear flag even if Counter Protocol isn't active
+            fighter.mechaJustDodged = false;
+        }
+
         if (fighter.cooldowns.def > 0) return;
         if (fighter.status.stun > 0) return;
         if (fighter.mechaDashActive) return; // Don't dodge during melee dash
-
-        const { game, enemies } = context;
 
         // Priority 1: Check for approaching projectiles
         const threat = this.findApproachingThreat(fighter, context);
@@ -564,69 +573,11 @@ export class MechaDefAbility extends Ability {
 
         logger.log(`${fighter.name} Thruster Dodge! (${threat.type})`, 'combat');
 
-        // Mark that dodge was triggered (for ULT)
+        // Mark that dodge was triggered (for ULT counter-attack)
         fighter.mechaJustDodged = true;
     }
-}
 
-// --- ULT: COUNTER PROTOCOL (Passive - triggers ATK on dodge) ---
-export class MechaUltAbility extends Ability {
-    constructor(config, slot) {
-        super(config, slot);
-    }
-
-    update(fighter, context) {
-        const { game } = context;
-
-        // Only active when HP is below 50%
-        if (fighter.hp > fighter.maxHp * 0.5) {
-            // Reset visual state when above threshold
-            if (fighter.mechaCounterProtocolActive) {
-                fighter.mechaCounterProtocolActive = false;
-            }
-            return;
-        }
-
-        // Mark Counter Protocol as active
-        if (!fighter.mechaCounterProtocolActive) {
-            fighter.mechaCounterProtocolActive = true;
-            // Initial activation flash
-            game.particles.spawnShockwave(fighter.x, fighter.y, '#00FF00', 60, 0.5);
-            game.combatText.text(fighter.x, fighter.y - fighter.radius - 30, 'COUNTER PROTOCOL ACTIVE', '#00FF00');
-            audioEngine.playPowerUp();
-            logger.log(`${fighter.name} Counter Protocol VISUAL EFFECT ACTIVATED! HP: ${fighter.hp}/${fighter.maxHp}`, 'combat');
-        }
-
-        // Spawn occasional energy particles for ambient effect
-        if (Math.random() < 0.15) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = fighter.radius + 15 + Math.random() * 10;
-            game.particles.particles.push({
-                x: fighter.x + Math.cos(angle) * radius,
-                y: fighter.y + Math.sin(angle) * radius,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
-                life: 0.5,
-                decay: 0.1,
-                size: 3 + Math.random() * 3,
-                color: '#00FF00',
-                type: 'dot',
-                alpha: 0.8
-            });
-        }
-
-        // Check if dodge was just triggered
-        if (fighter.mechaJustDodged) {
-            fighter.mechaJustDodged = false;
-
-            // Trigger counter attack
-            this.triggerCounterAttack(fighter, context);
-        }
-    }
-
-    // NOTE: Counter Protocol visual effect is now rendered in Renderer.js
-    // via the MECHA accessory renderer (following Divine Brawler pattern)
-
+    // Counter Protocol counter-attack (called when dodge triggers with ULT active)
     triggerCounterAttack(fighter, context) {
         const { game } = context;
 
@@ -643,11 +594,37 @@ export class MechaUltAbility extends Ability {
         game.combatText.text(fighter.x, fighter.y - fighter.radius - 20, 'COUNTER!', '#00FF00');
 
         audioEngine.playPowerUp();
-        logger.log(`${fighter.name} Counter Protocol activated!`, 'combat');
+        logger.log(`${fighter.name} Counter Protocol triggered!`, 'combat');
+    }
+}
+
+// --- ULT: COUNTER PROTOCOL (Passive - triggers ATK on dodge when HP < 50%) ---
+export class MechaUltAbility extends Ability {
+    constructor(config, slot) {
+        super(config, slot);
+        this.cooldown = config.cooldown || 999999; // Activates once per fight
     }
 
-    // Override execute to do nothing (passive ability)
+    // Called by Fighter.js when HP < 50% and cooldown <= 0
     execute(fighter, context) {
-        // Passive - does nothing on explicit execute
+        const { game } = context;
+
+        // Activate Counter Protocol
+        fighter.mechaCounterProtocolActive = true;
+
+        // Activation visuals
+        game.particles.spawnShockwave(fighter.x, fighter.y, '#00FF00', 60, 0.5);
+        game.combatText.text(fighter.x, fighter.y - fighter.radius - 30, 'COUNTER PROTOCOL ACTIVE', '#00FF00');
+        audioEngine.playPowerUp();
+
+        // Set high cooldown (one-time activation)
+        fighter.cooldowns.ult = this.cooldown;
+        fighter.maxCooldowns.ult = this.cooldown;
+
+        logger.log(`${fighter.name} Counter Protocol ACTIVATED! HP: ${fighter.hp}/${fighter.maxHp}`, 'combat');
     }
+
+    // NOTE: Counter Protocol visual effect is rendered in Renderer.js
+    // via the MECHA accessory renderer (following Divine Brawler pattern)
+    // NOTE: Counter-attack trigger on dodge is handled in MechaDefAbility.update()
 }

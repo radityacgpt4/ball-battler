@@ -291,19 +291,8 @@ export class QuincyUltAbility extends Ability {
                 this.plantedArrowLifeTime = config.plantedArrowLifeTime || 60; // NEW: Configurable planted duration
         }
 
-        update(fighter, context) {
-                // Only trigger when HP < 50% and off cooldown
-                if (fighter.hp >= fighter.maxHp * 0.5) return;
-
-                if (fighter.cooldowns.ult <= 0) {
-                        const { enemies } = context;
-                        const target = enemies.find(e => e !== fighter && !e.isDead);
-
-                        if (target) {
-                                this.execute(fighter, context, target);
-                        }
-                }
-        }
+        // NOTE: update() is not called from Fighter.js - ULT triggers via execute() when HP < 50%
+        // This method exists for potential future use but is currently inactive
 
         execute(fighter, context, target) {
                 const { game, enemies } = context;

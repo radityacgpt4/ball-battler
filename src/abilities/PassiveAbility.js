@@ -62,6 +62,19 @@ export class StaticPassiveAbility extends Ability {
 
     // Static is handled in collision resolution
     // This stores the config values
+    onEntityCollision(fighter, other, context) {
+        if (fighter.status.stun <= 0 && other.status.stun <= 0) {
+            other.takeDamage(this.damage, false, false, fighter);
+            other.applyStatus('STUN');
+
+            // Visuals
+            context.game.particles.spawnBolt([{ x: fighter.x, y: fighter.y }, { x: other.x, y: other.y }], '#00FFFF', 4);
+            context.game.particles.spawn(other.x, other.y, '#00FFFF', 8);
+
+            audioEngine.playZap();
+            logger.log(`${fighter.name} STATIC PASSIVE zapped ${other.name} for ${this.damage} dmg!`, 'combat');
+        }
+    }
 }
 
 export class ShieldDeflectAbility extends Ability {
@@ -110,10 +123,111 @@ export class MomentumPassiveAbility extends Ability {
         this.speedGain = config.speedGain || 1;
         this.damagePerTier = config.damagePerTier || 5;
         this.knockback = config.knockback || 15;
+
+        this.currentSpeed = 0; // Will be synced with fighter base speed
     }
 
-    // Momentum is handled in Fighter movement and collision
-    // This stores the config values
+    onWallBounce(fighter) {
+        // Init if needed
+        if (this.currentSpeed === 0) this.currentSpeed = fighter.baseSpeed;
+
+        if (this.currentSpeed < this.maxSpeed) {
+            this.currentSpeed = Math.min(this.currentSpeed + this.speedGain, this.maxSpeed);
+
+            // Visuals
+            fighter.game.combatText.speedUp(fighter.x, fighter.y);
+            fighter.game.particles.spawn(fighter.x, fighter.y, '#8b5cf6', 5);
+            audioEngine.playSpeedUp();
+            this.spawnSonicBoom(fighter);
+            logger.log(`${fighter.name} SPEED UP! (${this.currentSpeed.toFixed(1)}/${this.maxSpeed})`, 'info');
+        }
+    }
+
+    modifySpeed(fighter, speed) {
+        if (this.currentSpeed === 0) this.currentSpeed = speed; // Sync initial
+        // If we are faster than base, use our speed
+        return Math.max(speed, this.currentSpeed);
+    }
+
+    spawnSonicBoom(fighter) {
+        const moveAngle = Math.atan2(fighter.dy, fighter.dx);
+        for (let i = 0; i < 12; i++) {
+            const angle = moveAngle + Math.PI + (Math.random() - 0.5) * 1.5;
+            const speed = 3 + Math.random() * 3;
+            fighter.game.particles.particles.push({
+                x: fighter.x - Math.cos(moveAngle) * fighter.radius,
+                y: fighter.y - Math.sin(moveAngle) * fighter.radius,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1.0,
+                decay: 0.06,
+                size: 4 + Math.random() * 4,
+                color: '#ffffff',
+                type: 'dot'
+            });
+        }
+        fighter.game.particles.particles.push({
+            type: 'shockwave',
+            x: fighter.x,
+            y: fighter.y,
+            radius: fighter.radius,
+            maxRadius: 80,
+            life: 1.0,
+            decay: 0.08,
+            color: '#8b5cf6'
+        });
+    }
+
+    /**
+     * @returns {boolean} True if a special collision was handled (e.g. slam result)
+     */
+    onEntityCollision(fighter, other, context) {
+        if (other.collisionImmunity > 0) return false;
+
+        const speedTier = Math.floor((this.currentSpeed - fighter.baseSpeed) / this.speedGain);
+
+        if (speedTier <= 0 && !fighter.ultWallSlamActive) return false;
+
+        // Calculate potential damage for shield check
+        let damage = speedTier * this.damagePerTier;
+        if (fighter.ultWallSlamActive) damage = Math.max(damage, 10);
+
+        if (other.isBlockedByShield(fighter.x, fighter.y, damage)) {
+            logger.log(`${other.name} blocked momentum slam from ${fighter.name}`, 'combat');
+            this.currentSpeed = fighter.baseSpeed;
+            const reverseAngle = Math.atan2(fighter.y - other.y, fighter.x - other.x);
+            fighter.dx = Math.cos(reverseAngle) * 10;
+            fighter.dy = Math.sin(reverseAngle) * 10;
+            context.game.particles.spawn(
+                other.x + Math.cos(other.angle) * 30,
+                other.y + Math.sin(other.angle) * 30,
+                '#8b5cf6', 10
+            );
+            audioEngine.playBlock();
+            return true;
+        }
+
+        // Damage calculation
+        other.takeDamage(damage, false, false, fighter);
+        context.game.particles.spawn(other.x, other.y, '#8b5cf6', 8);
+        logger.log(`${fighter.name} SLAMMED ${other.name} for ${damage} dmg (SpeedTier: ${speedTier})`, 'combat');
+        audioEngine.playHeavyImpact();
+
+        if (fighter.ultWallSlamActive) {
+            other.pendingWallSlam = { owner: fighter };
+            for (let i = 0; i < 10; i++) {
+                context.game.particles.spawn(other.x, other.y, '#ff4444', 1);
+            }
+        }
+
+        this.currentSpeed = fighter.baseSpeed;
+
+        for (let k = 0; k < 15; k++) {
+            context.game.particles.spawn(other.x, other.y, '#8b5cf6', 1);
+        }
+
+        return false; // Let standard physics bump happen
+    }
 }
 
 export class ForceFieldAbility extends Ability {
@@ -171,5 +285,31 @@ export class ForceFieldAbility extends Ability {
             }
         }
         return damage;
+    }
+
+    draw(fighter, ctx) {
+        if (!fighter || !ctx || fighter.shieldHp <= 0) return;
+
+        ctx.save();
+        ctx.globalAlpha = 0.3 + (fighter.shieldHp / (this.maxShield || 75)) * 0.3;
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, fighter.radius + 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
+        ctx.fill();
+        ctx.restore();
+
+        // Shield HP UI
+        ctx.save();
+        ctx.fillStyle = "#00ffff";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2;
+        ctx.font = "bold 12px monospace";
+        ctx.textAlign = "center";
+        ctx.strokeText(`🛡️${Math.ceil(fighter.shieldHp)}`, 0, -fighter.radius - 15);
+        ctx.fillText(`🛡️${Math.ceil(fighter.shieldHp)}`, 0, -fighter.radius - 15);
+        ctx.restore();
     }
 }

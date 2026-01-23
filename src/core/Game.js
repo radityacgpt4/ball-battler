@@ -176,6 +176,7 @@ export class Game {
 
         this.entities = [];
         this.projectiles = [];
+        this.blackholes = [];
         this.particles = new ParticleSystem();
         this.combatText = new CombatTextHelper(this.particles);
 
@@ -287,252 +288,97 @@ export class Game {
         // Projectiles Collision Logic (Moved update to loop for timescale control)
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             let p = this.projectiles[i];
-            // p.update(); // Removed, called in loop with timeScale
 
-            if (p.isGrenade && p.hasExploded) {
-                this.particles.spawnExplosion(p.x, p.y);
-                audioEngine.playExplosion();
-                logger.log(`${p.owner.name}'s Grenade EXPLODED!`, 'combat');
-                const blastRadius = 60;
-
-                this.entities.forEach(ent => {
-                    if (!ent.isDead && ent !== p.owner) {
-                        const d = Physics.dist(p.x, p.y, ent.x, ent.y);
-                        if (d < blastRadius + ent.radius) {
-                            ent.takeDamage(p.damage, false, false, p.owner);
-                            const angle = Math.atan2(ent.y - p.y, ent.x - p.x);
-                            const force = 12;
-                            ent.dx += Math.cos(angle) * force;
-                            ent.dy += Math.sin(angle) * force;
-                            ent.applyStatus('STUN');
-                        }
-                    }
-                });
-
-                this.projectiles.splice(i, 1);
-                continue;
-            }
-
+            // 1. LIFECYCLE CHECK
             if (!p.active) {
                 this.projectiles.splice(i, 1);
                 continue;
             }
 
-            if (p.isClaymore) {
-                for (let ent of this.entities) {
-                    if (ent === p.owner || ent.isDead) continue;
-                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius + 5) {
-                        // Trigger Claymore
-                        ent.takeDamage(p.damage, false, false, p.owner);
-                        if (p.slowDuration > 0) ent.applyStatus('SLOW', p.slowDuration);
+            // 2. SELF-MANAGED COLLISION CHECK
+            // Behaviors can opt-out of generic collision (e.g. WorldSlash, Grenade mid-air)
+            // They handle hit detection inside their update() component.
+            if (p.handlesOwnCollision) continue;
 
-                        this.particles.spawnExplosion(p.x, p.y);
-                        audioEngine.playExplosion();
-                        logger.log(`${ent.name} triggered ${p.owner.name}'s CLAYMORE!`, 'combat');
+            // 3. GENERIC ENTITY COLLISION (Standard projectiles)
+            for (let ent of this.entities) {
+                if (ent === p.owner || ent.isDead) continue;
 
-                        p.active = false;
-                        break;
-                    }
-                }
-                continue;
-            }
+                // Z-Axis Check
+                if (p.z !== undefined && p.z > (ent.height || 40)) continue;
 
-            // Ginto Trap (Quincy)
-            if (p.isGintoTrap) {
-                for (let ent of this.entities) {
-                    if (ent === p.owner || ent.isDead) continue;
-                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
-                        // Trigger Ginto - stun the enemy
-                        if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
+                // Hit Detection
+                if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
 
-                        this.particles.spawnHirenkyaku(p.x, p.y);
-                        audioEngine.playZap();
-                        logger.log(`${ent.name} stepped on ${p.owner.name}'s GINTO TRAP!`, 'combat');
+                    // 4. SHIELD BLOCK LOGIC
+                    if (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage)) {
+                        // Deflection Implementation
+                        p.owner = ent;
+                        p.hitList = [];
+                        p.travelled = 0;
+                        p.isEmbedded = false;
 
-                        p.active = false;
-                        break;
-                    }
-                }
-                continue;
-            }
+                        const reflectAngle = ent.angle;
+                        const speed = Math.hypot(p.dx, p.dy);
+                        p.dx = Math.cos(reflectAngle) * speed;
+                        p.dy = Math.sin(reflectAngle) * speed;
+                        p.angle = reflectAngle;
+                        p.x = ent.x + Math.cos(reflectAngle) * (ent.radius + 15);
+                        p.y = ent.y + Math.sin(reflectAngle) * (ent.radius + 15);
 
-            if (!p.isGrenade && !p.isFugaArrow && !p.isGroundBurn && !p.isWorldSlash) {
-                for (let ent of this.entities) {
-                    if (ent === p.owner || ent.isDead) continue;
-                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < ent.radius + p.radius) {
+                        p.deflectLifetime = 120;
+                        p.isDeflected = true;
 
-                        // Check if projectile is blocked by shield
-                        if (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage)) {
-                            p.owner = ent;
-                            p.hitList = [];
-                            p.travelled = 0;
-                            p.isEmbedded = false;
+                        // Reset specialized props
+                        if (p.isKunai) p.maxDist = p.travelled + 300;
+                        if (p.isMissile) { p.target = null; p.isMissile = false; }
 
-                            const reflectAngle = ent.angle;
-                            const speed = Math.hypot(p.dx, p.dy);
-                            p.dx = Math.cos(reflectAngle) * speed;
-                            p.dy = Math.sin(reflectAngle) * speed;
-                            p.angle = reflectAngle;
-                            p.x = ent.x + Math.cos(reflectAngle) * (ent.radius + 15);
-                            p.y = ent.y + Math.sin(reflectAngle) * (ent.radius + 15);
-
-                            // FIX: Add lifetime to deflected projectiles so they don't litter arena
-                            p.deflectLifetime = 120; // 2 seconds at 60fps
-                            p.isDeflected = true;
-
-                            // Reset kunai max distance for deflected travel
-                            if (p.isKunai) {
-                                p.maxDist = p.travelled + 300; // Allow more travel distance
-                            }
-                            // Disable missile homing after deflection
-                            if (p.isMissile) {
-                                p.target = null;
-                                p.isMissile = false; // Convert to dumb projectile
-                            }
-
-                            this.particles.spawn(p.x, p.y, '#8b5cf6', 10);
-                            audioEngine.playBlock();
-                            logger.log(`${ent.name} DEFLECTED projectile from ${p.owner.name}`, 'warn');
-                        } else {
-                            if (p.isKunai) {
-                                if (!p.hitList.includes(ent.id)) {
-                                    ent.takeDamage(p.damage, false, false, p.owner);
-                                    p.hitList.push(ent.id);
-                                    this.particles.spawn(ent.x, ent.y, '#ffd700', 3);
-                                    audioEngine.playHit();
-                                }
-                            } else if (p.isQuincyArrow) {
-                                // Quincy arrows - piercing if perfect shot or Licht Regen
-                                if (p.piercing) {
-                                    if (!p.hitList.includes(ent.id)) {
-                                        ent.takeDamage(p.damage, false, false, p.owner);
-                                        p.hitList.push(ent.id);
-                                        this.particles.spawnQuincyArrow(ent.x, ent.y);
-                                        audioEngine.playZap();
-                                    }
-                                } else {
-                                    ent.takeDamage(p.damage, false, false, p.owner);
-                                    this.particles.spawnQuincyArrow(ent.x, ent.y);
-                                    audioEngine.playZap();
-                                    p.active = false;
-                                }
-                            } else if (p.isBallistaBolt) {
-                                // Ballista bolt - damage and knockback
-                                ent.takeDamage(p.damage, false, false, p.owner);
-                                this.particles.spawn(ent.x, ent.y, '#8B4513', 5);
-                                audioEngine.playHit();
-
-                                // Only knockback if not already being knocked back
-                                if (!ent.pendingBallistaPinned && !p.dragTarget) {
-                                    // Apply knockback velocity in bolt direction (Force / Mass)
-                                    const knockbackForce = 12;
-                                    const speed = knockbackForce / ent.mass;
-                                    ent.dx = Math.cos(p.angle) * speed;
-                                    ent.dy = Math.sin(p.angle) * speed;
-
-                                    // Set pending pin for wall collision
-                                    ent.pendingBallistaPinned = { owner: p.owner };
-                                    p.dragTarget = ent;
-
-                                    // Spawn knockback trail particles
-                                    for (let i = 0; i < 8; i++) {
-                                        this.particles.particles.push({
-                                            x: ent.x,
-                                            y: ent.y,
-                                            vx: -Math.cos(p.angle) * (2 + Math.random() * 2),
-                                            vy: -Math.sin(p.angle) * (2 + Math.random() * 2),
-                                            life: 0.6,
-                                            decay: 0.05,
-                                            size: 4 + Math.random() * 3,
-                                            color: '#8B4513',
-                                            type: 'dot'
-                                        });
-                                    }
-                                } else {
-                                    // Already being knocked - just damage, deactivate bolt
-                                    p.active = false;
-                                }
-                            } else if (p.isMissile) {
-                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
-                                this.particles.spawnExplosion(ent.x, ent.y); // Small explosion
-                                p.active = false;
-                                audioEngine.playExplosion(); // Or lighter explosion sound
-                            } else if (p.isZoltraak) {
-                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
-                                this.particles.spawnZoltraakImpact(ent.x, ent.y);
-                                audioEngine.playHit();
-                                p.active = false;
-                            } else {
-                                ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
-                                if (p.stunDuration > 0) ent.applyStatus('STUN', p.stunDuration);
-
-                                p.active = false;
-                                audioEngine.playHit();
-                            }
-                        }
-                        // Unblockable shots destroy shield logic (pierce through? or just ignore?)
-                        // Current logic: if unblockable, we skipped the shield block block.
-                        // So we are here.
-
-                        if (!p.isKunai && !(p.isQuincyArrow && p.piercing)) {
-                            if (!p.isUnblockable && ent.isBlockedByShield(p.x, p.y, p.damage)) break;
-                            if (!p.piercing) break;
-                        }
-                    }
-                }
-            }
-
-
-
-
-            if (p.isWorldSlash && p.active) {
-                // Deflect enemy projectiles
-                for (let j = this.projectiles.length - 1; j >= 0; j--) {
-                    const other = this.projectiles[j];
-                    if (other === p || !other.active) continue;
-                    if (other.owner === p.owner) continue; // Don't deflect own projectiles
-                    if (other.isGroundBurn) continue; // Don't deflect ground burns
-
-                    if (Physics.dist(p.x, p.y, other.x, other.y) < (p.radius || 40) + (other.radius || 4)) {
-                        // Deflect the projectile
-                        other.owner = p.owner;
-                        other.hitList = [];
-
-                        // Reverse and redirect
-                        const speed = Math.hypot(other.dx, other.dy);
-                        other.dx = Math.cos(p.angle) * speed * 1.2;
-                        other.dy = Math.sin(p.angle) * speed * 1.2;
-                        other.angle = p.angle;
-
-                        other.isDeflected = true;
-                        other.deflectLifetime = 180;
-
-                        // Visual effect
-                        this.particles.spawn(other.x, other.y, '#DC143C', 6);
+                        this.particles.spawn(p.x, p.y, '#8b5cf6', 10);
                         audioEngine.playBlock();
-                        logger.log(`World Cutting Slash DEFLECTED projectile!`, 'combat');
-                    }
-                }
+                        logger.log(`${ent.name} DEFLECTED projectile from ${p.owner.name}`, 'warn');
+                    } else {
+                        // 5. IMPACT
 
-                // Hit entities
-                for (let ent of this.entities) {
-                    if (ent === p.owner || ent.isDead) continue;
-                    // Wide hitbox check
-                    if (Physics.dist(p.x, p.y, ent.x, ent.y) < (p.radius || 40) + ent.radius) {
-                        // Drag Logic
-                        if (p.dragTarget) {
-                            // Pull entity towards projectile center + forward motion
-                            ent.dx = p.dx * (p.dragStrength || 0.3) + (p.x - ent.x) * 0.1;
-                            ent.dy = p.dy * (p.dragStrength || 0.3) + (p.y - ent.y) * 0.1;
+                        // A) Trigger Component onImpact
+                        p.triggerImpact(ent);
+
+                        // B) Check if Component Handled Everything
+                        if (p.hasHandledImpact) {
+                            p.hasHandledImpact = false; // Reset for next target if piercing
+                            if (!p.active) break; // Terminate if destroyed
+                            continue; // Skip generic fallback if handled
                         }
 
-                        // Damage once per enemy
-                        if (!p.hitList) p.hitList = [];
-                        if (!p.hitList.includes(ent.id)) {
-                            ent.takeDamage(p.damage, true, false, p.owner); // Unblockable
+                        // C) GENERIC FALLBACK (Unified Hit Handler)
+                        // This handles simple projectiles without custom behaviors
+                        if (!p.active) break; // If destroyed by something else
+
+                        // Piercing Check
+                        if (p.piercing) {
+                            if (p.hitList && p.hitList.includes(ent.id)) continue;
+                            if (!p.hitList) p.hitList = [];
                             p.hitList.push(ent.id);
-                            this.particles.spawnSlash(ent.x, ent.y, ent.x + (Math.random() - 0.5) * 20, ent.y + (Math.random() - 0.5) * 20, '#DC143C', 30);
-                            audioEngine.playSlash();
+                        }
+
+                        // Apply Effects
+                        ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
+
+                        if (p.statusEffect) {
+                            ent.applyStatus(p.statusEffect.type, p.statusEffect.duration);
+                        } else if (p.stunDuration > 0) {
+                            ent.applyStatus('STUN', p.stunDuration);
+                        }
+
+                        audioEngine.play(p.impactSound);
+
+                        if (p.impactParticle) {
+                            this.particles.spawnEffect(p.impactParticle, ent.x, ent.y);
+                        }
+
+                        // Destroy non-piercing
+                        if (!p.piercing) {
+                            p.active = false;
+                            break;
                         }
                     }
                 }
@@ -552,89 +398,24 @@ export class Game {
                 let minDist = e1.radius + e2.radius;
 
                 if (dist < minDist) {
-                    // Static passive (Volt's zap on contact)
-                    if (e1.skills.def.type === 'STATIC_PASSIVE' && e2.status.stun <= 0) {
-                        const dmg = e1.skills.def.damage || 5;
-                        e2.takeDamage(dmg, false, false, e1);
-                        e2.applyStatus('STUN');
+                    const context = { game: this };
+                    let hit1 = false;
+                    let hit2 = false;
 
-                        // Visuals
-                        this.particles.spawnBolt([{ x: e1.x, y: e1.y }, { x: e2.x, y: e2.y }], '#00FFFF', 4);
-                        this.particles.spawn(e2.x, e2.y, '#00FFFF', 8);
-
-                        audioEngine.playZap();
-                        logger.log(`${e1.name} STATIC PASSIVE zapped ${e2.name} for ${dmg} dmg!`, 'combat');
-                    }
-                    if (e2.skills.def.type === 'STATIC_PASSIVE' && e1.status.stun <= 0) {
-                        const dmg = e2.skills.def.damage || 5;
-                        e1.takeDamage(dmg, false, false, e2);
-                        e1.applyStatus('STUN');
-
-                        // Visuals
-                        this.particles.spawnBolt([{ x: e2.x, y: e2.y }, { x: e1.x, y: e1.y }], '#00FFFF', 4);
-                        this.particles.spawn(e1.x, e1.y, '#00FFFF', 8);
-
-                        audioEngine.playZap();
-                        logger.log(`${e2.name} STATIC PASSIVE zapped ${e1.name} for ${dmg} dmg!`, 'combat');
-                    }
-
-                    // SHIELDBEARER: Momentum Collision
-                    const handleMomentumHit = (attacker, defender) => {
-                        if (attacker.typeKey !== 'SHIELDBEARER') return false;
-
-                        if (defender.collisionImmunity > 0) return false;
-
-                        const config = attacker.skills.atk;
-                        const speedTier = Math.floor((attacker.wallBounceSpeed - attacker.baseSpeed) / config.speedGain);
-
-                        if (speedTier <= 0 && !attacker.ultWallSlamActive) return false;
-
-                        // Calculate potential damage for shield check
-                        let damage = speedTier * config.damagePerTier;
-                        if (attacker.ultWallSlamActive) damage = Math.max(damage, 10);
-
-                        if (defender.isBlockedByShield(attacker.x, attacker.y, damage)) {
-                            logger.log(`${defender.name} blocked momentum slam from ${attacker.name}`, 'combat');
-                            attacker.wallBounceSpeed = attacker.baseSpeed;
-                            const reverseAngle = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
-                            attacker.dx = Math.cos(reverseAngle) * 10;
-                            attacker.dy = Math.sin(reverseAngle) * 10;
-                            this.particles.spawn(
-                                defender.x + Math.cos(defender.angle) * 30,
-                                defender.y + Math.sin(defender.angle) * 30,
-                                '#8b5cf6', 10
-                            );
-                            audioEngine.playBlock();
-                            return true;
+                    // OCP: Let abilities handle special collision effects
+                    Object.values(e1.abilities).forEach(ability => {
+                        if (ability && ability.onEntityCollision) {
+                            const result = ability.onEntityCollision(e1, e2, context);
+                            if (result === true) hit1 = true;
                         }
+                    });
 
-                        // Damage already calculated above
-                        defender.takeDamage(damage, false, false, attacker);
-                        this.particles.spawn(defender.x, defender.y, '#8b5cf6', 8);
-                        logger.log(`${attacker.name} SLAMMED ${defender.name} for ${damage} dmg (SpeedTier: ${speedTier})`, 'combat');
-                        audioEngine.playHeavyImpact();
-
-                        if (attacker.ultWallSlamActive) {
-                            defender.pendingWallSlam = { owner: attacker };
-                            for (let i = 0; i < 10; i++) {
-                                this.particles.spawn(defender.x, defender.y, '#ff4444', 1);
-                            }
+                    Object.values(e2.abilities).forEach(ability => {
+                        if (ability && ability.onEntityCollision) {
+                            const result = ability.onEntityCollision(e2, e1, context);
+                            if (result === true) hit2 = true;
                         }
-
-                        attacker.wallBounceSpeed = attacker.baseSpeed;
-
-                        for (let k = 0; k < 15; k++) {
-                            this.particles.spawn(defender.x, defender.y, '#8b5cf6', 1);
-                        }
-
-                        // We used to return 'true' to skip physics and set velocity manually.
-                        // Now we return 'false' so the standard elastic collision (bump) happens below,
-                        // which naturally handles mass-based knockback.
-                        return false;
-                    };
-
-                    const hit1 = handleMomentumHit(e1, e2);
-                    const hit2 = handleMomentumHit(e2, e1);
+                    });
 
                     // Separation
                     let angle = Math.atan2(e2.y - e1.y, e2.x - e1.x);
@@ -825,11 +606,8 @@ export class Game {
 
         this.entities.forEach(ent => {
             renderer.drawFighter(this.ctx, ent);
-
-            // Draw Hex Barrier if fighter has it
-            if (ent.abilities && ent.abilities.def && ent.abilities.def.draw) {
-                ent.abilities.def.draw(ent, this.ctx);
-            }
+            // NOTE: Ability visuals (barriers, etc.) are already drawn via
+            // renderer.drawAbilityVisuals() inside drawFighter() with proper context
         });
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.particles.updateAndDraw(this.ctx);

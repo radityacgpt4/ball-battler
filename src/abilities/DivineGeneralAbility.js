@@ -11,6 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { logger } from '../systems/Logger.js';
 import { audioEngine } from '../systems/Audio.js';
+import { checkWeaponHit } from '../data/weaponGeometry.js';
 
 // --- ATK: EIGHTFOLD STRIKE ---
 export class DivineGeneralAtkAbility extends Ability {
@@ -40,27 +41,19 @@ export class DivineGeneralAtkAbility extends Ability {
             }
         }
 
-        // Orb-based collision
+        // Orb-based collision using weapon geometry registry
         if (this.canUse(fighter, context)) {
-            const orbDistance = fighter.radius + this.orbDistance;
             let hit = false;
 
             for (const enemy of context.enemies) {
                 if (enemy === fighter || enemy.isDead) continue;
 
-                // Check each of the orbs for collision
-                for (let i = 0; i < this.orbCount; i++) {
-                    const orbAngle = fighter.angle + (fighter.wheelRotation || 0) + (Math.PI * 2 * i) / this.orbCount;
-                    const orbX = fighter.x + Math.cos(orbAngle) * orbDistance;
-                    const orbY = fighter.y + Math.sin(orbAngle) * orbDistance;
-
-                    const distToEnemy = Physics.dist(orbX, orbY, enemy.x, enemy.y);
-                    if (distToEnemy < this.orbRadius + enemy.radius) {
-                        if (fighter.cooldowns.atk <= 0) {
-                            this.performAttack(fighter, enemy);
-                            hit = true;
-                            break;
-                        }
+                // Use weapon geometry registry for orb collision
+                if (checkWeaponHit('DIVINE_GENERAL_WHEEL', fighter, enemy)) {
+                    if (fighter.cooldowns.atk <= 0) {
+                        this.performAttack(fighter, enemy);
+                        hit = true;
+                        break;
                     }
                 }
                 if (hit) break;

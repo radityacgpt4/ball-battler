@@ -53,11 +53,11 @@ export const FIGHTER_TYPES = {
                 type: "RAYCAST",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 75,
+                cooldown: 60,
                 range: 800,
                 damage: 15,
-                bounces: 3,
-                damageDecayWall: 0.8,
+                bounces: 2,
+                damageDecayWall: 0.9,
                 damageDecayShield: 0.9
             },
             def: {
@@ -76,8 +76,8 @@ export const FIGHTER_TYPES = {
                 type: "DOUBLE_ZAP",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 120,
-                angleSpread: 0.18
+                cooldown: 100,
+                angleSpread: 0.20
             }
         }
     },
@@ -223,11 +223,11 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 120,
                 duration: 180,
-                chargeTime: 150,
+                chargeTime: 120,
                 damage: 1,
                 range: 2000,
-                rotationSlow: 0.1,
-                speedSlow: 0.25,
+                rotationSlow: 0.15,
+                speedSlow: 0.50,
                 beamWidth: 14,
                 coreWidth: 5,
                 tickRate: 3,
@@ -272,8 +272,9 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 90,
                 damage: 12,
-                stun: 60,
+                stun: 45,
                 projectileSpeed: 21,
+                ultProjectileSpeed: 24, // Faster during Steady Aim
                 projectileRadius: 5,
                 ultProjectileRadius: 8,
                 recoilForce: 22,
@@ -528,14 +529,15 @@ export const FIGHTER_TYPES = {
                 type: "LICHT_REGEN",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 200,
+                cooldown: 180,
                 damage: 4,
                 arrowCount: 6,
-                stunDuration: 30, // 0.5 sec stun per arrow
-                arrowSpeed: 18, // Falling speed
+                stunDuration: 45,
+                arrowSpeed: 22,
                 arrowRadius: 2,
-                rainHeight: 150, // Initial z height
-                rainSpread: 120 // How far arrows spread around target
+                rainHeight: 150,
+                rainSpread: 120,
+                plantedArrowLifeTime: 120
             }
         }
     },
@@ -572,12 +574,12 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 120,
-                duration: 600,
-                slashDamage: 9,
-                slashSpeed: 21,
+                duration: 360,
+                slashDamage: 8,
+                slashSpeed: 18,
                 slashFireRate: 60,
-                slashWidth: 90, // Parabolic width
-                dragStrength: 0.2 // Drag factor
+                slashWidth: 120, // Parabolic width
+                dragStrength: 0.15 // Drag factor
             }
         }
     },
@@ -674,6 +676,55 @@ export const FIGHTER_TYPES = {
             }
         }
     },
+    MECHA: {
+        name: "Mecha",
+        color: "#1E90FF", // Gundam Blue (Wing Zero inspired)
+        hp: 100, mass: 1.3, speed: 4.2, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Beam Rifle",
+                desc: "Fires an energy projectile that explodes on impact, followed by a melee dash.",
+                type: "MECHA_BEAM",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 90,
+                projectileDamage: 6,
+                explosionDamage: 4,
+                stunDuration: 30, //
+                projectileSpeed: 36,
+                explosionRadius: 80,
+                // Melee dash properties
+                meleeDamage: 3,
+                dashSpeed: 24,
+                dashDistance: 1000,
+                ultDashDistance: 1400,
+                dashDelay: 12,
+                aimError: 0.5,
+                meleeRotationMultiplier: 5,
+                twinBarrelOffset: 10
+            },
+            def: {
+                name: "Thruster Dodge",
+                desc: "Side dashes when enemies or projectiles approach.",
+                type: "MECHA_DODGE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 90,
+                detectionRadius: 90,
+                approachThreshold: 0.6,
+                dodgeDistance: 30,
+                dodgeSpeed: 14
+            },
+            ult: {
+                name: "Twin Cannon Protocol",
+                desc: "Activates twin-barreled cannons and boosted thrusters. Fires 2 lasers at once and increases melee dash range by 30%.",
+                type: "MECHA_ULT_MODE",
+                isPassive: false,
+                cooldown: 300,
+                duration: 600 // 10 seconds
+            }
+        }
+    },
     LEVI: {
         name: "Titan Killer",
         color: "#4A5D4E", // Survey Corps Green
@@ -686,7 +737,7 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 baseDamage: 2,
-                range: 33,
+                range: 35, // Matches visual blade length (updated from 33)
                 attackCooldown: 12, // Base cooldown (decreases with speed)
                 minCooldown: 2,     // Minimum cooldown at max speed
                 maxRotationSpeed: 0.6, // Cap for rotation speed scaling
@@ -724,6 +775,54 @@ export const FIGHTER_TYPES = {
                 fireRateMultiplier: 1.5,
                 hookSpeedMultiplier: 2.0,
                 maxSpeedBoost: 18 // Increased max speed cap during ult
+            }
+        }
+    },
+    DEATH_GOD_SWORDSMAN: {
+        name: "Death God Swordsman",
+        color: "#FF6600", // Ichigo's orange spiritual pressure
+        hp: 100, mass: 1.2, speed: 4.8, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Zangetsu Slash",
+                desc: "Rotation-based melee attack with an oversized khyber knife.",
+                type: "ZANGETSU_SLASH",
+                isPassive: true,
+                // Configurable properties
+                range: 55,
+                damage: 7,
+                attackCooldown: 12
+            },
+            def: {
+                name: "Getsuga Tenshou",
+                desc: "Every 5 HP missing, unleash a crescent energy wave in facing direction.",
+                type: "GETSUGA_TENSHOU",
+                isPassive: true,
+                // Configurable properties
+                hpThreshold: 5,
+                damage: 6,
+                ultDamage: 8, // Damage in Bankai form
+                projectileSpeed: 12,
+                explosionRadius: 75,
+                explosionDamage: 5,
+                explosionUltDamage: 7,
+                stunDuration: 60, // 1 second stun
+                getsugaDelay: 8, // Frames between each getsuga (for sparse firing)
+                explodeOnWall: true
+            },
+            ult: {
+                name: "Bankai: Tensa Zangetsu",
+                desc: "Transform sword to thin black blade. +60% MS and +75% AS",
+                type: "BANKAI_MODE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 240,
+                duration: 480, // 8 seconds
+                speedBoost: 0.6, // 60% increase
+                rotationBoost: 0.75, // 75% increase
+                bankaiPulseInterval: 120, // Every 2 seconds (60fps)
+                bankaiPulseRadius: 180,
+                bankaiPulseStun: 60 // 1 second stun
             }
         }
     }

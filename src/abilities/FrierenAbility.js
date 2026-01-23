@@ -11,7 +11,8 @@ import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
 
-// ============================================================================
+import { ZoltraakRenderer } from '../components/ProjectileRenderers.js';
+import { ZoltraakBehavior } from '../components/ProjectileBehaviors.js';
 // ATK: Zoltraak - Ordinary Offensive Magic (Homing Beam Projectile)
 // ============================================================================
 export class ZoltraakAbility extends Ability {
@@ -34,6 +35,8 @@ export class ZoltraakAbility extends Ability {
     }
 
     update(fighter, context) {
+        if (fighter.status.stun > 0) return;
+
         // Handle active burst
         if (this.currentBurst > 0) {
             this.burstFrameTimer--;
@@ -94,20 +97,19 @@ export class ZoltraakAbility extends Ability {
         fighter.dx -= Math.cos(aimAngle) * recoilForce;
         fighter.dy -= Math.sin(aimAngle) * recoilForce;
 
-        // Spawn projectile
-        const startX = fighter.x + Math.cos(aimAngle) * (fighter.radius + 15);
-        const startY = fighter.y + Math.sin(aimAngle) * (fighter.radius + 15);
+        // Spawn projectile at Magic Circle position
+        const startX = fighter.x + Math.cos(aimAngle) * (fighter.radius - 15);
+        const startY = fighter.y + Math.sin(aimAngle) * (fighter.radius - 15);
 
         const p = new Projectile(fighter, startX, startY, aimAngle, this.speed, this.damage, game);
-        p.radius = 4;
-        p.isZoltraak = true;
-        p.homingStrength = this.homingStrength;
-        p.maxDist = this.range;
-        p.startX = startX;
-        p.startY = startY;
-        p.lastX = startX;
-        p.lastY = startY;
         p.target = target;
+
+        p.renderer = new ZoltraakRenderer();
+        p.addComponent(new ZoltraakBehavior(this.homingStrength, this.range));
+
+        // Unified impact properties
+        p.impactSound = 'hit';
+        p.impactParticle = 'zoltraakImpact';
 
         game.projectiles.push(p);
 
@@ -121,6 +123,78 @@ export class ZoltraakAbility extends Ability {
         });
 
         audioEngine.playZoltraak(); // Magical laser sound
+
+        // Set Magic Circle Visual State
+        fighter.magicCircleTimer = 20; // Lasts for 20 frames (approx cooldown)
+        // Lock angle to firing direction (independent of body spin)
+        fighter.magicCircleAngle = aimAngle;
+    }
+
+    draw(fighter, ctx) {
+        if (!fighter || !ctx || fighter.magicCircleTimer <= 0) return;
+
+        ctx.save();
+        // Use stored angle, independent of body rotation
+        const angle = fighter.magicCircleAngle || fighter.angle;
+        // Position: In front of the fighter
+        const dist = fighter.radius + 15;
+        const cx = Math.cos(angle) * dist;
+        const cy = Math.sin(angle) * dist;
+
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+
+        // PERSPECTIVE TRANSFORM: Squash X (depth), Scale Y (width)
+        // This makes it look like a vertical disk facing the target
+        ctx.scale(0.3, 1.25);
+
+        const alpha = Math.min(1, fighter.magicCircleTimer / 5); // Fade out last 5 frames
+
+        // 1. Main Ring
+        ctx.globalAlpha = 0.8 * alpha;
+        ctx.strokeStyle = '#4fc3f7';
+        ctx.lineWidth = 3; // Thicker to withstand scaling
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 2. Inner Square/Triangle (Geometric pattern)
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const r = 12;
+        ctx.moveTo(r, 0);
+        ctx.lineTo(0, r);
+        ctx.lineTo(-r, 0);
+        ctx.lineTo(0, -r);
+        ctx.closePath();
+        ctx.stroke();
+
+        // 3. Rotating inner bits
+        ctx.save();
+        ctx.rotate(Date.now() * 0.005);
+        ctx.strokeStyle = '#87CEEB';
+        ctx.beginPath();
+        ctx.moveTo(-8, -8);
+        ctx.lineTo(8, 8);
+        ctx.moveTo(8, -8);
+        ctx.lineTo(-8, 8);
+        ctx.stroke();
+        ctx.restore();
+
+        // 4. Glow
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowColor = '#4fc3f7';
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = '#E0FFFF';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Decrement timer (client-side visual state)
+        if (fighter.magicCircleTimer > 0) fighter.magicCircleTimer--;
     }
 }
 
@@ -197,6 +271,7 @@ export class HexBarrierAbility extends Ability {
     }
 
     // Draw visual for hexagonal shield
+    // NOTE: Context is already translated to fighter position by Renderer.drawFighter()
     draw(fighter, ctx) {
         if (!fighter || !ctx) return;
 
@@ -204,7 +279,7 @@ export class HexBarrierAbility extends Ability {
         const halfArc = this.arcAngle / 2;
 
         ctx.save();
-        ctx.translate(fighter.x, fighter.y);
+        // DO NOT translate - context is already at fighter position
         ctx.rotate(fighter.angle);
 
         // Draw hexagonal segments
@@ -232,6 +307,15 @@ export class HexBarrierAbility extends Ability {
             ctx.arc(nodeX, nodeY, 3, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // End node for the last segment
+        const lastNodeAngle = halfArc;
+        const lastNodeX = Math.cos(lastNodeAngle) * shieldRadius;
+        const lastNodeY = Math.sin(lastNodeAngle) * shieldRadius;
+        ctx.fillStyle = '#4fc3f7';
+        ctx.beginPath();
+        ctx.arc(lastNodeX, lastNodeY, 3, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.restore();
     }

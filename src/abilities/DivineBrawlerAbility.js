@@ -11,6 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { checkWeaponHit } from '../data/weaponGeometry.js';
 
 // --- ATK: BLACK FLASH (Passive) ---
 export class DivineBrawlerAtkAbility extends Ability {
@@ -34,7 +35,6 @@ export class DivineBrawlerAtkAbility extends Ability {
     }
 
     update(fighter, context) {
-        const meleeRange = fighter.radius + this.range;
         let hit = false;
 
         if (fighter.cooldowns.atk > 0) return;
@@ -42,8 +42,8 @@ export class DivineBrawlerAtkAbility extends Ability {
         for (const enemy of context.enemies) {
             if (enemy === fighter || enemy.isDead) continue;
 
-            const dist = Physics.dist(fighter.x, fighter.y, enemy.x, enemy.y);
-            if (dist < meleeRange + enemy.radius) {
+            // Use weapon geometry registry for fist collision
+            if (checkWeaponHit('DIVINE_BRAWLER_FISTS', fighter, enemy)) {
                 this.performAttack(fighter, enemy);
                 hit = true;
                 break;
@@ -122,6 +122,22 @@ export class DivineBrawlerDefAbility extends Ability {
     }
 
     update(fighter, context) {
+        // Manage Focus buff timer (from ULT) - handled here since DEF.update() is called every frame
+        if (fighter.activeEffects.focusActive) {
+            fighter.activeEffects.focusTimer--;
+
+            // Particle aura
+            if (fighter.activeEffects.focusTimer % 10 === 0) {
+                fighter.game.particles.spawn(fighter.x, fighter.y, '#4B0082', 1);
+            }
+
+            if (fighter.activeEffects.focusTimer <= 0) {
+                fighter.activeEffects.focusActive = false;
+                fighter.mass = fighter.originalMass || 1.6;
+                logger.log(`${fighter.name}'s Focus fades.`, 'info');
+            }
+        }
+
         if (fighter.cooldowns.def > 0) return;
         if (fighter.status.stun > 0) return;
 
@@ -253,26 +269,6 @@ export class DivineBrawlerUltAbility extends Ability {
         fighter.maxCooldowns.ult = this.cooldown;
     }
 
-    update(fighter, context) {
-        // Trigger logic
-        if (fighter.cooldowns.ult <= 0 && !fighter.activeEffects.focusActive) {
-            this.execute(fighter, context);
-        }
-
-        // Buff Management
-        if (fighter.activeEffects.focusActive) {
-            fighter.activeEffects.focusTimer--;
-
-            // Particle aura
-            if (fighter.activeEffects.focusTimer % 10 === 0) {
-                fighter.game.particles.spawn(fighter.x, fighter.y, '#4B0082', 1);
-            }
-
-            if (fighter.activeEffects.focusTimer <= 0) {
-                fighter.activeEffects.focusActive = false;
-                fighter.mass = fighter.originalMass || 1.6;
-                logger.log(`${fighter.name}'s Focus fades.`, 'info');
-            }
-        }
-    }
+    // NOTE: ULT triggers via execute() from Fighter.js when HP < 50%
+    // Buff timer management is handled in DivineBrawlerDefAbility.update()
 }

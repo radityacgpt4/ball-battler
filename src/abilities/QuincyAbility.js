@@ -12,6 +12,8 @@ import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { QuincyArrowRenderer, GintoTrapRenderer } from '../components/ProjectileRenderers.js';
+import { LinearMovement, QuincyTrailBehavior, StaticLifetimeBehavior, LichtRegenBehavior } from '../components/ProjectileBehaviors.js';
 
 // --- ATK: HEILIG PFEIL (Sacred Arrow) ---
 export class QuincyAtkAbility extends Ability {
@@ -139,6 +141,16 @@ export class QuincyAtkAbility extends Ability {
                 p.isPerfectShot = isPerfectLock;
                 p.radius = isPerfectLock ? this.perfectRadius : this.normalRadius;
 
+                // Unified impact properties
+                // Unified impact properties
+                p.impactSound = 'zap';
+                p.impactParticle = 'quincyArrow';
+
+                // OCP Migration
+                p.renderer = new QuincyArrowRenderer();
+                p.addComponent(new LinearMovement());
+                p.addComponent(new QuincyTrailBehavior());
+
                 // Perfect shots pierce
                 if (isPerfectLock) {
                         p.piercing = true;
@@ -244,8 +256,11 @@ export class QuincyDefAbility extends Ability {
                 trap.lifeTime = this.trapDuration;
                 trap.stunDuration = this.trapStunDuration;
                 trap.radius = this.trapRadius;
-                trap.dx = 0;
-                trap.dy = 0;
+                // trap.dx = 0; // Handled by behavior
+                // trap.dy = 0;
+
+                trap.renderer = new GintoTrapRenderer();
+                trap.addComponent(new StaticLifetimeBehavior(this.trapDuration));
 
                 game.projectiles.push(trap);
 
@@ -273,19 +288,11 @@ export class QuincyUltAbility extends Ability {
                 this.stunDuration = config.stunDuration || 30;
                 this.rainHeight = config.rainHeight || 150;
                 this.rainSpread = config.rainSpread || 120;
+                this.plantedArrowLifeTime = config.plantedArrowLifeTime || 60; // NEW: Configurable planted duration
         }
 
-        update(fighter, context) {
-                // Trigger when off cooldown
-                if (fighter.cooldowns.ult <= 0) {
-                        const { enemies } = context;
-                        const target = enemies.find(e => e !== fighter && !e.isDead);
-
-                        if (target) {
-                                this.execute(fighter, context, target);
-                        }
-                }
-        }
+        // NOTE: update() is not called from Fighter.js - ULT triggers via execute() when HP < 50%
+        // This method exists for potential future use but is currently inactive
 
         execute(fighter, context, target) {
                 const { game, enemies } = context;
@@ -331,6 +338,13 @@ export class QuincyUltAbility extends Ability {
                         p.piercing = true;
                         p.hitList = [];
                         p.stunDuration = this.stunDuration;
+                        p.plantedArrowLifeTime = this.plantedArrowLifeTime; // NEW: Configurable lifetime
+
+                        // Unified impact properties
+                        p.impactSound = 'zap';
+                        p.impactParticle = 'quincyArrow';
+                        p.statusEffect = { type: 'STUN', duration: this.stunDuration };
+
                         // Store destination for hit indicator (cosmetic only)
                         p.destX = destX;
                         p.destY = destY;
@@ -340,6 +354,9 @@ export class QuincyUltAbility extends Ability {
                         p.z = 10;
                         // Exact physics solution for landing at t=40
                         p.vz = 0.25 * airTime - 10 / airTime;
+
+                        p.renderer = new QuincyArrowRenderer();
+                        p.addComponent(new LichtRegenBehavior());
 
                         game.projectiles.push(p);
                 }

@@ -147,29 +147,6 @@ export class Fighter {
             }
         }
 
-        // Ninja Teleport Trigger
-        if (this.teleportDelayTimer > 0) {
-            this.teleportDelayTimer = tick(this.teleportDelayTimer);
-            if (this.teleportDelayTimer <= 0 && this.kunaiPending.length > 0) {
-                this.chainDashQueue = [{ x: this.x, y: this.y }];
-                this.kunaiPending.forEach(p => {
-                    if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) {
-                        this.chainDashQueue.push({ x: p.x, y: p.y });
-                    }
-                });
-                this.kunaiPending = [];
-                if (this.chainDashQueue.length > 1) {
-                    this.isDashing = true;
-                } else {
-                    // Fail safe: if no valid targets, cancel dash
-                    this.teleportDelayTimer = 0;
-                    this.chainDashQueue = [];
-                }
-                this.dashTimer = this.chainDashQueue.length * 4;
-                this.dashTimerStart = this.dashTimer;
-            }
-        }
-
         // Evasion visual fade back
         if (this.activeEffects.evasionTimer > 0) this.activeEffects.evasionTimer = tick(this.activeEffects.evasionTimer);
 
@@ -182,25 +159,13 @@ export class Fighter {
 
         if (this.status.stun <= 0 && !this.isDashing) {
             let rot = this.rotationSpeed * timeScale;
-            if (this.typeKey === 'SOLDIER' && this.activeEffects.burstCount > 0) {
-                rot *= 0.2;
-            }
 
-            // King of Curses: Slow rotation by 60% when facing opponent (aiming mechanic)
-            if (this.typeKey === 'KING_OF_CURSES') {
-                const opponent = allEntities.find(e => e !== this && !e.isDead);
-                if (opponent) {
-                    const angleToOpponent = Math.atan2(opponent.y - this.y, opponent.x - this.x);
-                    let angleDiff = Math.abs(this.angle - angleToOpponent);
-                    // Normalize angle difference to [0, PI]
-                    while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
-
-                    // If facing opponent (within ~45 degrees), slow rotation
-                    if (angleDiff < Math.PI / 4) {
-                        rot *= 0.4; // 60% slow
-                    }
+            // OCP: Allow abilities to modify rotation (e.g. Soldier Burst, KOC Aim)
+            Object.values(this.abilities).forEach(ability => {
+                if (ability && ability.modifyRotation) {
+                    rot = ability.modifyRotation(this, rot);
                 }
-            }
+            });
 
             this.angle += rot;
         }
@@ -278,17 +243,11 @@ export class Fighter {
             this.pendingBallistaPinned = null;
         }
 
-        // SHIELDBEARER: Momentum on wall bounce
-        if (bounced && this.typeKey === 'SHIELDBEARER') {
-            const config = this.skills.atk;
-            if (this.wallBounceSpeed < config.maxSpeed) {
-                this.wallBounceSpeed = Math.min(this.wallBounceSpeed + config.speedGain, config.maxSpeed);
-                this.game.combatText.speedUp(this.x, this.y);
-                this.game.particles.spawn(this.x, this.y, '#8b5cf6', 5);
-                audioEngine.playSpeedUp();
-                this.spawnSonicBoom();
-                logger.log(`${this.name} SPEED UP! (${this.wallBounceSpeed.toFixed(1)}/${config.maxSpeed})`, 'info');
-            }
+        // OCP: Notify abilities of wall bounce
+        if (bounced) {
+            Object.values(this.abilities).forEach(ability => {
+                if (ability && ability.onWallBounce) ability.onWallBounce(this);
+            });
         }
 
         let speed = Math.hypot(this.dx, this.dy);
@@ -312,7 +271,7 @@ export class Fighter {
                 this.dy = Math.sin(restartAngle) * this.baseSpeed;
             } else if (speed > 0) {
                 // Normal movement driving
-                let mod = (this.activeEffects.ultActive && this.typeKey === 'SOLDIER') ? 1.5 : 1.0;
+                let mod = 1.0;
                 if (this.status.slow > 0) mod *= 0.75; // 25% slow
 
                 // Burn Slow (10% per stack)
@@ -321,7 +280,15 @@ export class Fighter {
                     mod *= (1 - burnSlow);
                 }
 
-                let targetSpeed = (this.typeKey === 'SHIELDBEARER') ? this.wallBounceSpeed : this.baseSpeed;
+                let targetSpeed = this.baseSpeed;
+
+                // OCP: Allow abilities to modify base target speed (e.g. Shieldbearer Momentum)
+                Object.values(this.abilities).forEach(ability => {
+                    if (ability && ability.modifySpeed) {
+                        targetSpeed = ability.modifySpeed(this, targetSpeed);
+                    }
+                });
+
                 targetSpeed *= mod;
 
                 // GLOBAL SPEED CAP: Prevent physics "explosions" from overlapping teleports/dashes
@@ -351,119 +318,30 @@ export class Fighter {
     handleDash(timeScale) {
         this.dashTimer -= 1 * timeScale;
 
-        if (this.typeKey === 'NINJA' && this.chainDashQueue.length > 1) {
-            if (this.dashTimer % 4 === 0) {
-                const current = this.chainDashQueue.shift();
-                const next = this.chainDashQueue[0];
-
-                // Validate coordinates
-                if (!next || !Number.isFinite(next.x) || !Number.isFinite(next.y)) {
-                    this.dashTimer = 0;
-                    this.isDashing = false;
-                    return;
-                }
-
-                // === The Yellow Flash (Lore Accurate) ===
-                // 1. Afterimage at start
-                this.game.particles.particles.push({
-                    x: current.x, y: current.y,
-                    vx: 0, vy: 0,
-                    life: 0.4, decay: 0.1,
-                    size: this.radius, color: '#ffd700', type: 'dot', alpha: 0.15
-                });
-
-                // 2. Yellow Flash Streak (Solid Beam)
-                // Use 'beam' type for a cohesive glowing line with white core
-                // Decay 0.08 means it lasts ~12 frames (0.2s), much more visible than 2 frames
-                // Width 8: Sharp and thin, distinct from the ball body (diameter 50)
-                this.game.particles.spawnBeam(current.x, current.y, next.x, next.y, '#ffd700', 8, 0.08);
-
-                // Add faint parallel lines for speed illusion
-                const px = current.y - next.y; // Perpendicular vector (simple approximation)
-                const py = next.x - current.x;
-                const len = Math.hypot(px, py) || 1;
-                const offX = (px / len) * 8;
-                const offY = (py / len) * 8;
-
-                // Secondary faint beam
-                this.game.particles.spawnBeam(
-                    current.x + offX, current.y + offY,
-                    next.x + offX, next.y + offY,
-                    '#ffd700', 2, 0.1 // Thin line decays slightly faster
-                );
-
-                // 3. Subtle destination marker (No explosion)
-                this.game.particles.particles.push({
-                    x: next.x, y: next.y,
-                    vx: 0, vy: 0,
-                    life: 0.3, decay: 0.1,
-                    size: this.radius, color: '#ffd700', type: 'dot', alpha: 0.15
-                });
-
-                audioEngine.playTeleport();
-
-                this.x = next.x;
-                this.y = next.y;
-
-                const enemies = this.game.entities.filter(e => e !== this && !e.isDead);
-                let hitTarget = null;
-
-                // Check collisions
-                for (const e of enemies) {
-                    if (Physics.lineCircleIntersect(current.x, current.y, next.x, next.y, e.x, e.y, e.radius + 15)) {
-                        hitTarget = e;
-                        if (this.pendingRasengan) break; // Priority hit for Ult
-                    }
-                }
-
-                if (hitTarget) {
-                    if (this.pendingRasengan) {
-                        // === TRIGGER RASENGAN HIT ===
-                        // Move to impact point (not center, to avoid physics NaN issues)
-                        const impactAngle = Math.atan2(hitTarget.y - current.y, hitTarget.x - current.x);
-                        const stopDist = hitTarget.radius + this.radius + 1;
-                        this.x = hitTarget.x - Math.cos(impactAngle) * stopDist;
-                        this.y = hitTarget.y - Math.sin(impactAngle) * stopDist;
-
-                        this.triggerRasengan(hitTarget);
-
-                        // Stop Dash Immediately
-                        this.chainDashQueue = [];
-                        this.dashTimer = 0;
-                        this.isDashing = false;
-                        this.pendingRasengan = null;
-                        this.game.projectiles = this.game.projectiles.filter(p => !p.isKunai || p.owner !== this);
-                        return;
-                    } else {
-                        // Normal dash damage
-                        this.game.combatText.flash(hitTarget.x, hitTarget.y - hitTarget.radius);
-                        hitTarget.takeDamage(8);
-                        this.game.particles.spawn(hitTarget.x, hitTarget.y, '#ffd700', 5);
-                    }
-                }
-            }
-        } else if (this.typeKey === 'SWORD_MASTER') {
-            this.x += this.dx; this.y += this.dy;
-            if (Math.random() < 0.5) this.game.particles.spawn(this.x, this.y, '#ff0000', 1);
+        // OCP: Delegate dash logic to handling ability (e.g. Ninja Teleport)
+        if (this.dashHandler && this.dashHandler.updateDash) {
+            this.dashHandler.updateDash(this, timeScale);
         } else {
-            this.x += this.dx; this.y += this.dy;
-            this.game.particles.spawn(this.x, this.y, '#aaa', 1);
+            // Generic Dash Movement (Soldier Retreat, etc.)
+            this.x += this.dx;
+            this.y += this.dy;
+
+            // Simple visual trail
+            if (this.typeKey === 'SWORD_MASTER') {
+                if (Math.random() < 0.5) this.game.particles.spawn(this.x, this.y, '#ff0000', 1);
+            } else {
+                this.game.particles.spawn(this.x, this.y, '#aaa', 1);
+            }
         }
 
         if (this.dashTimer <= 0) {
             this.isDashing = false;
+            this.dashHandler = null; // Clear handler
 
-            if (this.typeKey === 'NINJA') {
-                this.game.projectiles = this.game.projectiles.filter(p => !p.isKunai || p.owner !== this);
-
-                // Rasengan effect at final position (if missed)
-                if (this.pendingRasengan) {
-                    this.triggerRasengan(null); // Null target = AOE at location
-                    this.pendingRasengan = null;
-                }
-            }
-
+            // Reset specialized queues if any remain (safety)
             this.chainDashQueue = [];
+
+            // Sword Master stop? (Legacy logic)
             if (this.typeKey === 'SWORD_MASTER') {
                 this.dx = Math.cos(this.angle) * this.baseSpeed;
                 this.dy = Math.sin(this.angle) * this.baseSpeed;
@@ -475,98 +353,7 @@ export class Fighter {
         this.y = Math.max(bounds.y + this.radius, Math.min(bounds.y + bounds.height - this.radius, this.y));
     }
 
-    triggerRasengan(directHitTarget = null) {
-        const rasenganDamage = this.pendingRasengan;
-        const rasenganRadius = 60;
 
-        // === Spectacular Visuals ===
-        // 1. Spiral
-        for (let i = 0; i < 30; i++) {
-            const angle = (Math.PI * 2 / 30) * i;
-            const dist = 10 + Math.random() * 40;
-            this.game.particles.particles.push({
-                x: this.x + Math.cos(angle) * dist,
-                y: this.y + Math.sin(angle) * dist,
-                vx: Math.cos(angle + Math.PI / 2) * 8, // Faster spin
-                vy: Math.sin(angle + Math.PI / 2) * 8,
-                life: 0.8,
-                decay: 0.04,
-                size: 3 + Math.random() * 4,
-                color: '#00BFFF',
-                type: 'dot'
-            });
-        }
-        // 2. Core Burst
-        this.game.particles.spawnExplosion(this.x, this.y); // Add fiery burst center
-        this.game.particles.spawn(this.x, this.y, '#00BFFF', 20); // Blue burst
-        this.game.particles.spawn(this.x, this.y, '#ffffff', 10); // White core
-
-        // 3. Shockwave
-        this.game.particles.particles.push({
-            type: 'shockwave', x: this.x, y: this.y,
-            radius: 10, maxRadius: 100,
-            life: 1.0, decay: 0.05, color: '#00BFFF'
-        });
-
-        audioEngine.playHeavyImpact();
-
-        if (directHitTarget) {
-            logger.log(`${this.name} RASENGAN DIRECT HIT on ${directHitTarget.name}!`, 'combat');
-            directHitTarget.takeDamage(rasenganDamage * 1.5, true); // Bonus dmg for direct hit? Or just ensure hit.
-            // Let's stick to base damage or slight bonus. Prompt didn't specify bonus but direct hit usually implies it.
-            // I'll stick to rasenganDamage to be safe, but apply it.
-            // Actually, let's just do AOE to ensure everyone near gets hit, including target.
-        } else {
-            logger.log(`${this.name} Rasengan exploded!`, 'info');
-        }
-
-        // AOE damage
-        const enemies = this.game.entities.filter(e => e !== this && !e.isDead);
-        enemies.forEach(e => {
-            const dist = Physics.dist(this.x, this.y, e.x, e.y);
-            if (dist < rasenganRadius + e.radius) {
-                // If direct hit, we already logged, but maybe didn't damage yet.
-                // To avoid double damage, we can check.
-                // Simple approach: Just deal damage here to all in AOE.
-                e.takeDamage(rasenganDamage, true); // Unblockable? Rasengan breaks guards usually.
-
-                // Heavy Knockback
-                const knockAngle = Math.atan2(e.y - this.y, e.x - this.x);
-                e.dx = Math.cos(knockAngle) * 12;
-                e.dy = Math.sin(knockAngle) * 12;
-                e.applyStatus('STUN', 45); // Add stun
-            }
-        });
-    }
-
-    spawnSonicBoom() {
-        const moveAngle = Math.atan2(this.dy, this.dx);
-        for (let i = 0; i < 12; i++) {
-            const angle = moveAngle + Math.PI + (Math.random() - 0.5) * 1.5;
-            const speed = 3 + Math.random() * 3;
-            this.game.particles.particles.push({
-                x: this.x - Math.cos(moveAngle) * this.radius,
-                y: this.y - Math.sin(moveAngle) * this.radius,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 1.0,
-                decay: 0.06,
-                size: 4 + Math.random() * 4,
-                color: '#ffffff',
-                type: 'dot'
-            });
-        }
-        this.game.particles.particles.push({
-            type: 'shockwave',
-            x: this.x,
-            y: this.y,
-            radius: this.radius,
-            maxRadius: 80,
-            life: 1.0,
-            decay: 0.08,
-            color: '#8b5cf6'
-        });
-    }
 
     /**
      * SHIELD SYSTEM - Check if a ray hits the shield arc
@@ -609,6 +396,11 @@ export class Fighter {
         // Divine General (Mahoraga) triggers ULT on attack hit instead
         if (this.hp < this.maxHp * 0.5 && this.cooldowns.ult <= 0 && this.abilities.ult && this.typeKey !== 'DIVINE_GENERAL') {
             this.abilities.ult.execute(this, context);
+        }
+
+        // Update active ultimate ability
+        if (this.abilities.ult && this.abilities.ult.update) {
+            this.abilities.ult.update(this, context);
         }
 
         // Handle active ultimate effects
@@ -698,460 +490,5 @@ export class Fighter {
         }
     }
 
-    draw(ctx) {
-        if (this.isDead) return;
-        ctx.save();
-        ctx.translate(this.x, this.y);
 
-        // Evasion Transparency
-        if (this.activeEffects.evasionTimer > 0) {
-            ctx.globalAlpha = 0.2;
-        }
-
-        if (this.status.stun > 0) {
-            ctx.strokeStyle = '#ffd700';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 5, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-
-        // Slow effect visual
-        if (this.status.slow > 0) {
-            ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // Wall slam knockback indicator
-        if (this.beingPushed) {
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 4;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 8, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
-        // Pushing indicator
-        if (this.isPushing) {
-            ctx.strokeStyle = '#8b5cf6';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 8, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-
-        ctx.save();
-        ctx.rotate(this.angle);
-        if (this.typeKey === 'SWORD_MASTER') {
-            ctx.fillStyle = '#e0e0e0';
-            ctx.fillRect(this.radius - 5, -4, this.skills.atk.range, 8);
-        } else if (this.typeKey === 'SOLDIER') {
-            ctx.fillStyle = '#333';
-            ctx.fillRect(this.radius - 5, -6, 20, 12);
-        } else if (this.typeKey === 'SHIELDBEARER') {
-            const halfArc = this.skills.def.arcAngle / 2;
-
-            if (this.wallBounceSpeed > this.baseSpeed || this.ultWallSlamActive) {
-                ctx.save();
-                ctx.globalCompositeOperation = 'lighter';
-                ctx.strokeStyle = this.ultWallSlamActive ? '#ff4444' : '#8b5cf6';
-                ctx.lineWidth = 4;
-                ctx.globalAlpha = 0.5;
-                ctx.beginPath();
-                ctx.arc(0, 0, this.radius + 8, -halfArc, halfArc);
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 8, -halfArc, halfArc);
-            ctx.lineWidth = 12;
-            ctx.strokeStyle = '#c4b5fd';
-            ctx.lineCap = 'round';
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 8, -halfArc, halfArc);
-            ctx.lineWidth = 5;
-            ctx.strokeStyle = '#8b5cf6';
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 12, -halfArc * 0.85, halfArc * 0.85);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = this.ultWallSlamActive ? '#ff6666' : '#a78bfa';
-            ctx.stroke();
-
-            // End Shieldbearer draw
-        } else if (this.typeKey === 'THUNDER_MAGE') {
-            ctx.fillStyle = '#00FFFF';
-            ctx.beginPath();
-            ctx.arc(this.radius, 0, 6, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (this.typeKey === 'NINJA') {
-            ctx.fillStyle = '#ffd700';
-            ctx.fillRect(-this.radius - 10, -5, 15, 4);
-            ctx.fillRect(-this.radius - 10, 1, 15, 4);
-        } else if (this.typeKey === 'CYBORG') {
-            ctx.fillStyle = '#ffaa00';
-            ctx.beginPath();
-            ctx.arc(this.radius, 0, 5, 0, Math.PI * 2); // Eye/Core
-            ctx.fill();
-        } else if (this.typeKey === 'AXEMAN') {
-            // === DOUBLE-SIDED BATTLEAXE (Slim & Long) ===
-            const handleLength = 48;
-            const handleStart = this.radius - 5;
-            const bladeCenter = handleStart + handleLength - 5;
-
-            // Handle shadow (depth)
-            ctx.fillStyle = '#3E2723';
-            ctx.fillRect(handleStart, -1, handleLength, 4);
-
-            // Main wooden handle (slimmer)
-            ctx.fillStyle = '#5D4037';
-            ctx.fillRect(handleStart, -2, handleLength, 4);
-
-            // Handle grip wrapping
-            ctx.strokeStyle = '#4E342E';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < 6; i++) {
-                const gx = handleStart + 8 + i * 6;
-                ctx.beginPath();
-                ctx.moveTo(gx, -2);
-                ctx.lineTo(gx + 2, 2);
-                ctx.stroke();
-            }
-
-            // Handle end cap (pommel - smaller)
-            ctx.fillStyle = '#757575';
-            ctx.beginPath();
-            ctx.arc(handleStart + 2, 0, 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#9E9E9E';
-            ctx.beginPath();
-            ctx.arc(handleStart + 2, -1, 1.5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Metal collar where blades attach (slimmer)
-            ctx.fillStyle = '#616161';
-            ctx.fillRect(bladeCenter - 3, -4, 6, 8);
-            ctx.fillStyle = '#9E9E9E';
-            ctx.fillRect(bladeCenter - 2, -3, 4, 6);
-
-            // === TOP BLADE (slimmer, longer) ===
-            ctx.beginPath();
-            ctx.moveTo(bladeCenter - 2, -4);
-            // Curve up to blade peak (reduced height from 26 to 18)
-            ctx.quadraticCurveTo(bladeCenter - 5, -12, bladeCenter + 8, -18);
-            // Sharp cutting edge curving to tip (extended reach)
-            ctx.quadraticCurveTo(bladeCenter + 26, -14, bladeCenter + 24, -5);
-            // Blade beard (lower edge curves back)
-            ctx.quadraticCurveTo(bladeCenter + 16, -4, bladeCenter + 2, -4);
-            ctx.closePath();
-
-            // Blade gradient fill
-            const topGrad = ctx.createLinearGradient(bladeCenter, -18, bladeCenter + 24, -4);
-            topGrad.addColorStop(0, '#78909C');
-            topGrad.addColorStop(0.5, '#B0BEC5');
-            topGrad.addColorStop(1, '#ECEFF1');
-            ctx.fillStyle = topGrad;
-            ctx.fill();
-
-            // Blade edge highlight
-            ctx.strokeStyle = '#ECEFF1';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(bladeCenter + 8, -18);
-            ctx.quadraticCurveTo(bladeCenter + 26, -14, bladeCenter + 24, -5);
-            ctx.stroke();
-
-            // === BOTTOM BLADE (mirror) ===
-            ctx.beginPath();
-            ctx.moveTo(bladeCenter - 2, 4);
-            ctx.quadraticCurveTo(bladeCenter - 5, 12, bladeCenter + 8, 18);
-            ctx.quadraticCurveTo(bladeCenter + 26, 14, bladeCenter + 24, 5);
-            ctx.quadraticCurveTo(bladeCenter + 16, 4, bladeCenter + 2, 4);
-            ctx.closePath();
-
-            const botGrad = ctx.createLinearGradient(bladeCenter, 18, bladeCenter + 24, 4);
-            botGrad.addColorStop(0, '#78909C');
-            botGrad.addColorStop(0.5, '#B0BEC5');
-            botGrad.addColorStop(1, '#ECEFF1');
-            ctx.fillStyle = botGrad;
-            ctx.fill();
-
-            // Bottom blade edge highlight
-            ctx.strokeStyle = '#ECEFF1';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(bladeCenter + 8, 18);
-            ctx.quadraticCurveTo(bladeCenter + 26, 14, bladeCenter + 24, 5);
-            ctx.stroke();
-
-            // Blood effect on axe if combo hits > 0
-            if (this.axemanHits > 0) {
-                ctx.globalAlpha = 0.6 + (this.axemanHits * 0.1);
-                // Blood drips on top blade
-                ctx.fillStyle = '#8B0000';
-                ctx.beginPath();
-                ctx.ellipse(bladeCenter + 16, -10, 3, 4, 0.3, 0, Math.PI * 2);
-                ctx.fill();
-                // Blood drips on bottom blade
-                ctx.beginPath();
-                ctx.ellipse(bladeCenter + 14, 8, 2, 4, -0.3, 0, Math.PI * 2);
-                ctx.fill();
-                // Dripping effect
-                if (this.axemanHits >= 3) {
-                    ctx.fillStyle = '#ff0000';
-                    ctx.beginPath();
-                    ctx.ellipse(bladeCenter + 18, -15, 1.5, 3, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.globalAlpha = 1.0;
-            }
-        } else if (this.typeKey === 'BALLISTA') {
-            // === BALLISTA CROSSBOW ===
-            const bowLength = 50;
-            const bowStart = this.radius - 5;
-
-            // Crossbow stock (wooden base)
-            ctx.fillStyle = '#5D4037';
-            ctx.fillRect(bowStart, -4, 35, 8);
-
-            // Stock detail
-            ctx.fillStyle = '#4E342E';
-            ctx.fillRect(bowStart + 5, -3, 25, 6);
-
-            // Crossbow arms (bent bow shape)
-            ctx.strokeStyle = '#3E2723';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(bowStart + 30, 0);
-            ctx.quadraticCurveTo(bowStart + 35, -25, bowStart + 20, -30);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(bowStart + 30, 0);
-            ctx.quadraticCurveTo(bowStart + 35, 25, bowStart + 20, 30);
-            ctx.stroke();
-
-            // Bow arms inner (lighter wood)
-            ctx.strokeStyle = '#6D4C41';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(bowStart + 30, 0);
-            ctx.quadraticCurveTo(bowStart + 34, -22, bowStart + 22, -28);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(bowStart + 30, 0);
-            ctx.quadraticCurveTo(bowStart + 34, 22, bowStart + 22, 28);
-            ctx.stroke();
-
-            // Bowstring
-            ctx.strokeStyle = '#D7CCC8';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(bowStart + 20, -30);
-            ctx.lineTo(bowStart + 10, 0);
-            ctx.lineTo(bowStart + 20, 30);
-            ctx.stroke();
-
-            // Loaded bolt
-            ctx.fillStyle = '#4A4A4A';
-            ctx.fillRect(bowStart + 8, -2, 28, 4);
-
-            // Bolt head
-            ctx.fillStyle = '#757575';
-            ctx.beginPath();
-            ctx.moveTo(bowStart + 38, 0);
-            ctx.lineTo(bowStart + 32, -4);
-            ctx.lineTo(bowStart + 32, 4);
-            ctx.closePath();
-            ctx.fill();
-
-            // Metal reinforcement at center
-            ctx.fillStyle = '#616161';
-            ctx.fillRect(bowStart + 28, -6, 6, 12);
-        }
-        ctx.restore();
-
-        // Ballista Barriers Visual (4 sides) - rotate with fighter
-        if (this.ballistaBarriers) {
-            ctx.save();
-            // ctx.translate(this.x, this.y); // Removed double translation
-
-            // Visual copy of Shieldbearer shield style
-            const barrierDist = this.radius + 3;  // Closer to body like Shieldbearer
-            // Shieldbearer is Math.PI * 0.65 (117 degrees)
-            // We need 4 shields fitting in 360 without overlap. 360/4 = 90.
-            // Let's use 70 degrees (approx 1.22 rad) to leave gaps
-            const arcAngle = 1.22;
-            const halfArc = arcAngle / 2;
-
-            for (const barrier of this.ballistaBarriers) {
-                if (barrier.destroyed) continue;
-
-                const hpRatio = barrier.hp / barrier.maxHp;
-                // Add fighter's angle so barriers rotate with the fighter
-                const adjustedAngle = barrier.angle + this.angle;
-
-                // --- Shieldbearer 1:1 Visual Style ---
-
-                if (hpRatio < 1.0) {
-                    ctx.save();
-                    ctx.globalCompositeOperation = 'lighter';
-                    ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : '#FF0000';
-                    ctx.lineWidth = 4;
-                    ctx.globalAlpha = 0.3 * (1 - hpRatio);
-                    ctx.beginPath();
-                    ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
-                    ctx.stroke();
-                    ctx.restore();
-                }
-
-                // 1. Thick Outer Base (lighter)
-                ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
-                ctx.lineWidth = 12;
-                ctx.strokeStyle = `rgba(210, 180, 140, ${0.6 + hpRatio * 0.4})`; // Tan/Wood light color
-                ctx.lineCap = 'round';
-                ctx.stroke();
-
-                // 2. Main Inner Shield (darker core)
-                ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 3, adjustedAngle - halfArc, adjustedAngle + halfArc);
-                ctx.lineWidth = 5;
-                ctx.strokeStyle = '#8B4513'; // SaddleBrown
-                ctx.stroke();
-
-                // 3. Detail Line (HP Indicator / Rim)
-                ctx.beginPath();
-                ctx.arc(0, 0, barrierDist + 7, adjustedAngle - halfArc * 0.85, adjustedAngle + halfArc * 0.85);
-                ctx.lineWidth = 2;
-                // Color change based on HP state
-                ctx.strokeStyle = hpRatio > 0.5 ? '#DAA520' : (hpRatio > 0.25 ? '#FF8C00' : '#FF0000');
-                ctx.stroke();
-
-                // Draw HP text (same font size as Cyborg: 12px, no shield icon)
-                const textX = Math.cos(adjustedAngle) * (barrierDist + 18);
-                const textY = Math.sin(adjustedAngle) * (barrierDist + 18);
-                ctx.fillStyle = '#DAA520';
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 2;
-                ctx.font = 'bold 12px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.strokeText(Math.ceil(barrier.hp), textX, textY);
-                ctx.fillText(Math.ceil(barrier.hp), textX, textY);
-
-                // End barrier draw
-            }
-
-            ctx.restore();
-        }
-
-        // Force Field Visual
-        if (this.shieldHp > 0) {
-            ctx.save();
-            ctx.globalAlpha = 0.3 + (this.shieldHp / this.maxShield) * 0.3;
-            ctx.strokeStyle = '#00ffff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
-            ctx.fill();
-            ctx.restore();
-
-            // Sticky Shield HP UI
-            ctx.save();
-            ctx.fillStyle = "#00ffff";
-            ctx.strokeStyle = "#000000";
-            ctx.lineWidth = 2;
-            ctx.font = "bold 12px monospace";
-            ctx.textAlign = "center";
-            ctx.strokeText(`🛡️${Math.ceil(this.shieldHp)}`, 0, -this.radius - 15);
-            ctx.fillText(`🛡️${Math.ceil(this.shieldHp)}`, 0, -this.radius - 15);
-            ctx.restore();
-        }
-
-        // Cursed Shield Visual (King of Curses)
-        if (this.cursedShield > 0) {
-            ctx.save();
-            // Pulsing/Sinister effect
-            const pulse = (Math.sin(Date.now() / 200) + 1) * 0.5; // 0 to 1
-            ctx.globalAlpha = 0.4 + pulse * 0.2;
-
-            // Dark Red / Crimson jagged aura
-            ctx.strokeStyle = '#DC143C';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            // Jagged circle
-            const shieldRadius = this.radius + 8;
-            for (let i = 0; i <= 360; i += 10) {
-                const angle = i * Math.PI / 180;
-                const r = shieldRadius + (Math.random() * 4 - 2); // Jitter
-                const x = Math.cos(angle) * r;
-                const y = Math.sin(angle) * r;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
-            ctx.stroke();
-
-            ctx.fillStyle = 'rgba(220, 20, 60, 0.15)';
-            ctx.fill();
-
-            ctx.restore();
-
-            // Shield HP UI
-            ctx.save();
-            ctx.fillStyle = "#DC143C";
-            ctx.strokeStyle = "#000000";
-            ctx.lineWidth = 2;
-            ctx.font = "bold 12px monospace";
-            ctx.textAlign = "center";
-            ctx.strokeText(`👹${Math.ceil(this.cursedShield)}`, 0, -this.radius - 15);
-            ctx.fillText(`👹${Math.ceil(this.cursedShield)}`, 0, -this.radius - 15);
-            ctx.restore();
-        }
-
-        ctx.fillStyle = this.color;
-        if (this.activeEffects.ultActive) {
-            // Optimized Ult Aura (Zero-Blur)
-            ctx.save();
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 4;
-            ctx.globalAlpha = 0.5;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 3, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
-        }
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.rotate(this.angle);
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath();
-        ctx.arc(this.radius / 2, 0, this.radius / 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.rotate(-this.angle);
-
-        ctx.fillStyle = "#ffffff";
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 3;
-        ctx.font = "bold 16px monospace";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.strokeText(Math.ceil(this.hp), 0, 1);
-        ctx.fillText(Math.ceil(this.hp), 0, 1);
-
-        ctx.restore();
-    }
 }

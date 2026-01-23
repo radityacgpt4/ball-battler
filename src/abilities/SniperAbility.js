@@ -11,6 +11,8 @@ import { Ability } from './Ability.js';
 import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
+import { SniperRenderer, ClaymoreRenderer } from '../components/ProjectileRenderers.js';
+import { LinearMovement, MineBehavior, SniperTrailBehavior } from '../components/ProjectileBehaviors.js';
 
 export class SniperAtkAbility extends Ability {
     constructor(config, slot) {
@@ -20,6 +22,7 @@ export class SniperAtkAbility extends Ability {
         this.damage = config.damage || 12;
         this.stunDuration = config.stun || 60;
         this.projectileSpeed = config.projectileSpeed || 20;
+        this.ultProjectileSpeed = config.ultProjectileSpeed || 25; // Faster during ult
         this.projectileRadius = config.projectileRadius || 5;
         this.ultProjectileRadius = config.ultProjectileRadius || 8;
         this.recoilForce = config.recoilForce || 5;
@@ -29,6 +32,8 @@ export class SniperAtkAbility extends Ability {
     }
 
     update(fighter, context) {
+        if (fighter.status.stun > 0) return;
+
         const { game } = context;
 
         // Sync laser color with Ult state
@@ -84,12 +89,14 @@ export class SniperAtkAbility extends Ability {
 
         fighter.cooldowns.atk = this.cooldown;
 
+        const speed = fighter.activeEffects.ultActive ? this.ultProjectileSpeed : this.projectileSpeed;
+
         const p = new Projectile(
             fighter,
             fighter.x + Math.cos(fighter.angle) * 20,
             fighter.y + Math.sin(fighter.angle) * 20,
             fighter.angle,
-            this.projectileSpeed,
+            speed,
             this.damage,
             game
         );
@@ -97,6 +104,12 @@ export class SniperAtkAbility extends Ability {
         p.isSniperShot = true;
         p.stunDuration = this.stunDuration;
         p.radius = this.projectileRadius;
+
+        p.renderer = new SniperRenderer();
+        p.addComponent(new LinearMovement());
+        // Standard trail for normal shots or ult shots? 
+        // Logic in Projectile.js for isSniperShot used trail.
+        p.addComponent(new SniperTrailBehavior());
 
         // Check for ULT buff
         if (fighter.activeEffects.ultActive) {
@@ -155,6 +168,9 @@ export class ClaymoreAbility extends Ability {
         p.lifeTime = this.lifeTime;
         p.slowDuration = this.slowDuration;
         p.radius = this.triggerRadius;
+
+        p.renderer = new ClaymoreRenderer();
+        p.addComponent(new MineBehavior(0.9));
 
         game.projectiles.push(p);
         audioEngine.playTone(600, 'sine', 0.1, 0.1);

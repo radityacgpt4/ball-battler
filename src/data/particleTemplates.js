@@ -169,14 +169,18 @@ export const PARTICLE_TEMPLATES = {
     },
     'bankaiPulse': {
         layers: [
-            // Black core shockwave
-            { type: 'shockwave', color: '#1a1a2e', maxRadius: 160, life: 0.8, lineWidth: 12 },
-            // Purple energy ring
-            { type: 'shockwave', color: '#8B00FF', maxRadius: 180, life: 0.6, lineWidth: 4 },
-            // Lightning crackles
-            { type: 'lightning', count: 8, color: '#9400D3', spread: 150, life: 0.5, width: 2 },
-            // Floating text
-            { type: 'text', text: 'BANKAI!', color: '#8B00FF', offset: { x: 0, y: -40 } }
+            // 1. Core Energy Burst (Dark Purple/Black)
+            { type: 'burst', count: 30, color: ['#1a1a2e', '#4a0080', '#8B00FF'], speed: { min: 10, max: 20 }, life: 0.8, shape: 'flame' },
+            // 2. Thick Void Shockwave (Main aura)
+            { type: 'shockwave', color: '#1a1a2e', maxRadius: 180, life: 1.0, lineWidth: 20 },
+            // 3. Spiritual Pressure Ring (Purple)
+            { type: 'shockwave', color: '#8B00FF', maxRadius: 160, life: 0.8, lineWidth: 10 },
+            // 4. White-hot Core Burst
+            { type: 'burst', count: 10, color: '#FFFFFF', speed: { min: 5, max: 15 }, life: 0.5, shape: 'flash', size: 8 },
+            // 5. Intense Lightning crackles
+            { type: 'lightning', count: 15, color: '#9400D3', spread: 180, life: 0.6, width: 4 },
+            // 6. Combat Text Feedback
+            { type: 'text', text: 'TENSA ZANGETSU!', color: '#8B00FF', offset: { x: 0, y: -60 } }
         ]
     }
 };

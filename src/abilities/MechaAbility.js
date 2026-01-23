@@ -323,18 +323,19 @@ export class MechaAtkAbility extends Ability {
                 if (!fighter.mechaHitList) fighter.mechaHitList = [];
                 fighter.mechaHitList.push(enemy.id);
 
-                enemy.takeDamage(this.meleeDamage, false, false, fighter);
+                const dealt = enemy.takeDamage(this.meleeDamage, false, false, fighter);
+                if (dealt !== false) {
+                    // Blade slash effect
+                    game.particles.spawnSlash(
+                        fighter.x, fighter.y,
+                        enemy.x, enemy.y,
+                        '#00FFFF', 30
+                    );
+                    game.particles.spawn(enemy.x, enemy.y, '#00FFFF', 8);
 
-                // Blade slash effect
-                game.particles.spawnSlash(
-                    fighter.x, fighter.y,
-                    enemy.x, enemy.y,
-                    '#00FFFF', 30
-                );
-                game.particles.spawn(enemy.x, enemy.y, '#00FFFF', 8);
-
-                audioEngine.playSwordSwing();
-                logger.log(`${fighter.name} landed a blade strike on ${enemy.name}!`, 'combat');
+                    audioEngine.playSwordSwing();
+                    logger.log(`${fighter.name} landed a blade strike on ${enemy.name}!`, 'combat');
+                }
             }
         }
 
@@ -529,7 +530,7 @@ export class MechaDefAbility extends Ability {
         const { game, enemies } = context;
 
         // Counter Protocol: Trigger counter-attack after dodge (when ULT is active)
-        if (fighter.mechaJustDodged && fighter.mechaCounterProtocolActive) {
+        if (fighter.mechaJustDodged && fighter.mechaUltActive) {
             fighter.mechaJustDodged = false;
             this.triggerCounterAttack(fighter, context);
         } else if (fighter.mechaJustDodged) {
@@ -768,7 +769,8 @@ export class MechaUltAbility extends Ability {
         // Activate Twin Cannon Protocol
         fighter.mechaUltActive = true;
         fighter.mechaUltTimer = this.duration;
-        fighter.activeEffects.ultActive = true; // For general visual hooks
+        fighter.activeEffects.ultActive = true;
+        fighter.activeEffects.ultTimer = this.duration; // Sync with global timer to prevent Fighter.js deactivation
 
         // Activation visuals
         game.particles.spawnShockwave(fighter.x, fighter.y, '#FFFFFF', 80, 0.5);

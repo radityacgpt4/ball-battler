@@ -142,14 +142,14 @@ export const weaponGeometry = {
     // ICHIGO (Death God Swordsman) - Zangetsu (Shikai)
     // Right-angled trapezoid / scalene triangle with truncated base
     // ========================================================================
-    ICHIGO_ZANGETSU: {
+    SOUL_REAPER_ZANGETSU: {
         type: 'single_blade',
-        bladeLength: 55, // Oversized khyber knife
-        bladeWidth: 14, // Wide blade at base
-        tipWidth: 4, // Narrower tip
+        bladeLength: 60, // Oversized khyber knife
+        bladeWidth: 16, // Wide blade at base
+        tipWidth: 5, // Narrower tip
         startFromEdge: true,
 
-        // Blade shape: Right-angled trapezoid (like Ichigo's zanpakuto)
+        // Blade shape: Oversized Khyber Knife
         bladeOffsets: [
             { x: 0, y: 0, rotation: 0 }
         ]
@@ -159,9 +159,9 @@ export const weaponGeometry = {
     // ICHIGO (Death God Swordsman) - Tensa Zangetsu (Bankai)
     // Thin black blade - compressed power
     // ========================================================================
-    ICHIGO_TENSA_ZANGETSU: {
+    SOUL_REAPER_TENSA: {
         type: 'single_blade',
-        bladeLength: 48, // Slightly shorter but faster
+        bladeLength: 60, // Synced with Shikai
         bladeWidth: 4, // Very thin
         startFromEdge: true,
 

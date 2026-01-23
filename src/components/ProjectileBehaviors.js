@@ -799,8 +799,10 @@ export class MechaBeamBehavior {
 
         // If hitting a target, apply direct damage + stun first
         if (target) {
-            target.takeDamage(p.damage, false, false, p.owner);
-            target.applyStatus('STUN', p.stunDuration);
+            const dealt = target.takeDamage(p.damage, false, false, p.owner);
+            if (dealt !== false) {
+                target.applyStatus('STUN', p.stunDuration);
+            }
         }
 
         this.triggerExplosion(p, target);
@@ -820,13 +822,15 @@ export class MechaBeamBehavior {
 
             const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
             if (dist < p.explosionRadius + enemy.radius) {
-                enemy.takeDamage(p.explosionDamage, false, false, p.owner);
-                enemy.applyStatus('STUN', p.stunDuration);
+                const dealt = enemy.takeDamage(p.explosionDamage, false, false, p.owner);
+                if (dealt !== false) {
+                    enemy.applyStatus('STUN', p.stunDuration);
 
-                // Knockback
-                const angle = Math.atan2(enemy.y - p.y, enemy.x - p.x);
-                enemy.dx += Math.cos(angle) * 6;
-                enemy.dy += Math.sin(angle) * 6;
+                    // Knockback
+                    const angle = Math.atan2(enemy.y - p.y, enemy.x - p.x);
+                    enemy.dx += Math.cos(angle) * 6;
+                    enemy.dy += Math.sin(angle) * 6;
+                }
             }
         }
 
@@ -922,8 +926,8 @@ export class GetsugaBehavior {
 
         // If hitting a target, apply direct damage + stun first
         if (target) {
-            target.takeDamage(p.damage, false, false, p.owner);
-            if (p.statusEffect) {
+            const dealt = target.takeDamage(p.damage, false, false, p.owner);
+            if (dealt !== false && p.statusEffect) {
                 target.applyStatus(p.statusEffect.type, p.statusEffect.duration);
             }
         }

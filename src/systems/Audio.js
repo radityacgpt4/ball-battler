@@ -367,6 +367,13 @@ export class AudioEngine {
         setTimeout(() => this.playTone(880, 'triangle', 0.3, 0.3), 200);
         setTimeout(() => this.playTone(1320, 'sine', 0.2, 0.2), 350);
     }
+
+    playBankaiPulse() {
+        // Shorter, sharper version of the Bankai sound for the pulsating pressure
+        this.playTone(100, 'sawtooth', 0.3, 0.4, 600);
+        this.playNoise(0.25, 0.3, 1200);
+        this.playTone(1500, 'sine', 0.1, 0.1, 800);
+    }
 }
 
 

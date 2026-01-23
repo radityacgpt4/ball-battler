@@ -217,6 +217,10 @@ export class DivineGeneralUltAbility extends Ability {
 
         logger.log(`${fighter.name} activates PERSISTENT ADAPTATION!`, 'combat');
     }
+
+    stop(fighter, context) {
+        fighter.activeEffects.adaptationAbsorbing = false;
+    }
 }
 
 // DEF ability with ULT interaction

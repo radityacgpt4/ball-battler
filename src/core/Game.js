@@ -180,8 +180,20 @@ export class Game {
         this.particles = new ParticleSystem();
         this.combatText = new CombatTextHelper(this.particles);
 
-        this.entities.push(new Fighter(1, 100, 250, this.p1Type, FIGHTER_TYPES, this));
-        this.entities.push(new Fighter(2, 400, 250, this.p2Type, FIGHTER_TYPES, this));
+        const f1 = new Fighter(1, 100, 250, this.p1Type, FIGHTER_TYPES, this);
+        const f2 = new Fighter(2, 400, 250, this.p2Type, FIGHTER_TYPES, this);
+
+        // Randomize starting angles with "Anti-Facing" logic to prevent early shot advantage.
+        // F1 is on the left (x=100), facing right (0 rad) would hit F2.
+        // We force F1 to face AWAY from F2 (between PI/2 and 3PI/2).
+        f1.angle = Math.PI / 2 + Math.random() * Math.PI;
+
+        // F2 is on the right (x=400), facing left (PI rad) would hit F1.
+        // We force F2 to face AWAY from F1 (between -PI/2 and PI/2).
+        f2.angle = (Math.random() - 0.5) * Math.PI;
+
+        this.entities.push(f1);
+        this.entities.push(f2);
 
         this.createUI();
 

@@ -32,12 +32,12 @@ export class Fighter {
         this.angle = Math.random() * Math.PI * 2;
         this.isDead = false;
 
-        this.skills = stats.skills;
+        this.skills = stats.skills || {};
         this.cooldowns = { atk: 0, def: 0, ult: 0 };
         this.maxCooldowns = {
-            atk: stats.skills.atk.cooldown || 0,
-            def: stats.skills.def.cooldown || 0,
-            ult: stats.skills.ult.cooldown || 0
+            atk: (this.skills.atk && this.skills.atk.cooldown) || 0,
+            def: (this.skills.def && this.skills.def.cooldown) || 0,
+            ult: (this.skills.ult && this.skills.ult.cooldown) || 0
         };
 
         this.status = { stun: 0, bleed: 0, bleedTick: 0, slow: 0 };
@@ -80,12 +80,12 @@ export class Fighter {
         const abilities = { atk: null, def: null, ult: null };
 
         // Use AbilityRegistry for dynamic ability creation
-        abilities.atk = AbilityRegistry.create(skills.atk.type, skills.atk, 'atk');
-        abilities.def = AbilityRegistry.create(skills.def.type, skills.def, 'def');
-        abilities.ult = AbilityRegistry.create(skills.ult.type, skills.ult, 'ult', {
+        abilities.atk = skills.atk ? AbilityRegistry.create(skills.atk.type, skills.atk, 'atk') : null;
+        abilities.def = skills.def ? AbilityRegistry.create(skills.def.type, skills.def, 'def') : null;
+        abilities.ult = skills.ult ? AbilityRegistry.create(skills.ult.type, skills.ult, 'ult', {
             atkConfig: skills.atk,
             ProjectileClass: Projectile
-        });
+        }) : null;
 
         return abilities;
     }
@@ -476,5 +476,9 @@ export class Fighter {
         }
     }
 
-
+    heal(amount) {
+        this.hp = Math.min(this.hp + amount, this.maxHp);
+        this.game.combatText.healing(this.x, this.y - 20, amount);
+        logger.log(`${this.name} healed ${amount}. HP: ${this.hp}/${this.maxHp}`, 'combat');
+    }
 }

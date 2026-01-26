@@ -87,6 +87,7 @@ Projectiles no longer use "flags" (like `isMissile`) for behavior. Instead, they
     - `single_blade` / `dual_blades` - Line-based collision (swords, axes)
     - `orb_ring` - Multiple point collisions (Divine General's wheel)
     - `dual_fists` - Circle collision (Divine Brawler's melee range)
+    - ... Add more if user asked for new melee weapon type
 
 ### 4. Module Responsibilities (Where to Touch)
 

@@ -831,5 +831,57 @@ export const FIGHTER_TYPES = {
                 evasionHPThreshold: 0.5    // Starts scaling below 50% HP
             }
         }
+    },
+    SORCERER_INFINITY: {
+        name: "Sorcerer of Infinity",
+        color: "#ffffff", // Pure White / Light Blue Eyes theme
+        hp: 100, mass: 1.1, speed: 4.8, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Cursed Technique Reversal: Red",
+                desc: "Fires a repelling red orb. Deals massive damage to enemies trapped in Blue.",
+                type: "GOJO_RED",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 90,
+                damage: 7,
+                critDamage: 15,
+                projectileSpeed: 11,
+                knockback: 18,
+                radius: 12,
+                range: 400,
+                explosionRadius: 60,
+                explodeOnWall: true
+            },
+            def: {
+                name: "Cursed Technique Amplification: Blue",
+                desc: "Creates a powerful attractive force that traps enemies.",
+                type: "GOJO_BLUE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                duration: 180,
+                radius: 120,
+                pullStrength: 2.1,
+                damage: 0,
+                launchSpeed: 2.9,
+                friction: 0.87,
+                growthSpeed: 0.3
+            },
+            ult: {
+                name: "Limitless: Infinity",
+                desc: "Stops projectiles and slows enemies within range. Frozen projectiles expire after 2s.",
+                type: "INFINITY_VOID",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 240,
+                activeDuration: 180,
+                rechargeTime: 90,
+                stopRadius: 100,
+                slowRadius: 200,
+                slowAmount: 0.8,
+                projectileExpiry: 120
+            }
+        }
     }
 };

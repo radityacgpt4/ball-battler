@@ -182,5 +182,32 @@ export const PARTICLE_TEMPLATES = {
             // 6. Combat Text Feedback
             { type: 'text', text: 'TENSA ZANGETSU!', color: '#8B00FF', offset: { x: 0, y: -60 } }
         ]
+    },
+
+    // ============================================
+    // FIGHTER SPECIFIC: SORCERER OF INFINITY (Gojo)
+    // ============================================
+    'blueOrbImplosion': {
+        layers: [
+            // Sucking effect (Reverse burst? or just inward looking shockwaves)
+            { type: 'shockwave', color: '#00BFFF', maxRadius: 120, life: 0.8, lineWidth: 8 },
+            { type: 'burst', count: 20, color: ['#00BFFF', '#1E90FF', '#FFFFFF'], speed: { min: 2, max: 8 }, life: 0.6, shape: 'dot' }, // Debris
+            { type: 'burst', count: 10, color: '#FFFFFF', speed: 0, life: 0.4, shape: 'flash', size: 10 }
+        ]
+    },
+    'redOrbExplosion': {
+        layers: [
+            // Massive Repulsion
+            { type: 'shockwave', color: '#DC143C', maxRadius: 150, life: 0.6, lineWidth: 15 }, // Red shockwave
+            { type: 'shockwave', color: '#000000', maxRadius: 100, life: 0.8, lineWidth: 4 }, // Black rim
+            { type: 'burst', count: 40, color: ['#DC143C', '#FF0000', '#000000'], speed: { min: 15, max: 35 }, life: 0.8, shape: 'dot' },
+            { type: 'lightning', count: 15, color: '#DC143C', spread: 120, life: 0.5, width: 3 }
+        ]
+    },
+    'infinityAura': {
+        layers: [
+            // Subtle barrier effect
+            { type: 'shockwave', color: '#ffffff', maxRadius: 110, life: 0.5, lineWidth: 2 }
+        ]
     }
 };

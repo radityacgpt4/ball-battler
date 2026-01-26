@@ -12,7 +12,7 @@ import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { SniperRenderer, ClaymoreRenderer } from '../components/ProjectileRenderers.js';
-import { LinearMovement, MineBehavior, SniperTrailBehavior } from '../components/ProjectileBehaviors.js';
+import { LinearMovement, ClaymoreBehavior, SniperTrailBehavior } from '../components/ProjectileBehaviors.js';
 
 export class SniperAtkAbility extends Ability {
     constructor(config, slot) {
@@ -170,7 +170,7 @@ export class ClaymoreAbility extends Ability {
         p.radius = this.triggerRadius;
 
         p.renderer = new ClaymoreRenderer();
-        p.addComponent(new MineBehavior(0.9));
+        p.addComponent(new ClaymoreBehavior());
 
         game.projectiles.push(p);
         audioEngine.playTone(600, 'sine', 0.1, 0.1);

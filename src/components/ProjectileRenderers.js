@@ -609,6 +609,124 @@ export class MechaBeamRenderer {
         ctx.restore();
     }
 }
+
+export class GojoRedRenderer {
+    draw(ctx, p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+
+        const time = Date.now();
+
+        // Pulsing Effect
+        const pulseScale = 1 + Math.sin(time * 0.015) * 0.15;
+        const pulseAlpha = 0.6 + Math.sin(time * 0.02) * 0.2;
+
+        // === 1. OUTER REPULSIVE FORCE RINGS (Animated) ===
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+
+        // Expanding ring 1 (Reduced from 2.5 to 2.0)
+        const ring1Radius = p.radius * 2.0 + (time % 600) / 600 * p.radius * 0.8;
+        const ring1Alpha = 0.25 - (time % 600) / 600 * 0.25;
+        ctx.globalAlpha = ring1Alpha;
+        ctx.strokeStyle = '#FF4444';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, ring1Radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Expanding ring 2 (offset timing, reduced)
+        const ring2Radius = p.radius * 2.0 + ((time + 300) % 600) / 600 * p.radius * 0.8;
+        const ring2Alpha = 0.25 - ((time + 300) % 600) / 600 * 0.25;
+        ctx.globalAlpha = ring2Alpha;
+        ctx.beginPath();
+        ctx.arc(0, 0, ring2Radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // === 2. OUTER AURA GLOW ===
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.2;
+        const auraGradient = ctx.createRadialGradient(0, 0, p.radius, 0, 0, p.radius * 2.0);
+        auraGradient.addColorStop(0, 'rgba(255, 0, 0, 0.6)');
+        auraGradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.3)');
+        auraGradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
+        ctx.fillStyle = auraGradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, p.radius * 2.0 * pulseScale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === 3. ROTATING ENERGY LINES ===
+        ctx.save();
+        ctx.rotate(time * 0.003);
+        ctx.strokeStyle = '#FF6666';
+        ctx.lineWidth = 1.2;
+        ctx.globalAlpha = 0.4;
+        for (let i = 0; i < 4; i++) {
+            const angle = (Math.PI * 2 / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(angle) * p.radius * 1.3, Math.sin(angle) * p.radius * 1.3);
+            ctx.lineTo(Math.cos(angle) * p.radius * 1.6, Math.sin(angle) * p.radius * 1.6);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // === 4. STATIC RED RING ===
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = pulseAlpha * 0.6;
+        ctx.strokeStyle = '#DC143C';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, p.radius * 1.3 * pulseScale, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // === 5. CORE ORB (Radial Gradient) ===
+        ctx.globalAlpha = 1.0;
+        const coreGradient = ctx.createRadialGradient(
+            -p.radius * 0.2, -p.radius * 0.2, 0,
+            0, 0, p.radius * pulseScale
+        );
+        coreGradient.addColorStop(0, '#FF4444');
+        coreGradient.addColorStop(0.5, '#CC0000');
+        coreGradient.addColorStop(1, '#660000');
+        ctx.fillStyle = coreGradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, p.radius * pulseScale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === 6. CORE EDGE HIGHLIGHT ===
+        ctx.strokeStyle = '#FF0000';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.arc(0, 0, p.radius * pulseScale, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // === 7. INNER SPECULARITY (3D Effect) ===
+        ctx.globalAlpha = 0.9;
+        const specGradient = ctx.createRadialGradient(
+            -p.radius * 0.3, -p.radius * 0.3, 0,
+            -p.radius * 0.3, -p.radius * 0.3, p.radius * 0.5
+        );
+        specGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+        specGradient.addColorStop(0.5, 'rgba(255, 200, 200, 0.4)');
+        specGradient.addColorStop(1, 'rgba(255, 100, 100, 0)');
+        ctx.fillStyle = specGradient;
+        ctx.beginPath();
+        ctx.arc(-p.radius * 0.25, -p.radius * 0.25, p.radius * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === 8. INNER ENERGY CORE ===
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(0, 0, p.radius * 0.3 * pulseScale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
 // =============================================================================
 // ICHIGO - Getsuga Tenshou (Crescent Moon Fang)
 // =============================================================================
@@ -734,3 +852,80 @@ export class GetsugaTenshouRenderer {
     }
 }
 
+
+export class BlueOrbRenderer {
+    draw(ctx, p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(Date.now() * 0.005); // Rotate slowly
+
+        // 1. Attraction Field (Faint)
+        ctx.globalAlpha = 0.2;
+        ctx.strokeStyle = '#00BFFF';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, 100, 0, Math.PI * 2); // Effect Radius Visual
+        ctx.stroke();
+
+        // 2. Swirling Matter
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = '#1E90FF';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            const startIdx = (Date.now() / 200 + i * 2) % (Math.PI * 2);
+            ctx.arc(0, 0, 15 + i * 5, startIdx, startIdx + Math.PI);
+            ctx.stroke();
+        }
+
+        // 3. Core
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = '#00BFFF'; // Deep Sky Blue
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. Inner Bright Core
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(0, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+export class RedOrbRenderer {
+    draw(ctx, p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+
+        // Pulsing
+        const pulse = 1 + Math.sin(Date.now() * 0.02) * 0.2;
+        ctx.scale(pulse, pulse);
+
+        // 1. Crimson Aura
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#DC143C';
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Black Core (Menacing)
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3. Red Sparks/Cracks
+        ctx.strokeStyle = '#FF0000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-4, -4); ctx.lineTo(4, 4);
+        ctx.moveTo(4, -4); ctx.lineTo(-4, 4);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}

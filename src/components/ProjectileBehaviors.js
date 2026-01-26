@@ -967,3 +967,379 @@ export class GetsugaBehavior {
         }
     }
 }
+
+// ===================================
+// GOJO BEHAVIORS
+// ===================================
+export class BlueOrbBehavior {
+    constructor(config) {
+        this.damageCore = config.damageCore || 5;
+        this.damageEdge = config.damageEdge || 3;
+        this.tickRate = config.tickRate || 60;
+        this.pullStrength = config.pullStrength || 2.0; // Increased for noticeable effect
+        this.coreRadius = config.coreRadius || 20;
+        this.effectRadius = config.effectRadius || 100;
+        this.damageTimer = 0; // Start at 0 so first tick deals damage immediately
+    }
+
+    update(p, timeScale) {
+        p.lifeTime = (p.lifeTime || 180) - 1 * timeScale;
+        if (p.lifeTime <= 0) {
+            p.active = false;
+            p.game.particles.spawnEffect('blueOrbImplosion', p.x, p.y);
+            return;
+        }
+
+        // Move linearly (slow)
+        p.x += p.dx * timeScale;
+        p.y += p.dy * timeScale;
+
+        // Die on wall
+        const bounds = p.game.arenaBounds;
+        if (p.x < bounds.x || p.x > bounds.x + bounds.width ||
+            p.y < bounds.y || p.y > bounds.y + bounds.height) {
+            p.active = false;
+            p.game.particles.spawnEffect('blueOrbImplosion', p.x, p.y);
+            return;
+        }
+
+        // Ignore standard collision cleanup
+        p.ignoreBounds = true;
+        p.handlesOwnCollision = true;
+
+        // ATTRACTION & DoT
+        const enemies = p.game.entities.filter(e => e !== p.owner && !e.isDead);
+
+        // Decrement damage timer
+        this.damageTimer -= timeScale;
+
+        for (const e of enemies) {
+            const dist = Physics.dist(p.x, p.y, e.x, e.y);
+
+            // 1. Gravity Pull - ALWAYS active
+            if (dist < this.effectRadius && dist > 0) {
+                // Calculate pull vector (towards the orb)
+                const angle = Math.atan2(p.y - e.y, p.x - e.x);
+                // Stronger pull when closer (inverse relationship)
+                const strength = this.pullStrength * (1 - (dist / this.effectRadius));
+
+                // Add velocity to enemy
+                e.dx += Math.cos(angle) * strength * timeScale;
+                e.dy += Math.sin(angle) * strength * timeScale;
+
+                // Apply friction to make pull more noticeable
+                e.dx *= 0.92;
+                e.dy *= 0.92;
+            }
+
+            // 2. DoT Logic - Tick damage
+            if (this.damageTimer <= 0) {
+                if (dist < this.coreRadius + e.radius) {
+                    e.takeDamage(this.damageCore, false, true, p.owner);
+                    p.game.particles.spawn(e.x, e.y, '#00BFFF', 3);
+                } else if (dist < this.effectRadius + e.radius) {
+                    e.takeDamage(this.damageEdge, false, true, p.owner);
+                    p.game.particles.spawn(e.x, e.y, '#1E90FF', 2);
+                }
+            }
+        }
+
+        // Reset damage timer after processing all enemies
+        if (this.damageTimer <= 0) {
+            this.damageTimer = this.tickRate;
+        }
+
+        // Deflect/Suck Projectiles
+        p.game.projectiles.forEach(proj => {
+            if (proj === p || proj.owner === p.owner || !proj.active) return;
+            const d = Physics.dist(p.x, p.y, proj.x, proj.y);
+            if (d < this.effectRadius) {
+                const ang = Math.atan2(p.y - proj.y, p.x - proj.x);
+                proj.dx += Math.cos(ang) * 0.8 * timeScale;
+                proj.dy += Math.sin(ang) * 0.8 * timeScale;
+            }
+        });
+    }
+}
+
+export class RedOrbBehavior {
+    constructor(config) {
+        this.knockback = config.knockback || 25;
+        this.damage = config.damage || 5;
+    }
+
+    update(p, timeScale) {
+        // Red orb uses standard linear movement, just track lifetime
+        // Movement handled by LinearMovement component
+    }
+
+    onImpact(p, target) {
+        // Red Effect: Huge Knockback
+        if (target) {
+            // Apply Damage
+            target.takeDamage(this.damage, false, false, p.owner);
+
+            // Apply Knockback
+            const angle = Math.atan2(target.y - p.y, target.x - p.x);
+            target.dx += Math.cos(angle) * this.knockback;
+            target.dy += Math.sin(angle) * this.knockback;
+            target.applyStatus('STUN', 30); // Brief stun
+
+            p.game.particles.spawnEffect('redOrbExplosion', p.x, p.y);
+            audioEngine.play('explosion');
+        } else {
+            // Wall hit
+            p.game.particles.spawnEffect('redOrbExplosion', p.x, p.y);
+            audioEngine.play('explosion');
+        }
+
+        p.active = false;
+        p.hasHandledImpact = true;
+    }
+}
+
+export class GojoRedBehavior {
+    update(p, timeScale) {
+        // Linear movement
+        p.x += p.dx * timeScale;
+        p.y += p.dy * timeScale;
+
+        // Visual Trail (Red Beam/Orb trail)
+        if (Math.random() < 0.3) {
+            p.game.particles.particles.push({
+                x: p.x - Math.cos(p.angle) * 10,
+                y: p.y - Math.sin(p.angle) * 10,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                life: 0.3, decay: 0.1,
+                size: 3,
+                color: '#FF0000',
+                type: 'dot'
+            });
+        }
+
+        // Bounds - Explode on wall
+        const bounds = p.game.arenaBounds;
+        if (p.x < bounds.x || p.x > bounds.x + bounds.width ||
+            p.y < bounds.y || p.y > bounds.y + bounds.height) {
+
+            p.x = Math.max(bounds.x, Math.min(bounds.x + bounds.width, p.x));
+            p.y = Math.max(bounds.y, Math.min(bounds.y + bounds.height, p.y));
+
+            p.triggerImpact(null);
+        }
+    }
+
+    onImpact(p, target) {
+        if (p.hasExploded) return;
+        p.hasExploded = true;
+        p.active = false;
+
+        // Custom Explosion Logic
+        const enemies = p.game.entities.filter(e => e !== p.owner && !e.isDead);
+        const radius = p.explosionRadius || 60;
+        let hasCrit = false;
+
+        enemies.forEach(e => {
+            const dist = Physics.dist(p.x, p.y, e.x, e.y);
+            if (dist < radius + e.radius) {
+                // Determine Damage (Crit check)
+                let damage = p.damage;
+                let isCrit = false;
+
+                // CRIT CONDITION: Trapped in Blue (Event Horizon)
+                if (e.status && e.status.isTrappedInBlue) {
+                    damage = p.critDamage || 15;
+                    isCrit = true;
+                    hasCrit = true;
+
+                    // === HOLLOW PURPLE EFFECT - PREMIUM ===
+                    if (p.game.combatText) {
+                        p.game.combatText.text(e.x, e.y - 40, "HOLLOW PURPLE!", '#9400D3', 1.5);
+                    }
+
+                    // 1. MASSIVE SHOCKWAVES (4 expanding waves)
+                    p.game.particles.spawnShockwave(e.x, e.y, '#9400D3', 120, 1.0);
+                    p.game.particles.spawnShockwave(e.x, e.y, '#FF00FF', 100, 0.8);
+                    p.game.particles.spawnShockwave(e.x, e.y, '#DA70D6', 80, 0.6);
+                    p.game.particles.spawnShockwave(e.x, e.y, '#FFFFFF', 60, 0.4);
+
+                    // 2. DENSE RADIAL ENERGY BURST (24 rays)
+                    for (let i = 0; i < 24; i++) {
+                        const angle = (Math.PI * 2 / 24) * i;
+                        const speed = 8 + Math.random() * 6;
+                        p.game.particles.particles.push({
+                            x: e.x,
+                            y: e.y,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            life: 0.8,
+                            decay: 0.06,
+                            size: 5 + Math.random() * 4,
+                            color: i % 2 === 0 ? '#9400D3' : '#FF00FF',
+                            type: 'dot'
+                        });
+                    }
+
+                    // 3. CHAOTIC EXPLOSION PARTICLES (40 particles with varied colors)
+                    for (let i = 0; i < 40; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = 3 + Math.random() * 8;
+                        const colors = ['#9400D3', '#FF00FF', '#EE82EE', '#DA70D6', '#BA55D3', '#FFFFFF'];
+                        p.game.particles.particles.push({
+                            x: e.x + (Math.random() - 0.5) * 30,
+                            y: e.y + (Math.random() - 0.5) * 30,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            life: 0.6 + Math.random() * 0.4,
+                            decay: 0.05,
+                            size: 3 + Math.random() * 5,
+                            color: colors[Math.floor(Math.random() * colors.length)],
+                            type: Math.random() > 0.5 ? 'square' : 'dot'
+                        });
+                    }
+
+                    // 4. ENERGY SPIRALS (12 spiraling particles)
+                    for (let i = 0; i < 12; i++) {
+                        const spiralAngle = (Math.PI * 2 / 12) * i;
+                        const spiralDist = 20 + i * 6;
+                        p.game.particles.particles.push({
+                            x: e.x + Math.cos(spiralAngle) * spiralDist,
+                            y: e.y + Math.sin(spiralAngle) * spiralDist,
+                            vx: Math.cos(spiralAngle + Math.PI / 2) * 4,
+                            vy: Math.sin(spiralAngle + Math.PI / 2) * 4,
+                            life: 0.6,
+                            decay: 0.08,
+                            size: 6,
+                            color: '#FFFFFF',
+                            type: 'square'
+                        });
+                    }
+
+                    // 5. ORBITING ENERGY PARTICLES (16 circling dots)
+                    for (let i = 0; i < 16; i++) {
+                        const orbitAngle = (Math.PI * 2 / 16) * i;
+                        const orbitRadius = 40;
+                        p.game.particles.particles.push({
+                            x: e.x + Math.cos(orbitAngle) * orbitRadius,
+                            y: e.y + Math.sin(orbitAngle) * orbitRadius,
+                            vx: Math.cos(orbitAngle + Math.PI / 2) * 5,
+                            vy: Math.sin(orbitAngle + Math.PI / 2) * 5,
+                            life: 0.5,
+                            decay: 0.08,
+                            size: 4,
+                            color: i % 3 === 0 ? '#FFFFFF' : '#FF00FF',
+                            type: 'dot'
+                        });
+                    }
+
+                    // 6. GLOWING CORE EXPLOSION (Purple + White mix)
+                    for (let i = 0; i < 20; i++) {
+                        const angle = (Math.PI * 2 / 20) * i;
+                        const speed = 2 + Math.random() * 3;
+                        p.game.particles.particles.push({
+                            x: e.x,
+                            y: e.y,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            life: 0.7,
+                            decay: 0.06,
+                            size: 7,
+                            color: '#FFFFFF',
+                            type: 'dot'
+                        });
+                    }
+
+                    // 7. SCREEN SHAKE EFFECT (extra particles for intensity)
+                    for (let i = 0; i < 15; i++) {
+                        p.game.particles.particles.push({
+                            x: e.x + (Math.random() - 0.5) * 60,
+                            y: e.y + (Math.random() - 0.5) * 60,
+                            vx: (Math.random() - 0.5) * 10,
+                            vy: (Math.random() - 0.5) * 10,
+                            life: 0.4,
+                            decay: 0.1,
+                            size: 8,
+                            color: '#DA70D6',
+                            type: 'square'
+                        });
+                    }
+                } else {
+                    // Normal hit - just yellow sparks
+                    p.game.particles.spawn(e.x, e.y, '#FFFF00', 8);
+                }
+
+                e.takeDamage(damage, false, isCrit, p.owner);
+
+                // KNOCKBACK
+                const angle = Math.atan2(e.y - p.y, e.x - p.x);
+                const force = p.knockback || 35;
+                e.dx += Math.cos(angle) * force;
+                e.dy += Math.sin(angle) * force;
+            }
+        });
+
+        // Base explosion visual (Red or Purple depending on crit)
+        if (hasCrit) {
+            // HOLLOW PURPLE MEGA EXPLOSION
+            p.game.particles.spawnEffect('redOrbExplosion', p.x, p.y);
+            audioEngine.playHollowPurple();
+
+            // DENSE PURPLE OVERLAY (60 particles for maximum impact)
+            for (let i = 0; i < 60; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 3 + Math.random() * 7;
+                const purpleShades = ['#9400D3', '#8B00FF', '#9932CC', '#BA55D3', '#DA70D6', '#EE82EE'];
+                p.game.particles.particles.push({
+                    x: p.x + (Math.random() - 0.5) * 40,
+                    y: p.y + (Math.random() - 0.5) * 40,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.6 + Math.random() * 0.3,
+                    decay: 0.06,
+                    size: 4 + Math.random() * 5,
+                    color: purpleShades[Math.floor(Math.random() * purpleShades.length)],
+                    type: 'dot'
+                });
+            }
+
+            // WHITE FLASH CORE (bright center)
+            for (let i = 0; i < 20; i++) {
+                const angle = (Math.PI * 2 / 20) * i;
+                const speed = 5 + Math.random() * 3;
+                p.game.particles.particles.push({
+                    x: p.x,
+                    y: p.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.4,
+                    decay: 0.1,
+                    size: 6,
+                    color: '#FFFFFF',
+                    type: 'dot'
+                });
+            }
+
+            // EXPANDING PURPLE RING
+            for (let i = 0; i < 30; i++) {
+                const angle = (Math.PI * 2 / 30) * i;
+                const speed = 8;
+                p.game.particles.particles.push({
+                    x: p.x,
+                    y: p.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.5,
+                    decay: 0.08,
+                    size: 3,
+                    color: '#FF00FF',
+                    type: 'square'
+                });
+            }
+        } else {
+            // Normal red explosion
+            p.game.particles.spawnEffect('redOrbExplosion', p.x, p.y);
+            p.game.particles.spawn(p.x, p.y, '#FF0000', 10);
+        }
+    }
+}

@@ -139,7 +139,9 @@ export class Game {
         skillsEl.innerHTML = '';
 
         ['atk', 'def', 'ult'].forEach(slot => {
-            const skill = data.skills[slot];
+            const skill = data.skills ? data.skills[slot] : null;
+            if (!skill) return; // Skip if skill is missing
+
             const div = document.createElement('div');
             div.className = 'detail-skill-item';
             div.innerHTML = `

@@ -173,7 +173,9 @@ export class Fighter {
         // Update visual rotation for wheel
         this.wheelRotation += 0.05 * timeScale;
 
-        this.updateSkills(allEntities, timeScale);
+        // Filter to only enemies (different team ID)
+        const enemies = allEntities.filter(e => e.id !== this.id && !e.isDead);
+        this.updateSkills(enemies, timeScale);
     }
 
     handleMovement(timeScale) {

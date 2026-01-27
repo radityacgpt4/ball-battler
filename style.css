@@ -8,7 +8,7 @@
     --text-main: #e0e0e0;
     --text-dim: #888899;
     --panel-bg: rgba(20, 20, 30, 0.85);
-    --game-size: 500px;
+    --game-size: 800px;
 }
 
 body {
@@ -30,8 +30,8 @@ body {
 
 /* Base Container */
 #game-container {
-    width: 900px;
-    /* Widened for better UI */
+    width: 1100px;
+    /* Widened for team battles */
     max-width: 95vw;
     margin: 20px auto;
     position: relative;
@@ -164,9 +164,9 @@ body {
 canvas {
     display: block;
     width: 100%;
-    max-width: 500px;
+    max-width: 800px;
     height: auto;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 8 / 5;
     background-color: var(--arena-bg);
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
     flex-shrink: 0;
@@ -235,6 +235,50 @@ canvas {
     margin: 0 0 20px 0;
     text-align: center;
     font-weight: 300;
+}
+
+/* Game Mode Selector */
+.mode-selector {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.mode-btn {
+    padding: 10px 30px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid var(--border-color);
+    color: var(--text-dim);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+}
+
+.mode-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-blue);
+    color: var(--text-main);
+}
+
+.mode-btn.active {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: #000;
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+}
+
+/* Team Member Display */
+.team-member {
+    padding: 5px 10px;
+    margin: 3px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid currentColor;
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
 /* Character Selection Grid */
@@ -667,7 +711,7 @@ canvas {
         width: 100%;
         height: auto;
         max-width: 100%;
-        aspect-ratio: 1/1;
+        aspect-ratio: 8/5;
     }
 
     /* Hide header on small mobile to save space, or adjust it */

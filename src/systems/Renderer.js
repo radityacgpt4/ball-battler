@@ -39,6 +39,9 @@ export class Renderer {
         // Status effect visuals
         this.drawStatusEffects(ctx, fighter);
 
+        // Team indicator (colored ring around fighter)
+        this.drawTeamIndicator(ctx, fighter);
+
         // Save for rotated accessories
         ctx.save();
         ctx.rotate(fighter.angle);
@@ -136,6 +139,41 @@ export class Renderer {
             ctx.arc(0, 0, fighter.radius + 8, 0, Math.PI * 2);
             ctx.stroke();
         }
+    }
+
+    /**
+     * Draw team indicator (colored ring to identify teams)
+     */
+    drawTeamIndicator(ctx, fighter) {
+        const teamColor = fighter.id === 1 ? '#4fc3f7' : '#ff6b6b';
+
+        // Draw outer ring
+        ctx.strokeStyle = teamColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, fighter.radius + 10, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Draw team badge
+        ctx.save();
+        ctx.fillStyle = teamColor;
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Position badge above the fighter
+        const badgeY = -fighter.radius - 18;
+
+        // Background for badge
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        const badgeText = `T${fighter.id}`;
+        const textWidth = ctx.measureText(badgeText).width;
+        ctx.fillRect(-textWidth / 2 - 4, badgeY - 8, textWidth + 8, 16);
+
+        // Badge text
+        ctx.fillStyle = teamColor;
+        ctx.fillText(badgeText, 0, badgeY);
+        ctx.restore();
     }
 
     /**

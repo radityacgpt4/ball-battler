@@ -24,8 +24,11 @@ export class Game {
         this.particles = new ParticleSystem();
         this.combatText = new CombatTextHelper(this.particles);
         this.running = false;
-        this.p1Type = 'THUNDER_MAGE';
-        this.p2Type = 'SHIELDBEARER';
+
+        // Game mode and team selections
+        this.gameMode = '1v1'; // '1v1', '2v2', '3v3'
+        this.p1Team = ['THUNDER_MAGE']; // Array of fighter types for team 1
+        this.p2Team = ['SHIELDBEARER']; // Array of fighter types for team 2
 
         this.width = CONSTANTS.WIDTH;
         this.height = CONSTANTS.HEIGHT;
@@ -51,7 +54,27 @@ export class Game {
         this.canvas = document.getElementById('arena');
         this.ctx = this.canvas.getContext('2d');
         logger.init();
+        this.setupModeSelector();
         this.showSelect();
+    }
+
+    setupModeSelector() {
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active class from all buttons
+                modeButtons.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                btn.classList.add('active');
+                // Update game mode
+                this.gameMode = btn.dataset.mode;
+                // Reset team selections based on mode
+                const teamSize = parseInt(this.gameMode[0]);
+                this.p1Team = Array(teamSize).fill('THUNDER_MAGE');
+                this.p2Team = Array(teamSize).fill('SHIELDBEARER');
+                this.renderCharSelect();
+            });
+        });
     }
 
     showSelect() {
@@ -60,8 +83,13 @@ export class Game {
         document.getElementById('end-screen').style.display = 'none';
 
         // Default selections if none
-        if (!this.p1Type) this.p1Type = 'SWORD_MASTER';
-        if (!this.p2Type) this.p2Type = 'SNIPER';
+        const teamSize = parseInt(this.gameMode[0]);
+        if (!this.p1Team || this.p1Team.length === 0) {
+            this.p1Team = Array(teamSize).fill('SWORD_MASTER');
+        }
+        if (!this.p2Team || this.p2Team.length === 0) {
+            this.p2Team = Array(teamSize).fill('SNIPER');
+        }
 
         this.renderCharSelect();
     }
@@ -76,87 +104,88 @@ export class Game {
             const item = document.createElement('div');
             item.className = 'grid-item';
 
+            // Count how many times this fighter appears in each team
+            const p1Count = this.p1Team.filter(t => t === key).length;
+            const p2Count = this.p2Team.filter(t => t === key).length;
+
             // Highlight selections
-            if (this.p1Type === key && this.p2Type === key) item.classList.add('selected-both');
-            else if (this.p1Type === key) item.classList.add('selected-p1');
-            else if (this.p2Type === key) item.classList.add('selected-p2');
+            if (p1Count > 0 && p2Count > 0) item.classList.add('selected-both');
+            else if (p1Count > 0) item.classList.add('selected-p1');
+            else if (p2Count > 0) item.classList.add('selected-p2');
 
             item.innerHTML = `
                 <div class="grid-icon" style="background:${data.color}"></div>
                 <div class="grid-name">${data.name}</div>
                 <div class="select-badges">
-                    ${this.p1Type === key ? '<span class="p-badge p1">P1</span>' : ''}
-                    ${this.p2Type === key ? '<span class="p-badge p2">P2</span>' : ''}
+                    ${p1Count > 0 ? `<span class="p-badge p1">P1${p1Count > 1 ? 'x' + p1Count : ''}</span>` : ''}
+                    ${p2Count > 0 ? `<span class="p-badge p2">P2${p2Count > 1 ? 'x' + p2Count : ''}</span>` : ''}
                 </div>
             `;
 
+            // Left click: cycle through P1 team slots
             item.onclick = (e) => {
-                // simple toggle: click selects for P1, right-click (or special modifier) for P2?
-                // Let's do: if left side of button click P1, right side P2? 
-                // Or just alternate? Let's just do left-click P1, right-click P2 for ease of use in dev,
-                // but for "AI automation" maybe a simpler toggle.
-                // Let's use a clear P1/P2 button inside or just click order.
-                // Better: If already P1, move to P2.
-                if (this.p1Type !== key) {
-                    this.p1Type = key;
-                } else {
-                    this.p2Type = key;
-                }
+                const teamSize = parseInt(this.gameMode[0]);
+                // Find first slot that doesn't match this key, or overwrite first slot
+                let slotIndex = this.p1Team.findIndex((t, i) => t !== key);
+                if (slotIndex === -1) slotIndex = 0;
+                this.p1Team[slotIndex] = key;
                 this.renderCharSelect();
             };
 
-            // Right click for P2 selection
+            // Right click: cycle through P2 team slots
             item.oncontextmenu = (e) => {
                 e.preventDefault();
-                this.p2Type = key;
+                const teamSize = parseInt(this.gameMode[0]);
+                let slotIndex = this.p2Team.findIndex((t, i) => t !== key);
+                if (slotIndex === -1) slotIndex = 0;
+                this.p2Team[slotIndex] = key;
                 this.renderCharSelect();
             };
 
             grid.appendChild(item);
         });
 
-        this.updateDetailPanel(1, this.p1Type);
-        this.updateDetailPanel(2, this.p2Type);
+        this.updateDetailPanels();
     }
 
-    updateDetailPanel(playerNum, type) {
-        const data = FIGHTER_TYPES[type];
-        const prefix = `p${playerNum}`;
+    updateDetailPanels() {
+        // Update Player 1 panel
+        const p1Panel = document.getElementById('p1-detail-name');
+        const p1Stats = document.getElementById('p1-detail-stats');
+        const p1Skills = document.getElementById('p1-detail-skills');
 
-        document.getElementById(`${prefix}-detail-name`).innerText = data.name;
-        document.getElementById(`${prefix}-detail-name`).style.color = data.color;
+        p1Panel.innerText = `Team 1 (${this.gameMode})`;
+        p1Panel.style.color = '#4fc3f7';
 
-        // Stats
-        const statsEl = document.getElementById(`${prefix}-detail-stats`);
-        statsEl.innerHTML = `
-            <div class="stat-item">HP <span class="stat-val">${data.hp}</span></div>
-            <div class="stat-item">SPD <span class="stat-val">${data.speed}</span></div>
-            <div class="stat-item">MASS <span class="stat-val">${data.mass}</span></div>
-        `;
+        // Show team roster
+        p1Stats.innerHTML = this.p1Team.map((type, idx) => {
+            const data = FIGHTER_TYPES[type];
+            return `<div class="team-member" style="color: ${data.color}">${idx + 1}. ${data.name}</div>`;
+        }).join('');
 
-        // Skills
-        const skillsEl = document.getElementById(`${prefix}-detail-skills`);
-        skillsEl.innerHTML = '';
+        p1Skills.innerHTML = '<div class="d-skill-desc">Left-click fighters to add to Team 1</div>';
 
-        ['atk', 'def', 'ult'].forEach(slot => {
-            const skill = data.skills ? data.skills[slot] : null;
-            if (!skill) return; // Skip if skill is missing
+        // Update Player 2 panel
+        const p2Panel = document.getElementById('p2-detail-name');
+        const p2Stats = document.getElementById('p2-detail-stats');
+        const p2Skills = document.getElementById('p2-detail-skills');
 
-            const div = document.createElement('div');
-            div.className = 'detail-skill-item';
-            div.innerHTML = `
-                <div class="d-skill-title">${slot}</div>
-                <div class="d-skill-name">${skill.name || slot.toUpperCase()}</div>
-                <div class="d-skill-desc">${skill.desc || 'No description available.'}</div>
-            `;
-            skillsEl.appendChild(div);
-        });
+        p2Panel.innerText = `Team 2 (${this.gameMode})`;
+        p2Panel.style.color = '#ff6b6b';
+
+        // Show team roster
+        p2Stats.innerHTML = this.p2Team.map((type, idx) => {
+            const data = FIGHTER_TYPES[type];
+            return `<div class="team-member" style="color: ${data.color}">${idx + 1}. ${data.name}</div>`;
+        }).join('');
+
+        p2Skills.innerHTML = '<div class="d-skill-desc">Right-click fighters to add to Team 2</div>';
     }
 
     startMatch() {
         audioEngine.init();
         logger.clear();
-        logger.log(`MATCH START: ${this.p1Type} vs ${this.p2Type}`, 'system');
+        logger.log(`MATCH START: ${this.gameMode} - Team 1 vs Team 2`, 'system');
 
         document.getElementById('char-select').style.display = 'none';
         this.width = CONSTANTS.WIDTH;
@@ -182,20 +211,48 @@ export class Game {
         this.particles = new ParticleSystem();
         this.combatText = new CombatTextHelper(this.particles);
 
-        const f1 = new Fighter(1, 100, 250, this.p1Type, FIGHTER_TYPES, this);
-        const f2 = new Fighter(2, 400, 250, this.p2Type, FIGHTER_TYPES, this);
+        // Spawn Team 1 fighters (left side)
+        const teamSize = this.p1Team.length;
+        const spacing = teamSize === 1 ? 0 : Math.min(80, 200 / (teamSize - 1));
+        const p1StartX = 120;
+        const p1StartY = this.height / 2;
 
-        // Randomize starting angles with "Anti-Facing" logic to prevent early shot advantage.
-        // F1 is on the left (x=100), facing right (0 rad) would hit F2.
-        // We force F1 to face AWAY from F2 (between PI/2 and 3PI/2).
-        f1.angle = Math.PI / 2 + Math.random() * Math.PI;
+        this.p1Team.forEach((type, idx) => {
+            const yOffset = (idx - (teamSize - 1) / 2) * spacing;
+            const fighter = new Fighter(
+                1,
+                p1StartX,
+                p1StartY + yOffset,
+                type,
+                FIGHTER_TYPES,
+                this
+            );
+            // Face away from enemies (right side)
+            fighter.angle = Math.PI / 2 + Math.random() * Math.PI;
+            this.entities.push(fighter);
+        });
 
-        // F2 is on the right (x=400), facing left (PI rad) would hit F1.
-        // We force F2 to face AWAY from F1 (between -PI/2 and PI/2).
-        f2.angle = (Math.random() - 0.5) * Math.PI;
+        // Spawn Team 2 fighters (right side)
+        const p2StartX = this.width - 120;
+        const p2StartY = this.height / 2;
 
-        this.entities.push(f1);
-        this.entities.push(f2);
+        this.p2Team.forEach((type, idx) => {
+            const yOffset = (idx - (teamSize - 1) / 2) * spacing;
+            const fighter = new Fighter(
+                2,
+                p2StartX,
+                p2StartY + yOffset,
+                type,
+                FIGHTER_TYPES,
+                this
+            );
+            // Face away from enemies (left side)
+            fighter.angle = (Math.random() - 0.5) * Math.PI;
+            this.entities.push(fighter);
+        });
+
+        logger.log(`Team 1: ${this.p1Team.join(', ')}`, 'system');
+        logger.log(`Team 2: ${this.p2Team.join(', ')}`, 'system');
 
         this.createUI();
 
@@ -483,25 +540,34 @@ export class Game {
             // Wait 120 frames (approx 2s at 60fps, but effectively longer due to timescale)
             if (this.finishTimer > 150) {
                 this.running = false;
-                const alive = this.entities.filter(e => !e.isDead);
+                const team1Alive = this.entities.filter(e => !e.isDead && e.id === 1);
+                const team2Alive = this.entities.filter(e => !e.isDead && e.id === 2);
                 const overlay = document.getElementById('end-screen');
                 const msg = document.getElementById('win-msg');
                 overlay.style.display = 'flex';
-                if (alive.length === 0) {
+
+                if (team1Alive.length === 0 && team2Alive.length === 0) {
                     msg.innerText = "DRAW";
                     msg.style.color = "white";
                     logger.log("MATCH END: DRAW", 'system');
+                } else if (team1Alive.length > 0) {
+                    msg.innerText = `TEAM 1 WINS!`;
+                    msg.style.color = '#4fc3f7';
+                    logger.log(`MATCH END: TEAM 1 WINS! (${team1Alive.length} survivors)`, 'system');
                 } else {
-                    msg.innerText = `P${alive[0].id} - ${alive[0].name} WINS`;
-                    msg.style.color = alive[0].color;
-                    logger.log(`MATCH END: ${alive[0].name} WINS!`, 'system');
+                    msg.innerText = `TEAM 2 WINS!`;
+                    msg.style.color = '#ff6b6b';
+                    logger.log(`MATCH END: TEAM 2 WINS! (${team2Alive.length} survivors)`, 'system');
                 }
             }
             return;
         }
 
-        const alive = this.entities.filter(e => !e.isDead);
-        if (alive.length <= 1) {
+        // Check if entire team is eliminated
+        const team1Alive = this.entities.filter(e => !e.isDead && e.id === 1);
+        const team2Alive = this.entities.filter(e => !e.isDead && e.id === 2);
+
+        if (team1Alive.length === 0 || team2Alive.length === 0) {
             this.isMatchOver = true;
             this.timeScale = 0.2; // SLOW MOTION
             audioEngine.playWin();

@@ -23,6 +23,7 @@ import { ZoltraakAbility, HexBarrierAbility, BlackholeAbility } from '../abiliti
 import { SwordShredAbility, ODMDefAbility, GodspeedODMAbility } from '../abilities/LeviAbility.js';
 import { MechaAtkAbility, MechaDefAbility, MechaUltAbility } from '../abilities/MechaAbility.js';
 import { IchigoAtkAbility, IchigoDefAbility, IchigoUltAbility } from '../abilities/IchigoAbility.js';
+import { GojoRedAbility, GojoBlueAbility, GojoUltAbility } from '../abilities/GojoAbility.js';
 
 class AbilityRegistryClass {
     constructor() {
@@ -153,6 +154,11 @@ class AbilityRegistryClass {
         this.register('ZANGETSU_SLASH', IchigoAtkAbility);
         this.register('GETSUGA_TENSHOU', IchigoDefAbility);
         this.register('BANKAI_MODE', IchigoUltAbility);
+
+        // Sorcerer of Infinity (Gojo) abilities
+        this.register('GOJO_RED', GojoRedAbility);
+        this.register('GOJO_BLUE', GojoBlueAbility);
+        this.register('INFINITY_VOID', GojoUltAbility);
     }
 }
 

@@ -1,5 +1,5 @@
 /**
- * Death God Swordsman Abilities (Ichigo Kurosaki inspired)
+ * Soul Reaper Abilities (Ichigo Kurosaki inspired)
  *
  * ATK: Zangetsu Slash - Rotation-based melee attack with oversized khyber knife
  * DEF: Getsuga Tenshou - Every 5 HP missing, unleash crescent-shaped projectile
@@ -35,8 +35,11 @@ export class IchigoAtkAbility extends Ability {
         for (let enemy of enemies) {
             if (enemy === fighter || enemy.isDead) continue;
 
+            const isBankai = fighter.activeEffects && fighter.activeEffects.bankaiActive;
+            const weaponKey = isBankai ? 'SOUL_REAPER_TENSA' : 'SOUL_REAPER_ZANGETSU';
+
             // Use weapon geometry registry for collision
-            if (checkWeaponHit('ICHIGO_ZANGETSU', fighter, enemy)) {
+            if (checkWeaponHit(weaponKey, fighter, enemy)) {
                 // Check if blocked by shield
                 if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                     if (fighter.cooldowns.atk <= 0) {
@@ -196,15 +199,20 @@ export class IchigoUltAbility extends Ability {
         this.rotationBoost = config.rotationBoost || 0.75; // 75% increase
 
         // Pulsating Stun properties
-        this.pulseInterval = config.bankaiPulseInterval || 180;
-        this.pulseRadius = config.bankaiPulseRadius || 120;
+        this.pulseInterval = config.bankaiPulseInterval || 120;
+        this.pulseRadius = config.bankaiPulseRadius || 180;
         this.pulseStun = config.bankaiPulseStun || 60;
+
+        // Evasion properties
+        this.baseEvasion = config.baseEvasion || 0.15;
+        this.extraEvasionPerStep = config.extraEvasionPerStep || 0.03;
+        this.hpStep = config.hpStep || 5;
+        this.maxEvasion = config.maxEvasion || 0.85;
+        this.evasionHPThreshold = config.evasionHPThreshold || 0.5;
     }
 
     canUse(fighter, context) {
-        if (!super.canUse(fighter, context)) return false;
-        // Only activate when HP is below 50%
-        return fighter.hp < fighter.maxHp * 0.5;
+        return super.canUse(fighter, context);
     }
 
     execute(fighter, context) {
@@ -212,6 +220,7 @@ export class IchigoUltAbility extends Ability {
 
         fighter.cooldowns.ult = this.cooldown;
         fighter.activeEffects.ultActive = true;
+        fighter.activeEffects.ultTimer = this.duration; // Global sync
         fighter.activeEffects.bankaiActive = true;
         fighter.activeEffects.bankaiTimer = this.duration;
 
@@ -230,17 +239,8 @@ export class IchigoUltAbility extends Ability {
     }
 
     update(fighter, context) {
-        // Handle Bankai duration
+        // --- Pulsating Stun Logic ---
         if (fighter.activeEffects.bankaiActive) {
-            fighter.activeEffects.bankaiTimer--;
-
-            if (fighter.activeEffects.bankaiTimer <= 0) {
-                fighter.activeEffects.bankaiActive = false;
-                fighter.activeEffects.ultActive = false;
-                logger.log(`${fighter.name}'s Bankai expires!`, 'combat');
-            }
-
-            // --- Pulsating Stun Logic ---
             fighter.activeEffects.bankaiPulseTimer++;
             if (fighter.activeEffects.bankaiPulseTimer >= this.pulseInterval) {
                 fighter.activeEffects.bankaiPulseTimer = 0;
@@ -251,7 +251,7 @@ export class IchigoUltAbility extends Ability {
                 game.particles.spawnEffect('bankaiPulse', fighter.x, fighter.y, {
                     maxRadius: this.pulseRadius
                 });
-                audioEngine.playZap(); // Spiritual pressure crackle
+                audioEngine.playBankaiPulse(); // Spiritual pressure crackle
 
                 // Apply stun to nearby enemies
                 for (const enemy of enemies) {
@@ -260,11 +260,57 @@ export class IchigoUltAbility extends Ability {
                     const dist = Math.hypot(enemy.x - fighter.x, enemy.y - fighter.y);
                     if (dist < this.pulseRadius + enemy.radius) {
                         enemy.applyStatus('STUN', this.pulseStun);
-                        game.particles.spawnShockwave(enemy.x, enemy.y, '#8B00FF');
+                        // Visual feedback on enemy (small impact effect)
+                        game.particles.spawn(enemy.x, enemy.y, '#8B00FF', 6);
                     }
                 }
             }
         }
+    }
+
+    stop(fighter, context) {
+        fighter.activeEffects.bankaiActive = false;
+        context.game.combatText.text(fighter.x, fighter.y - fighter.radius - 20, "Bankai expires!", "#888");
+        logger.log(`${fighter.name}'s Bankai expires!`, 'combat');
+    }
+
+    onDamage(fighter, damage, context) {
+        // Evasion logic (Only during Bankai and NOT while stunned)
+        if (fighter.activeEffects && fighter.activeEffects.bankaiActive && fighter.status.stun <= 0) {
+            // Scale from the configured HP baseline (default 50% HP)
+            const hpBaseline = fighter.maxHp * this.evasionHPThreshold;
+            const hpBelowThreshold = Math.max(0, hpBaseline - fighter.hp);
+            const extraEvasion = Math.floor(hpBelowThreshold / this.hpStep) * this.extraEvasionPerStep;
+            const totalEvasion = Math.min(this.maxEvasion, this.baseEvasion + extraEvasion);
+
+            if (Math.random() < totalEvasion) {
+                const { game } = context;
+                game.combatText.dodged(fighter.x, fighter.y - fighter.radius);
+
+                // --- SHUNPO AFTERIMAGE EFFECT ---
+                // Create a fading afterimage of the fighter
+                game.particles.particles.push({
+                    x: fighter.x, y: fighter.y,
+                    vx: 0, vy: 0,
+                    life: 0.4, decay: 0.1,
+                    size: fighter.radius,
+                    color: '#8B00FF', type: 'dot', alpha: 0.4
+                });
+
+                game.particles.spawn(fighter.x, fighter.y, '#8B00FF', 8);
+
+                // Trigger visual transparency (ghosting)
+                fighter.activeEffects.evasionTimer = 10;
+
+                audioEngine.playSwordSwing(); // Whoosh sound
+                logger.log(`${fighter.name} DODGED! (Chance: ${Math.round(totalEvasion * 100)}%)`, 'combat');
+                return false; // Negate damage
+            } else {
+                // Log the failure too, so user can see their current stats
+                logger.log(`${fighter.name} failed to dodge. (Current Evasion: ${Math.round(totalEvasion * 100)}%)`, 'combat');
+            }
+        }
+        return damage;
     }
 
     modifySpeed(fighter, speed) {

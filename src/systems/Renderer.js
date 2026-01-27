@@ -31,9 +31,9 @@ export class Renderer {
         ctx.save();
         ctx.translate(fighter.x, fighter.y);
 
-        // Apply evasion transparency
+        // Apply evasion transparency ("Ghost" effect)
         if (fighter.activeEffects.evasionTimer > 0) {
-            ctx.globalAlpha = 0.2;
+            ctx.globalAlpha = 0.5; // 50% opacity as requested
         }
 
         // Status effect visuals
@@ -156,7 +156,7 @@ export class Renderer {
     drawBody(ctx, fighter) {
         ctx.fillStyle = fighter.color;
 
-        if (fighter.activeEffects.ultActive) {
+        if (fighter.activeEffects.ultActive && !(fighter.typeKey === 'SOUL_REAPER' && fighter.activeEffects.bankaiActive)) {
             // Optimized Ult Aura (Zero-Blur)
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
@@ -1153,54 +1153,68 @@ export class Renderer {
             }
         });
 
-        // Death God Swordsman (Ichigo) - Zangetsu / Tensa Zangetsu
-        this.registerAccessory('DEATH_GOD_SWORDSMAN', (ctx, fighter) => {
+        // Soul Reaper (Ichigo) - Zangetsu / Tensa Zangetsu
+        this.registerAccessory('SOUL_REAPER', (ctx, fighter) => {
             const isBankai = fighter.activeEffects && fighter.activeEffects.bankaiActive;
 
             ctx.save();
 
             if (isBankai) {
                 // ================================================================
-                // BANKAI: Tensa Zangetsu - Thin Black Blade
+                // BANKAI: Tensa Zangetsu - Long Black Katana
                 // ================================================================
-                const bladeLength = 48;
+                const bladeLength = 60; // Same length as Shikai for balance
                 const bladeWidth = 4;
+                const hiltLen = 15;
 
-                // Handle (wrapped in black bandage-like cloth)
+                // 1. Hilt (Tsuka) - Black wrapped
                 ctx.fillStyle = '#1a1a1a';
-                ctx.fillRect(fighter.radius - 12, -3, 14, 6);
+                ctx.fillRect(fighter.radius - hiltLen, -3, hiltLen, 6);
 
-                // Guard (small tsuba - circular)
-                ctx.fillStyle = '#2a2a2a';
+                // Hilt detail (Red under-wrap)
+                ctx.fillStyle = '#8B0000';
+                for (let i = 0; i < hiltLen; i += 4) {
+                    ctx.fillRect(fighter.radius - hiltLen + i + 1, -1, 2, 2);
+                }
+
+                // 2. Guard (Tsuba) - Manji shape (simplified as 4 prongs)
+                ctx.fillStyle = '#111';
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                // Vertical bar
+                ctx.fillRect(fighter.radius - 2, -10, 4, 20);
+                // Horizontal bar
+                ctx.fillRect(fighter.radius - 6, -3, 12, 6);
+
+                // 3. Blade - Long, thin, pure black
                 ctx.beginPath();
-                ctx.arc(fighter.radius + 2, 0, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#050505'; // Vantablack style
+                ctx.strokeStyle = '#333';
+
+                // Katana shape
+                ctx.moveTo(fighter.radius + 2, -2);
+                ctx.lineTo(fighter.radius + bladeLength - 5, -2); // Spine
+                ctx.lineTo(fighter.radius + bladeLength, 0);      // Tip
+                ctx.lineTo(fighter.radius + bladeLength - 8, 2);  // Edge curve start
+                ctx.lineTo(fighter.radius + 2, 2);                // Edge back to guard
                 ctx.fill();
+                ctx.stroke();
 
-                // Blade - Thin and compressed (black with purple energy edge)
-                ctx.beginPath();
-                ctx.moveTo(fighter.radius + 4, -bladeWidth / 2);
-                ctx.lineTo(fighter.radius + bladeLength, 0); // Sharp tip
-                ctx.lineTo(fighter.radius + 4, bladeWidth / 2);
-                ctx.closePath();
+                // Energy edge (Subtle purple shimmer on the cutting edge)
 
-                // Black blade gradient
-                const bankaiGrad = ctx.createLinearGradient(0, -bladeWidth / 2, 0, bladeWidth / 2);
-                bankaiGrad.addColorStop(0, '#0a0a0a');
-                bankaiGrad.addColorStop(0.5, '#1a1a2e');
-                bankaiGrad.addColorStop(1, '#0a0a0a');
-                ctx.fillStyle = bankaiGrad;
-                ctx.fill();
+                // No duplicate fill here
 
-                // Energy edge (purple glow)
+                // Energy edge (purple glow on cutting edge only)
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.strokeStyle = '#8B00FF';
                 ctx.lineWidth = 2;
                 ctx.globalAlpha = 0.6;
                 ctx.beginPath();
-                ctx.moveTo(fighter.radius + 4, -bladeWidth / 2 - 1);
-                ctx.lineTo(fighter.radius + bladeLength, 0);
-                ctx.lineTo(fighter.radius + 4, bladeWidth / 2 + 1);
+                // Follow the cutting edge curve
+                ctx.moveTo(fighter.radius + bladeLength, 0); // Tip
+                ctx.lineTo(fighter.radius + bladeLength - 8, 2); // Curve start
+                ctx.lineTo(fighter.radius + 2, 2); // To guard
                 ctx.stroke();
                 ctx.restore();
 
@@ -1216,94 +1230,80 @@ export class Renderer {
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.strokeStyle = '#4a0080';
-                ctx.lineWidth = 8;
+                ctx.lineWidth = 6;
                 ctx.globalAlpha = 0.2 + Math.sin(Date.now() * 0.01) * 0.1;
                 ctx.beginPath();
-                ctx.moveTo(fighter.radius + 4, 0);
+                // Aura follows the full blade shape
+                ctx.moveTo(fighter.radius + 2, -2);
+                ctx.lineTo(fighter.radius + bladeLength - 5, -2);
                 ctx.lineTo(fighter.radius + bladeLength, 0);
+                ctx.lineTo(fighter.radius + bladeLength - 8, 2);
+                ctx.lineTo(fighter.radius + 2, 2);
                 ctx.stroke();
                 ctx.restore();
 
             } else {
                 // ================================================================
-                // SHIKAI: Zangetsu - Oversized Khyber Knife (Trapezoid Shape)
-                // Right-angled trapezoid / scalene triangle with truncated base
+                // SHIKAI: Zangetsu - Oversized Khyber Knife
                 // ================================================================
-                const bladeLength = 55;
-                const baseWidth = 14; // Wide at base
-                const tipWidth = 4; // Narrow at tip
-                const handleLength = 16;
+                const bladeLength = 60; // Increased from 55
+                const baseWidth = 12;  // Wider base
+                const tipWidth = 5;    // Tapered tip
+                const handleLength = 18;
 
                 // Handle (wrapped in white bandage)
                 ctx.fillStyle = '#f5f5f5';
-                ctx.fillRect(fighter.radius - handleLength, -4, handleLength, 8);
+                ctx.fillRect(fighter.radius - handleLength, -3.5, handleLength, 7);
                 // Handle wrapping lines
                 ctx.strokeStyle = '#ccc';
                 ctx.lineWidth = 1;
                 for (let i = 0; i < handleLength; i += 4) {
                     ctx.beginPath();
-                    ctx.moveTo(fighter.radius - handleLength + i, -4);
-                    ctx.lineTo(fighter.radius - handleLength + i + 2, 4);
+                    ctx.moveTo(fighter.radius - handleLength + i, -3.5);
+                    ctx.lineTo(fighter.radius - handleLength + i + 2, 3.5);
                     ctx.stroke();
                 }
 
-                // Guard (simple crossguard)
-                ctx.fillStyle = '#333';
-                ctx.fillRect(fighter.radius - 2, -8, 4, 16);
+                // Guard (rugged darkened metal)
+                ctx.fillStyle = '#222';
+                ctx.fillRect(fighter.radius - 2, -baseWidth / 2 - 2, 4, baseWidth + 4);
 
-                // Blade - Trapezoid shape (like Ichigo's Shikai)
-                // The blade is asymmetrical - flat on one side, angled on the other
+                // Blade Shape: True Oversized Khyber Knife
+                // Heavy spine, dramatic taper to a sharp edge and point at the TOP spine
                 ctx.beginPath();
-                // Start at base (back of blade, flat side - top edge)
+
+                // Spine - Straight top edge
                 ctx.moveTo(fighter.radius + 2, -baseWidth / 2);
-                // Go to tip (pointed end)
-                ctx.lineTo(fighter.radius + bladeLength, -tipWidth / 2);
-                ctx.lineTo(fighter.radius + bladeLength + 6, 0); // Sharp tip point
-                ctx.lineTo(fighter.radius + bladeLength, tipWidth / 2);
-                // Bottom edge (angled/curved)
-                ctx.lineTo(fighter.radius + 2, baseWidth / 2);
+                ctx.lineTo(fighter.radius + bladeLength, -baseWidth / 2); // Tip is ALIGNED with spine (Top)
+
+                // Cutting edge - Curves from the base up to the tip
+                // Control points to create the deep belly curve
+                ctx.lineTo(fighter.radius + bladeLength, -baseWidth / 2); // Ensure we are at tip
+                ctx.quadraticCurveTo(
+                    fighter.radius + bladeLength * 0.6, baseWidth / 2 + 5, // Belly bulges out
+                    fighter.radius + 2, baseWidth / 2             // Back to base
+                );
                 ctx.closePath();
 
-                // Blade gradient (steel look)
+                // Premium Blade Gradient
                 const shikaiGrad = ctx.createLinearGradient(0, -baseWidth / 2, 0, baseWidth / 2);
-                shikaiGrad.addColorStop(0, '#C0C0C0'); // Silver top
-                shikaiGrad.addColorStop(0.3, '#E8E8E8'); // Bright center
-                shikaiGrad.addColorStop(0.5, '#F0F0F0'); // Highlight
-                shikaiGrad.addColorStop(0.7, '#D0D0D0'); // Mid
-                shikaiGrad.addColorStop(1, '#A0A0A0'); // Darker bottom
+                shikaiGrad.addColorStop(0, '#444');     // Dark spine
+                shikaiGrad.addColorStop(0.2, '#888');   // Mid spine
+                shikaiGrad.addColorStop(0.4, '#C0C0C0'); // Steel face
+                shikaiGrad.addColorStop(0.8, '#F0F0F0'); // Sharp edge highlight
+                shikaiGrad.addColorStop(1, '#B0B0B0');   // Reflected light at very edge
                 ctx.fillStyle = shikaiGrad;
                 ctx.fill();
 
-                // Edge outline
-                ctx.strokeStyle = '#666';
+                // Edge outline (fine detail)
+                ctx.strokeStyle = '#333';
                 ctx.lineWidth = 1;
-                ctx.stroke();
-
-                // Sharp edge highlight (cutting side)
-                ctx.save();
-                ctx.globalCompositeOperation = 'lighter';
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 1.5;
-                ctx.globalAlpha = 0.7;
-                ctx.beginPath();
-                ctx.moveTo(fighter.radius + 10, baseWidth / 2 - 2);
-                ctx.lineTo(fighter.radius + bladeLength, tipWidth / 2);
-                ctx.lineTo(fighter.radius + bladeLength + 4, 0);
-                ctx.stroke();
-                ctx.restore();
-
-                // Back edge (spine) - darker line
-                ctx.strokeStyle = '#888';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(fighter.radius + 2, -baseWidth / 2 + 1);
-                ctx.lineTo(fighter.radius + bladeLength, -tipWidth / 2 + 0.5);
                 ctx.stroke();
             }
 
             ctx.restore();
 
-            // Spiritual Pressure Aura (when below 50% HP, hinting at Bankai availability)
+            // Spiritual Pressure Aura (when below 50% HP)
             if (!isBankai && fighter.hp < fighter.maxHp * 0.5) {
                 ctx.save();
                 ctx.rotate(-fighter.angle);
@@ -1312,7 +1312,7 @@ export class Renderer {
                 ctx.lineWidth = 4;
                 ctx.globalAlpha = 0.2 + Math.sin(Date.now() * 0.005) * 0.1;
                 ctx.beginPath();
-                ctx.arc(0, 0, fighter.radius + 10, 0, Math.PI * 2);
+                ctx.arc(0, 0, fighter.radius + 12, 0, Math.PI * 2);
                 ctx.stroke();
                 ctx.restore();
             }

@@ -778,10 +778,10 @@ export const FIGHTER_TYPES = {
             }
         }
     },
-    DEATH_GOD_SWORDSMAN: {
-        name: "Death God Swordsman",
+    SOUL_REAPER: {
+        name: "Soul Reaper",
         color: "#FF6600", // Ichigo's orange spiritual pressure
-        hp: 100, mass: 1.2, speed: 4.8, rotationSpeed: 0.14,
+        hp: 100, mass: 1.2, speed: 4.8, rotationSpeed: 0.16,
         skills: {
             atk: {
                 name: "Zangetsu Slash",
@@ -789,7 +789,7 @@ export const FIGHTER_TYPES = {
                 type: "ZANGETSU_SLASH",
                 isPassive: true,
                 // Configurable properties
-                range: 55,
+                range: 60,
                 damage: 7,
                 attackCooldown: 12
             },
@@ -800,29 +800,87 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 hpThreshold: 5,
-                damage: 6,
-                ultDamage: 8, // Damage in Bankai form
-                projectileSpeed: 12,
+                damage: 8,
+                ultDamage: 10, // Damage in Bankai form
+                projectileSpeed: 16,
                 explosionRadius: 75,
-                explosionDamage: 5,
-                explosionUltDamage: 7,
+                explosionDamage: 6,
+                explosionUltDamage: 8,
                 stunDuration: 60, // 1 second stun
-                getsugaDelay: 8, // Frames between each getsuga (for sparse firing)
+                getsugaDelay: 8, // Frames between each getsuga
                 explodeOnWall: true
             },
             ult: {
                 name: "Bankai: Tensa Zangetsu",
-                desc: "Transform sword to thin black blade. +60% MS and +75% AS",
+                desc: "Transform into Bankai. Grants 15% base evasion (+3% per 5 HP lost) and pulsing spiritual pressure.",
                 type: "BANKAI_MODE",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 240,
+                cooldown: 300,
                 duration: 480, // 8 seconds
-                speedBoost: 0.6, // 60% increase
+                speedBoost: 0.75, // 75% increase
                 rotationBoost: 0.75, // 75% increase
-                bankaiPulseInterval: 120, // Every 2 seconds (60fps)
+                bankaiPulseInterval: 90, // Every 1.5 seconds
                 bankaiPulseRadius: 180,
-                bankaiPulseStun: 60 // 1 second stun
+                bankaiPulseStun: 45, // 0.75 second stun
+                // Evasion properties
+                baseEvasion: 0.15,
+                extraEvasionPerStep: 0.05, // +3% evasion
+                hpStep: 5,                 // for every 5 HP lost
+                maxEvasion: 0.6,          // Cap
+                evasionHPThreshold: 0.5    // Starts scaling below 50% HP
+            }
+        }
+    },
+    SORCERER_INFINITY: {
+        name: "Sorcerer of Infinity",
+        color: "#ffffff", // Pure White / Light Blue Eyes theme
+        hp: 100, mass: 1.1, speed: 4.8, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Cursed Technique Reversal: Red",
+                desc: "Fires a repelling red orb. Deals massive damage to enemies trapped in Blue.",
+                type: "GOJO_RED",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 90,
+                damage: 7,
+                critDamage: 15,
+                projectileSpeed: 11,
+                knockback: 18,
+                radius: 12,
+                range: 400,
+                explosionRadius: 60,
+                explodeOnWall: true
+            },
+            def: {
+                name: "Cursed Technique Amplification: Blue",
+                desc: "Creates a powerful attractive force that traps enemies.",
+                type: "GOJO_BLUE",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 120,
+                duration: 180,
+                radius: 120,
+                pullStrength: 2.1,
+                damage: 0,
+                launchSpeed: 2.9,
+                friction: 0.87,
+                growthSpeed: 0.3
+            },
+            ult: {
+                name: "Limitless: Infinity",
+                desc: "Stops projectiles and slows enemies within range. Frozen projectiles expire after 2s.",
+                type: "INFINITY_VOID",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 240,
+                activeDuration: 180,
+                rechargeTime: 90,
+                stopRadius: 100,
+                slowRadius: 200,
+                slowAmount: 0.8,
+                projectileExpiry: 120
             }
         }
     }

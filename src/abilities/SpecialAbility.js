@@ -47,6 +47,11 @@ export class WallSlamAbility extends Ability {
 
         fighter.cooldowns.ult = this.cooldown;
     }
+
+    stop(fighter, context) {
+        fighter.ultWallSlamActive = false;
+        fighter.mass = fighter.originalMass;
+    }
 }
 
 export class DoubleZapUltAbility extends Ability {
@@ -57,8 +62,6 @@ export class DoubleZapUltAbility extends Ability {
     execute(fighter, context) {
         const { enemies, game } = context;
 
-        // The actual raycast is handled by the fighter's updateUltimate
-        // This just triggers the effect
         game.particles.spawn(fighter.x, fighter.y, '#00FFFF', 15);
         audioEngine.playThunder();
         logger.log(`${fighter.name} unleashed DOUBLE ZAP Storm!`, 'combat');
@@ -67,5 +70,23 @@ export class DoubleZapUltAbility extends Ability {
         fighter.activeEffects.ultTimer = 120; // 2 seconds of storm
 
         fighter.cooldowns.ult = this.cooldown;
+    }
+
+    update(fighter, context) {
+        if (!fighter.activeEffects.ultActive) return;
+        const { enemies, game } = context;
+
+        if (fighter.activeEffects.ultTimer % 10 === 0) {
+            const rx = fighter.x + (Math.random() - 0.5) * 300;
+            const ry = fighter.y + (Math.random() - 0.5) * 300;
+            game.particles.spawnBolt([{ x: rx, y: ry - 200 }, { x: rx, y: ry }], '#ffaa00');
+            audioEngine.playZap();
+            enemies.forEach(e => {
+                if (e !== fighter && !e.isDead && Physics.dist(rx, ry, e.x, e.y) < e.radius + 20) {
+                    e.takeDamage(5);
+                    e.applyStatus('STUN');
+                }
+            });
+        }
     }
 }

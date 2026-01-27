@@ -20,6 +20,13 @@ export class Ability {
     canUse(fighter, context) {
         if (fighter.status.stun > 0) return false;
         if (fighter.cooldowns[this.slot] > 0) return false;
+
+        // Default ULT triggering conditions: below 50% HP and not already active
+        if (this.slot === 'ult') {
+            if (fighter.activeEffects.ultActive) return false;
+            if (fighter.hp >= fighter.maxHp * 0.5) return false;
+        }
+
         return true;
     }
 
@@ -39,6 +46,15 @@ export class Ability {
      */
     update(fighter, context) {
         // Override in subclasses for passive abilities
+    }
+
+    /**
+     * Called when an ultimate active effect expires
+     * @param {Fighter} fighter 
+     * @param {Object} context 
+     */
+    stop(fighter, context) {
+        // Override in subclasses
     }
 
     /**

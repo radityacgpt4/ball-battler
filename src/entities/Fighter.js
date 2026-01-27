@@ -32,12 +32,12 @@ export class Fighter {
         this.angle = Math.random() * Math.PI * 2;
         this.isDead = false;
 
-        this.skills = stats.skills;
+        this.skills = stats.skills || {};
         this.cooldowns = { atk: 0, def: 0, ult: 0 };
         this.maxCooldowns = {
-            atk: stats.skills.atk.cooldown || 0,
-            def: stats.skills.def.cooldown || 0,
-            ult: stats.skills.ult.cooldown || 0
+            atk: (this.skills.atk && this.skills.atk.cooldown) || 0,
+            def: (this.skills.def && this.skills.def.cooldown) || 0,
+            ult: (this.skills.ult && this.skills.ult.cooldown) || 0
         };
 
         this.status = { stun: 0, bleed: 0, bleedTick: 0, slow: 0 };
@@ -80,12 +80,12 @@ export class Fighter {
         const abilities = { atk: null, def: null, ult: null };
 
         // Use AbilityRegistry for dynamic ability creation
-        abilities.atk = AbilityRegistry.create(skills.atk.type, skills.atk, 'atk');
-        abilities.def = AbilityRegistry.create(skills.def.type, skills.def, 'def');
-        abilities.ult = AbilityRegistry.create(skills.ult.type, skills.ult, 'ult', {
+        abilities.atk = skills.atk ? AbilityRegistry.create(skills.atk.type, skills.atk, 'atk') : null;
+        abilities.def = skills.def ? AbilityRegistry.create(skills.def.type, skills.def, 'def') : null;
+        abilities.ult = skills.ult ? AbilityRegistry.create(skills.ult.type, skills.ult, 'ult', {
             atkConfig: skills.atk,
             ProjectileClass: Projectile
-        });
+        }) : null;
 
         return abilities;
     }
@@ -392,9 +392,8 @@ export class Fighter {
             this.abilities.def.update(this, context);
         }
 
-        // Check ultimate condition (HP < 50%)
-        // Divine General (Mahoraga) triggers ULT on attack hit instead
-        if (this.hp < this.maxHp * 0.5 && this.cooldowns.ult <= 0 && this.abilities.ult && this.typeKey !== 'DIVINE_GENERAL') {
+        // Check ultimate condition (Auto-trigger when possible)
+        if (this.abilities.ult && this.abilities.ult.canUse && this.abilities.ult.canUse(this, context)) {
             this.abilities.ult.execute(this, context);
         }
 
@@ -408,27 +407,9 @@ export class Fighter {
             this.activeEffects.ultTimer--;
             if (this.activeEffects.ultTimer <= 0) {
                 this.activeEffects.ultActive = false;
-                if (this.typeKey === 'SHIELDBEARER') {
-                    this.ultWallSlamActive = false;
-                    this.mass = this.originalMass;
-                }
-                if (this.typeKey === 'DIVINE_GENERAL') {
-                    this.activeEffects.adaptationAbsorbing = false;
-                }
-            }
-
-            if (this.typeKey === 'THUNDER_MAGE') {
-                if (this.activeEffects.ultTimer % 10 === 0) {
-                    const rx = this.x + (Math.random() - 0.5) * 300;
-                    const ry = this.y + (Math.random() - 0.5) * 300;
-                    this.game.particles.spawnBolt([{ x: rx, y: ry - 200 }, { x: rx, y: ry }], '#ffaa00');
-                    audioEngine.playZap();
-                    enemies.forEach(e => {
-                        if (e !== this && !e.isDead && Physics.dist(rx, ry, e.x, e.y) < e.radius + 20) {
-                            e.takeDamage(5);
-                            e.applyStatus('STUN');
-                        }
-                    });
+                // OCP Compliant: Call stop on the ultimate ability to reset unique flags
+                if (this.abilities.ult && this.abilities.ult.stop) {
+                    this.abilities.ult.stop(this, context);
                 }
             }
         }
@@ -439,11 +420,15 @@ export class Fighter {
 
         const context = { game: this.game, isDoT, attacker };
 
-        // Check defensive abilities (skip for DoT unless ability handles it)
-        if (this.abilities.def && !isUnblockable) {
-            const result = this.abilities.def.onDamage(this, amount, context);
-            if (result === false) return; // Damage was blocked
-            amount = result;
+        // Check all abilities for onDamage hooks (e.g. defense, evasion)
+        if (!isUnblockable) {
+            for (const ability of Object.values(this.abilities)) {
+                if (ability && ability.onDamage) {
+                    const result = ability.onDamage(this, amount, context);
+                    if (result === false) return; // Damage was blocked
+                    amount = result;
+                }
+            }
         }
 
         const dmg = Math.ceil(amount);
@@ -472,6 +457,7 @@ export class Fighter {
                 });
             }
         }
+        return amount; // Return final damage dealt
     }
 
     applyStatus(type, duration = null) {
@@ -490,5 +476,9 @@ export class Fighter {
         }
     }
 
-
+    heal(amount) {
+        this.hp = Math.min(this.hp + amount, this.maxHp);
+        this.game.combatText.healing(this.x, this.y - 20, amount);
+        logger.log(`${this.name} healed ${amount}. HP: ${this.hp}/${this.maxHp}`, 'combat');
+    }
 }

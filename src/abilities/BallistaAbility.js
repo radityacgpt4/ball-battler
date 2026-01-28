@@ -12,7 +12,7 @@ import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-import { BallistaBoltRenderer } from '../components/ProjectileRenderers.js';
+import { BallistaBoltRenderer, TowerBoltRenderer } from '../components/ProjectileRenderers.js';
 import { LinearMovement, DragBehavior, BallistaBehavior } from '../components/ProjectileBehaviors.js';
 
 export class BallistaAtkAbility extends Ability {
@@ -398,7 +398,7 @@ export class BallistaUltAbility extends Ability {
         p.dragTarget = null;
         p.dragDuration = 20;
         p.impactSound = 'hit';
-        p.renderer = new BallistaBoltRenderer();
+        p.renderer = new TowerBoltRenderer();
         p.addComponent(new LinearMovement());
         p.addComponent(new BallistaBehavior());
         p.addComponent(new DragBehavior());

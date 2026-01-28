@@ -147,13 +147,6 @@ export class Renderer {
     drawTeamIndicator(ctx, fighter) {
         const teamColor = fighter.id === 1 ? '#4fc3f7' : '#ff6b6b';
 
-        // Draw outer ring
-        ctx.strokeStyle = teamColor;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, fighter.radius + 10, 0, Math.PI * 2);
-        ctx.stroke();
-
         // Draw team badge
         ctx.save();
         ctx.fillStyle = teamColor;
@@ -493,45 +486,99 @@ export class Renderer {
             }
         });
 
-        // Ballista - Crossbow
+        // Ballista - Premium Compact Crossbow
         this.registerAccessory('BALLISTA', (ctx, fighter) => {
-            const bowStart = fighter.radius - 5;
+            const bowStart = fighter.radius - 3;
 
-            // Stock
+            // Stock - Slimmer, darker wood with grain
+            const stockGrad = ctx.createLinearGradient(bowStart, -3, bowStart + 28, 3);
+            stockGrad.addColorStop(0, '#3E2723');
+            stockGrad.addColorStop(0.5, '#5D4037');
+            stockGrad.addColorStop(1, '#4E342E');
+            ctx.fillStyle = stockGrad;
+            ctx.beginPath();
+            ctx.roundRect(bowStart, -3, 28, 6, 2);
+            ctx.fill();
+
+            // Stock edge highlight
+            ctx.strokeStyle = '#8D6E63';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(bowStart, -3);
+            ctx.lineTo(bowStart + 28, -3);
+            ctx.stroke();
+
+            // Metallic trigger guard
+            ctx.strokeStyle = '#78909C';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(bowStart + 10, 4, 3, 0, Math.PI);
+            ctx.stroke();
+
+            // Arms - More elegant curved limbs
+            const armGrad = ctx.createLinearGradient(bowStart + 20, -22, bowStart + 24, 0);
+            armGrad.addColorStop(0, '#2E2017');
+            armGrad.addColorStop(0.5, '#4E342E');
+            armGrad.addColorStop(1, '#3E2723');
+            ctx.strokeStyle = armGrad;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+
+            // Top arm
+            ctx.beginPath();
+            ctx.moveTo(bowStart + 24, 0);
+            ctx.quadraticCurveTo(bowStart + 28, -18, bowStart + 16, -22);
+            ctx.stroke();
+
+            // Bottom arm
+            ctx.beginPath();
+            ctx.moveTo(bowStart + 24, 0);
+            ctx.quadraticCurveTo(bowStart + 28, 18, bowStart + 16, 22);
+            ctx.stroke();
+
+            // Arm tips - metallic caps
+            ctx.fillStyle = '#90A4AE';
+            ctx.beginPath();
+            ctx.arc(bowStart + 16, -22, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(bowStart + 16, 22, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bowstring - elegant thin line
+            ctx.strokeStyle = '#BCAAA4';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(bowStart + 16, -22);
+            ctx.lineTo(bowStart + 8, 0);
+            ctx.lineTo(bowStart + 16, 22);
+            ctx.stroke();
+
+            // Nocked bolt - compact with silver tip
             ctx.fillStyle = '#5D4037';
-            ctx.fillRect(bowStart, -4, 35, 8);
+            ctx.fillRect(bowStart + 6, -1.5, 22, 3);
 
-            // Arms
-            ctx.strokeStyle = '#3E2723';
-            ctx.lineWidth = 4;
+            // Bolt silver tip
+            const tipGrad = ctx.createLinearGradient(bowStart + 28, -3, bowStart + 32, 0);
+            tipGrad.addColorStop(0, '#888888');
+            tipGrad.addColorStop(0.5, '#E8E8E8');
+            tipGrad.addColorStop(1, '#B0B0B0');
+            ctx.fillStyle = tipGrad;
             ctx.beginPath();
-            ctx.moveTo(bowStart + 30, 0);
-            ctx.quadraticCurveTo(bowStart + 35, -25, bowStart + 20, -30);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(bowStart + 30, 0);
-            ctx.quadraticCurveTo(bowStart + 35, 25, bowStart + 20, 30);
-            ctx.stroke();
-
-            // Bowstring
-            ctx.strokeStyle = '#D7CCC8';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(bowStart + 20, -30);
-            ctx.lineTo(bowStart + 10, 0);
-            ctx.lineTo(bowStart + 20, 30);
-            ctx.stroke();
-
-            // Bolt
-            ctx.fillStyle = '#4A4A4A';
-            ctx.fillRect(bowStart + 8, -2, 28, 4);
-            ctx.fillStyle = '#757575';
-            ctx.beginPath();
-            ctx.moveTo(bowStart + 38, 0);
-            ctx.lineTo(bowStart + 32, -4);
-            ctx.lineTo(bowStart + 32, 4);
+            ctx.moveTo(bowStart + 32, 0);
+            ctx.lineTo(bowStart + 26, -3);
+            ctx.lineTo(bowStart + 26, 3);
             ctx.closePath();
             ctx.fill();
+
+            // Central mechanism - ornate gold accent
+            ctx.fillStyle = '#B8860B';
+            ctx.beginPath();
+            ctx.arc(bowStart + 24, 0, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#DAA520';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
         });
 
         // Divine General - Golden 8-Spoke Wheel

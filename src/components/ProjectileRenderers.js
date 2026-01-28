@@ -483,41 +483,120 @@ export class BallistaBoltRenderer {
         ctx.translate(p.x, p.y);
         ctx.rotate(p.angle);
 
+        // Scale down by 20% (0.8x original size)
+        const scale = 0.8;
+
         // Arrow shaft
         ctx.fillStyle = '#5D4037';
-        ctx.fillRect(-20, -2, 35, 4);
+        ctx.fillRect(-20 * scale, -2 * scale, 35 * scale, 4 * scale);
 
-        // Arrow head
-        ctx.fillStyle = p.isUltBolt ? '#FFD700' : '#4A4A4A';
+        // Arrow head - Silver metallic tip with gradient
+        const tipGrad = ctx.createLinearGradient(8 * scale, -6 * scale, 18 * scale, 0);
+        tipGrad.addColorStop(0, '#888888');
+        tipGrad.addColorStop(0.5, '#E8E8E8'); // Bright silver
+        tipGrad.addColorStop(1, '#C0C0C0'); // Silver
+        ctx.fillStyle = p.isUltBolt ? '#FFD700' : tipGrad;
         ctx.beginPath();
-        ctx.moveTo(18, 0);
-        ctx.lineTo(8, -6);
-        ctx.lineTo(10, 0);
-        ctx.lineTo(8, 6);
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, -6 * scale);
+        ctx.lineTo(10 * scale, 0);
+        ctx.lineTo(8 * scale, 6 * scale);
         ctx.closePath();
         ctx.fill();
 
-        // Metallic edge
-        ctx.strokeStyle = '#888';
+        // Metallic edge highlight
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, -6 * scale);
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+
+        // Silver edge outline
+        ctx.strokeStyle = '#A0A0A0';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(18, 0);
-        ctx.lineTo(8, -6);
-        ctx.moveTo(18, 0);
-        ctx.lineTo(8, 6);
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, 6 * scale);
         ctx.stroke();
 
         // Fletching
         ctx.fillStyle = p.isUltBolt ? '#8B0000' : '#2E7D32';
         ctx.beginPath();
-        ctx.moveTo(-15, -2);
-        ctx.lineTo(-22, -8);
-        ctx.lineTo(-18, -2);
+        ctx.moveTo(-15 * scale, -2 * scale);
+        ctx.lineTo(-22 * scale, -8 * scale);
+        ctx.lineTo(-18 * scale, -2 * scale);
         ctx.fill();
         ctx.beginPath();
-        ctx.moveTo(-15, 2);
-        ctx.lineTo(-22, 8);
-        ctx.lineTo(-18, 2);
+        ctx.moveTo(-15 * scale, 2 * scale);
+        ctx.lineTo(-22 * scale, 8 * scale);
+        ctx.lineTo(-18 * scale, 2 * scale);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+// Tower Defensive Bolt - 50% smaller with bronze tip
+export class TowerBoltRenderer {
+    draw(ctx, p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+
+        // Scale down to 0.65x original size (slightly smaller than Ballista bolt's 0.8x)
+        const scale = 0.65;
+
+        // Arrow shaft - darker wood
+        ctx.fillStyle = '#4A3728';
+        ctx.fillRect(-20 * scale, -2 * scale, 35 * scale, 4 * scale);
+
+        // Arrow head - Bronze metallic tip with gradient
+        const tipGrad = ctx.createLinearGradient(8 * scale, -6 * scale, 18 * scale, 0);
+        tipGrad.addColorStop(0, '#8B5A2B'); // Dark bronze
+        tipGrad.addColorStop(0.4, '#CD853F'); // Peru/mid bronze
+        tipGrad.addColorStop(0.7, '#D4A574'); // Light bronze highlight
+        tipGrad.addColorStop(1, '#CD7F32'); // Bronze
+        ctx.fillStyle = tipGrad;
+        ctx.beginPath();
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, -6 * scale);
+        ctx.lineTo(10 * scale, 0);
+        ctx.lineTo(8 * scale, 6 * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bronze edge highlight
+        ctx.strokeStyle = '#DAA520'; // Goldenrod highlight
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, -6 * scale);
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+
+        // Bronze edge outline
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, 6 * scale);
+        ctx.stroke();
+
+        // Fletching - smaller, earthy brown
+        ctx.fillStyle = '#6B4423';
+        ctx.beginPath();
+        ctx.moveTo(-15 * scale, -2 * scale);
+        ctx.lineTo(-22 * scale, -8 * scale);
+        ctx.lineTo(-18 * scale, -2 * scale);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-15 * scale, 2 * scale);
+        ctx.lineTo(-22 * scale, 8 * scale);
+        ctx.lineTo(-18 * scale, 2 * scale);
         ctx.fill();
 
         ctx.restore();

@@ -417,11 +417,11 @@ export const FIGHTER_TYPES = {
             },
             def: {
                 name: "Healing Stance",
-                desc: "Stores 90% of damage taken and heals it after 5s.",
+                desc: "Stores 90% of damage taken and heals it after 5.5s.",
                 type: "ADAPTATION_HEAL",
                 isPassive: false,
                 // Configurable properties
-                healDelay: 300,
+                healDelay: 330,
                 healPercent: 0.9
             },
             ult: {

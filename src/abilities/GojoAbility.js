@@ -355,6 +355,8 @@ export class GojoUltAbility extends Ability {
             // Projectile Stop Logic
             game.projectiles.forEach(p => {
                 if (p.owner === fighter) return;
+                if (!p.active) return; // Skip inactive projectiles
+
                 const dist = Physics.dist(fighter.x, fighter.y, p.x, p.y);
 
                 // Slow zone (between slow and stop radius)
@@ -378,12 +380,14 @@ export class GojoUltAbility extends Ability {
                     // Despawn after expiry
                     if (p.frozenTimer > this.projectileExpiry) {
                         this.despawnFrozenProjectile(p, game);
+                        return;
                     }
                 }
 
                 // Outside slow radius - if was frozen, despawn
                 if (dist >= this.slowRadius && p.isFrozenByInfinity) {
                     this.despawnFrozenProjectile(p, game);
+                    return;
                 }
             });
 

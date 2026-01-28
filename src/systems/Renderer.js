@@ -881,7 +881,7 @@ export class Renderer {
         this.registerAccessory('KING_OF_CURSES', (ctx, fighter) => {
             // Domain Expansion Visual (always active)
             if (fighter.domainActive) {
-                const radius = fighter.domainRadius || 150;
+                const radius = fighter.domainRadius || 125;
 
                 ctx.save();
 

@@ -51,8 +51,9 @@ export const PARTICLE_TEMPLATES = {
     },
     'hirenkyaku': {
         layers: [
-            { type: 'burst', count: 10, color: '#ffffff', speed: { min: 0, max: 0 }, life: 0.4, shape: 'dot', rise: -1 }, // Static
-            { type: 'burst', count: 1, color: '#1E90FF', speed: 0, life: 0.8, shape: 'flash', size: 8 } // Flash
+            { type: 'shockwave', color: '#1E90FF', maxRadius: 60, life: 0.4, lineWidth: 3 }, // Expanding energy ring
+            { type: 'burst', count: 15, color: '#ffffff', speed: { min: 2, max: 6 }, life: 0.4, shape: 'dot' }, // Outward sparkles
+            { type: 'burst', count: 1, color: '#E0FFFF', speed: 0, life: 0.6, shape: 'flash', size: 12 } // Bright core flash
         ]
     },
     'lichtRegen': {
@@ -66,9 +67,11 @@ export const PARTICLE_TEMPLATES = {
     // ============================================
     'zoltraakImpact': {
         layers: [
-            { type: 'shockwave', color: '#4fc3f7', maxRadius: 45, life: 0.4, lineWidth: 3 }, // Quick shockwave
-            { type: 'burst', count: 10, color: ['#4fc3f7', '#87CEEB', '#ffffff'], speed: { min: 4, max: 12 }, life: 0.5, shape: 'dot' }, // Cyan sparks
-            { type: 'burst', count: 4, color: '#E0FFFF', speed: { min: 1, max: 3 }, life: 0.3, shape: 'flash', size: 6 } // Core flash
+            { type: 'shockwave', color: '#4fc3f7', maxRadius: 60, life: 0.5, lineWidth: 4 }, // Larger quick shockwave
+            { type: 'shockwave', color: '#E0FFFF', maxRadius: 45, life: 0.3, lineWidth: 2 }, // White inner ring
+            { type: 'burst', count: 18, color: ['#4fc3f7', '#87CEEB', '#ffffff'], speed: { min: 6, max: 15 }, life: 0.6, shape: 'dot' }, // More cyan sparks
+            { type: 'burst', count: 6, color: '#E0FFFF', speed: { min: 1, max: 4 }, life: 0.4, shape: 'flash', size: 8 }, // Bigger core flash
+            { type: 'lightning', count: 8, color: '#87CEEB', spread: 90, life: 0.4, width: 2 } // Magical energy crackle
         ]
     },
 

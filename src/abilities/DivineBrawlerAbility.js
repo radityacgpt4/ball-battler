@@ -141,19 +141,11 @@ export class DivineBrawlerDefAbility extends Ability {
     }
 
     update(fighter, context) {
-        // Manage Focus buff timer (from ULT) - handled here since DEF.update() is called every frame
-        if (fighter.activeEffects.focusActive) {
-            fighter.activeEffects.focusTimer--;
-
-            // Particle aura
-            if (fighter.activeEffects.focusTimer % 10 === 0) {
+        // Manage Focus buff particles - now permanent once activated via ULT
+        if (fighter.activeEffects.ultActive && fighter.activeEffects.focusActive) {
+            // Particle aura visuals
+            if (fighter.game.tickCount % 10 === 0) {
                 fighter.game.particles.spawn(fighter.x, fighter.y, '#4B0082', 1);
-            }
-
-            if (fighter.activeEffects.focusTimer <= 0) {
-                fighter.activeEffects.focusActive = false;
-                fighter.mass = fighter.originalMass || 1.6;
-                logger.log(`${fighter.name}'s Focus fades.`, 'info');
             }
         }
 
@@ -270,9 +262,10 @@ export class DivineBrawlerUltAbility extends Ability {
     }
 
     execute(fighter, context) {
-        // Activate Buff
+        // Activate Buff Permamently
+        fighter.activeEffects.ultActive = true;
+        fighter.activeEffects.ultTimer = 999999;
         fighter.activeEffects.focusActive = true;
-        fighter.activeEffects.focusTimer = this.duration;
 
         // Massive Mass Increase
         fighter.originalMass = fighter.mass;

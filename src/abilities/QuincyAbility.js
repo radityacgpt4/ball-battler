@@ -238,6 +238,29 @@ export class QuincyDefAbility extends Ability {
                 // Visual effects at departure point
                 game.particles.spawnHirenkyaku(oldX, oldY);
 
+                // --- PREMIUM: Dash-Out Streak (Connecting Beam) ---
+                // Render a high-speed motion trail connecting start and end
+                game.particles.particles.push({
+                        type: 'beam',
+                        x1: oldX, y1: oldY,
+                        x2: newX, y2: newY,
+                        color: '#E0FFFF', // Very light cyan/white
+                        width: 12, // Thick start
+                        life: 0.5, // Increased from 0.25 to make it visible
+                        decay: 0.08 // Slower decay
+                });
+
+                // Add a second thinner core line for "energy" feel
+                game.particles.particles.push({
+                        type: 'beam',
+                        x1: oldX, y1: oldY,
+                        x2: newX, y2: newY,
+                        color: '#00BFFF', // Deep blue core
+                        width: 4,
+                        life: 0.5, // Sync with outer beam
+                        decay: 0.08
+                });
+
                 // Visual effects at arrival point
                 game.particles.spawnHirenkyaku(newX, newY);
 
@@ -266,7 +289,7 @@ export class QuincyDefAbility extends Ability {
                 game.projectiles.push(trap);
 
                 // Audio
-                audioEngine.playPowerUp();
+                audioEngine.playHirenkyaku();
 
                 logger.log(`${fighter.name} used Hirenkyaku!`, 'info');
 

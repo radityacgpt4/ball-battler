@@ -534,8 +534,8 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 180,
-                damage: 4,
-                arrowCount: 6,
+                damage: 5,
+                arrowCount: 5,
                 stunDuration: 45,
                 arrowSpeed: 22,
                 arrowRadius: 2,
@@ -582,7 +582,7 @@ export const FIGHTER_TYPES = {
                 slashDamage: 8,
                 slashSpeed: 18,
                 slashFireRate: 60,
-                slashWidth: 120, // Parabolic width
+                slashWidth: 160, // Parabolic width
                 dragStrength: 0.15 // Drag factor
             }
         }

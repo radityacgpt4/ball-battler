@@ -158,6 +158,20 @@ export class AudioEngine {
         this.playTone(600, 'sine', 0.1, 0.1, 800); // Subtle rising bloop
     }
 
+    playHirenkyaku() {
+        // Sharp spiritual "blink" - high pitched chirp + fast sweep
+        if (!this.enabled || !this.ctx) return;
+
+        // 1. High frequency reishi chirp
+        this.playTone(3200, 'triangle', 0.1, 0.3, 2400);
+
+        // 2. Fast futuristic "zip"
+        this.playTone(400, 'sine', 0.12, 0.4, 2000);
+
+        // 3. High-pass noise burst for air displacement
+        this.playNoise(0.08, 0.2, 5000);
+    }
+
     playLaser(duration = 1.0) {
         if (!this.enabled || !this.ctx) return;
 
@@ -298,6 +312,35 @@ export class AudioEngine {
 
         // Light noise for "magic dust" feel
         this.playNoise(0.15, 0.08, 6000);
+    }
+
+    playZoltraakImpact() {
+        // Magical impact - high pitched crystalline hit with magical resonance
+        if (!this.enabled || !this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const duration = 0.4;
+
+        // Crystalline "ting"
+        this.playTone(2800, 'triangle', 0.1, 0.3, 1800);
+
+        // Magical resonance pulse
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + duration);
+
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(now + duration);
+
+        // Magic sparkles noise
+        this.playNoise(0.3, 0.15, 4000);
     }
 
     // ============================================

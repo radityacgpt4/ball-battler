@@ -40,9 +40,9 @@ export class IchigoAtkAbility extends Ability {
 
             // Use weapon geometry registry for collision
             if (checkWeaponHit(weaponKey, fighter, enemy)) {
-                // Check if blocked by shield
-                if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
-                    if (fighter.cooldowns.atk <= 0) {
+                if (fighter.cooldowns.atk <= 0) {
+                    // Check if blocked by shield (only when actually attacking)
+                    if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                         const shieldX = enemy.x + Math.cos(enemy.angle) * (enemy.radius + 8);
                         const shieldY = enemy.y + Math.sin(enemy.angle) * (enemy.radius + 8);
                         game.combatText.blocked(enemy.x, enemy.y - enemy.radius);
@@ -50,11 +50,8 @@ export class IchigoAtkAbility extends Ability {
                         audioEngine.playBlock();
                         logger.log(`${enemy.name} blocked attack from ${fighter.name}`, 'combat');
                         fighter.cooldowns.atk = this.attackCooldown;
+                        continue;
                     }
-                    continue;
-                }
-
-                if (fighter.cooldowns.atk <= 0) {
                     fighter.meleeHits++;
                     enemy.takeDamage(this.damage, false, false, fighter);
 
@@ -220,9 +217,8 @@ export class IchigoUltAbility extends Ability {
 
         fighter.cooldowns.ult = this.cooldown;
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = this.duration; // Global sync
+        fighter.activeEffects.ultTimer = 999999; // Permanent once activated
         fighter.activeEffects.bankaiActive = true;
-        fighter.activeEffects.bankaiTimer = this.duration;
 
         // Store original values
         fighter.activeEffects.bankaiSpeedBoost = this.speedBoost;
@@ -269,9 +265,7 @@ export class IchigoUltAbility extends Ability {
     }
 
     stop(fighter, context) {
-        fighter.activeEffects.bankaiActive = false;
-        context.game.combatText.text(fighter.x, fighter.y - fighter.radius - 20, "Bankai expires!", "#888");
-        logger.log(`${fighter.name}'s Bankai expires!`, 'combat');
+        // Bankai is permanent once activated — this should not be called
     }
 
     onDamage(fighter, damage, context) {

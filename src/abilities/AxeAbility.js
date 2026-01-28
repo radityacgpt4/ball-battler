@@ -44,19 +44,16 @@ export class AxeAtkAbility extends Ability {
 
             // Use weapon geometry registry for collision
             if (checkWeaponHit('AXEMAN_AXE', fighter, enemy)) {
-                // Check shield block
-                if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
-                    if (fighter.cooldowns.atk <= 0) {
+                if (fighter.cooldowns.atk <= 0) {
+                    // Check shield block (only when actually attacking)
+                    if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                         game.combatText.blocked(enemy.x, enemy.y - enemy.radius);
                         game.particles.spawn(enemy.x, enemy.y, '#ffffff', 5);
                         audioEngine.playBlock();
                         logger.log(`${enemy.name} blocked axe attack from ${fighter.name}`, 'combat');
                         fighter.cooldowns.atk = this.blockedCooldown;
+                        continue;
                     }
-                    continue;
-                }
-
-                if (fighter.cooldowns.atk <= 0) {
                     fighter.cooldowns.atk = this.swingCooldown;
 
                     // Damage

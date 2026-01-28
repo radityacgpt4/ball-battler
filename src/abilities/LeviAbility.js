@@ -500,7 +500,7 @@ export class GodspeedODMAbility extends Ability {
         if (fighter.hp >= fighter.maxHp * 0.5) return; // Only below 50% HP
 
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = this.config.duration;
+        fighter.activeEffects.ultTimer = 999999; // Permanent once activated
         fighter.cooldowns.ult = this.config.cooldown;
 
         // Visual feedback

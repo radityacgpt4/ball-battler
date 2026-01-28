@@ -749,16 +749,11 @@ export class MechaUltAbility extends Ability {
     }
 
     update(fighter, context) {
-        if (fighter.mechaUltTimer > 0) {
-            fighter.mechaUltTimer--;
-
-            // Visual pulse every few frames
-            if (fighter.mechaUltTimer % 60 === 0) {
+        // Permanent ULT — visual pulse every 60 frames while active
+        if (fighter.mechaUltActive) {
+            this.pulseTimer = (this.pulseTimer || 0) + 1;
+            if (this.pulseTimer % 60 === 0) {
                 context.game.particles.spawnShockwave(fighter.x, fighter.y, '#00BFFF', 40, 0.2);
-            }
-
-            if (fighter.mechaUltTimer <= 0) {
-                this.deactivate(fighter, context);
             }
         }
     }
@@ -768,9 +763,8 @@ export class MechaUltAbility extends Ability {
 
         // Activate Twin Cannon Protocol
         fighter.mechaUltActive = true;
-        fighter.mechaUltTimer = this.duration;
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = this.duration; // Sync with global timer to prevent Fighter.js deactivation
+        fighter.activeEffects.ultTimer = 999999; // Permanent once activated
 
         // Activation visuals
         game.particles.spawnShockwave(fighter.x, fighter.y, '#FFFFFF', 80, 0.5);
@@ -786,9 +780,6 @@ export class MechaUltAbility extends Ability {
     }
 
     deactivate(fighter, context) {
-        fighter.mechaUltActive = false;
-        fighter.activeEffects.ultActive = false;
-        context.game.combatText.text(fighter.x, fighter.y - fighter.radius - 30, 'ULT EXPIRED', '#888888');
-        logger.log(`${fighter.name} Twin Cannon Protocol deactivated.`, 'combat');
+        // Permanent ULT — this should not be called
     }
 }

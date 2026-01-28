@@ -189,7 +189,7 @@ export class SniperUltAbility extends Ability {
         const { game } = context;
 
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = this.duration;
+        fighter.activeEffects.ultTimer = 999999; // Permanent once activated
         fighter.cooldowns.ult = this.cooldown;
 
         game.particles.spawn(fighter.x, fighter.y, '#00ff00', 10);

@@ -30,9 +30,9 @@ export class MeleeAbility extends Ability {
             if (enemy === fighter || enemy.isDead) continue;
             // Use weapon geometry registry for collision
             if (checkWeaponHit('SWORD_MASTER_BLADE', fighter, enemy)) {
-                // Check if blocked by shield
-                if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
-                    if (fighter.cooldowns.atk <= 0) {
+                if (fighter.cooldowns.atk <= 0) {
+                    // Check if blocked by shield (only when actually attacking)
+                    if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                         const shieldX = enemy.x + Math.cos(enemy.angle) * (enemy.radius + 8);
                         const shieldY = enemy.y + Math.sin(enemy.angle) * (enemy.radius + 8);
                         game.combatText.blocked(enemy.x, enemy.y - enemy.radius);
@@ -40,11 +40,8 @@ export class MeleeAbility extends Ability {
                         audioEngine.playBlock();
                         logger.log(`${enemy.name} blocked attack from ${fighter.name}`, 'combat');
                         fighter.cooldowns.atk = this.attackCooldown;
+                        continue;
                     }
-                    continue;
-                }
-
-                if (fighter.cooldowns.atk <= 0) {
                     fighter.meleeHits++;
                     enemy.takeDamage(this.damage, false, false, fighter);
 

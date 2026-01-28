@@ -13,7 +13,7 @@ import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
 import { QuincyArrowRenderer, GintoTrapRenderer } from '../components/ProjectileRenderers.js';
-import { LinearMovement, QuincyTrailBehavior, StaticLifetimeBehavior, LichtRegenBehavior } from '../components/ProjectileBehaviors.js';
+import { LinearMovement, QuincyTrailBehavior, StaticLifetimeBehavior, LichtRegenBehavior, GintoTrapBehavior } from '../components/ProjectileBehaviors.js';
 
 // --- ATK: HEILIG PFEIL (Sacred Arrow) ---
 export class QuincyAtkAbility extends Ability {
@@ -261,6 +261,7 @@ export class QuincyDefAbility extends Ability {
 
                 trap.renderer = new GintoTrapRenderer();
                 trap.addComponent(new StaticLifetimeBehavior(this.trapDuration));
+                trap.addComponent(new GintoTrapBehavior());
 
                 game.projectiles.push(trap);
 

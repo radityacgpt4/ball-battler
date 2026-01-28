@@ -437,6 +437,9 @@ export class Fighter {
         this.game.combatText.damage(this.x, this.y - this.radius, dmg);
         this.hp -= amount;
 
+        // Notify game of hit for no-hit arena shrink timer
+        if (this.game.registerHit) this.game.registerHit();
+
         logger.log(`${this.name} took ${dmg} dmg. HP: ${Math.ceil(this.hp)}/${this.maxHp}`, 'combat');
 
         if (this.hp <= 0) {

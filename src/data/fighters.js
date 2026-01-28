@@ -366,8 +366,7 @@ export const FIGHTER_TYPES = {
                 spreadAngle: 0.15,
                 boltRadius: 8,
                 dragDuration: 25,
-                normalBoltCount: 2,
-                ultBoltCount: 3
+                normalBoltCount: 2
             },
             def: {
                 name: "Gate Barrier",
@@ -381,15 +380,20 @@ export const FIGHTER_TYPES = {
                 shieldRadius: 8
             },
             ult: {
-                name: "Siege Mode",
-                desc: "Doubles fire rate but disables movement.",
+                name: "Defensive Tower",
+                desc: "Deploys auto-firing towers (max 3). Towers last 4s and have 20 HP.",
                 type: "SIEGE_MODE",
                 isPassive: false,
-                // Configurable properties
-                cooldown: 120,
-                damage: 15,
-                ultShots: 3,
-                ultVisualDuration: 60
+                // Tower properties
+                spawnInterval: 120,
+                maxTowers: 3,
+                towerHp: 20,
+                towerLifetime: 240,
+                towerFireRate: 60,
+                towerRotationSpeed: 0.04,
+                towerBoltDamage: 8,
+                towerBoltSpeed: 10,
+                towerRadius: 15
             }
         }
     },

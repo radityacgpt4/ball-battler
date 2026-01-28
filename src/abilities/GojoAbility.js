@@ -148,7 +148,7 @@ export class GojoBlueAbility extends Ability {
         fighter.cooldowns.def = this.cooldown;
 
         logger.log(`${fighter.name} casts BLUE!`, 'combat');
-        audioEngine.play('charge_up'); // Placeholder
+        audioEngine.playPowerUp();
 
         // Visual
         game.particles.spawnShockwave(holeX, holeY, '#0000FF', 30, 0.5);
@@ -332,7 +332,7 @@ export class GojoUltAbility extends Ability {
         fighter.infinityActive = true;
 
         context.game.particles.spawnEffect('infinityAura', fighter.x, fighter.y);
-        audioEngine.play('power_up');
+        audioEngine.playPowerUp();
         logger.log(`${fighter.name} expands Infinity!`, 'combat');
 
         fighter.cooldowns.ult = 9999;

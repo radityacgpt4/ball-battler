@@ -30,6 +30,9 @@ export class Game {
         this.p1Team = ['THUNDER_MAGE']; // Array of fighter types for team 1
         this.p2Team = ['SHIELDBEARER']; // Array of fighter types for team 2
 
+        // Mobile player toggle state (1 = P1, 2 = P2)
+        this.selectingPlayer = 1;
+
         this.width = CONSTANTS.WIDTH;
         this.height = CONSTANTS.HEIGHT;
         this.arenaBounds = {
@@ -39,6 +42,7 @@ export class Game {
             height: CONSTANTS.HEIGHT
         };
         this.arenaTimer = 0;
+        this.noHitTimer = 0;
         this.timeScale = 1.0;
         this.finishTimer = 0;
         this.isMatchOver = false;
@@ -55,6 +59,7 @@ export class Game {
         this.ctx = this.canvas.getContext('2d');
         logger.init();
         this.setupModeSelector();
+        this.setupPlayerToggle();
         this.showSelect();
     }
 
@@ -74,6 +79,23 @@ export class Game {
                 this.p2Team = Array(teamSize).fill('SHIELDBEARER');
                 this.renderCharSelect();
             });
+        });
+    }
+
+    setupPlayerToggle() {
+        const toggleP1 = document.getElementById('toggle-p1');
+        const toggleP2 = document.getElementById('toggle-p2');
+        if (!toggleP1 || !toggleP2) return;
+
+        toggleP1.addEventListener('click', () => {
+            this.selectingPlayer = 1;
+            toggleP1.className = 'player-toggle-btn active-p1';
+            toggleP2.className = 'player-toggle-btn';
+        });
+        toggleP2.addEventListener('click', () => {
+            this.selectingPlayer = 2;
+            toggleP2.className = 'player-toggle-btn active-p2';
+            toggleP1.className = 'player-toggle-btn';
         });
     }
 
@@ -122,20 +144,26 @@ export class Game {
                 </div>
             `;
 
-            // Left click: cycle through P1 team slots
+            // Click handler: on mobile uses toggle, on desktop left=P1 right=P2
             item.onclick = (e) => {
-                const teamSize = parseInt(this.gameMode[0]);
-                // Find first slot that doesn't match this key, or overwrite first slot
-                let slotIndex = this.p1Team.findIndex((t, i) => t !== key);
-                if (slotIndex === -1) slotIndex = 0;
-                this.p1Team[slotIndex] = key;
+                const isMobile = window.matchMedia('(max-width: 900px)').matches;
+                if (isMobile && this.selectingPlayer === 2) {
+                    // Mobile P2 selection via toggle
+                    let slotIndex = this.p2Team.findIndex((t, i) => t !== key);
+                    if (slotIndex === -1) slotIndex = 0;
+                    this.p2Team[slotIndex] = key;
+                } else {
+                    // P1 selection (desktop left-click or mobile P1 toggle)
+                    let slotIndex = this.p1Team.findIndex((t, i) => t !== key);
+                    if (slotIndex === -1) slotIndex = 0;
+                    this.p1Team[slotIndex] = key;
+                }
                 this.renderCharSelect();
             };
 
-            // Right click: cycle through P2 team slots
+            // Right click: P2 team slots (desktop only)
             item.oncontextmenu = (e) => {
                 e.preventDefault();
-                const teamSize = parseInt(this.gameMode[0]);
                 let slotIndex = this.p2Team.findIndex((t, i) => t !== key);
                 if (slotIndex === -1) slotIndex = 0;
                 this.p2Team[slotIndex] = key;
@@ -188,18 +216,23 @@ export class Game {
         logger.log(`MATCH START: ${this.gameMode} - Team 1 vs Team 2`, 'system');
 
         document.getElementById('char-select').style.display = 'none';
-        this.width = CONSTANTS.WIDTH;
-        this.height = CONSTANTS.HEIGHT;
+
+        // Arena size varies by mode
+        const arenaSizes = { '1v1': [550, 550], '2v2': [750, 550], '3v3': [850, 550] };
+        const [w, h] = arenaSizes[this.gameMode] || [800, 500];
+        this.width = w;
+        this.height = h;
 
         // Reset Arena Bounds
         this.arenaBounds = {
             x: 0,
             y: 0,
-            width: CONSTANTS.WIDTH,
-            height: CONSTANTS.HEIGHT
+            width: this.width,
+            height: this.height
         };
 
         this.arenaTimer = 0;
+        this.noHitTimer = 0; // Frames since last damage between fighters
         this.timeScale = 1.0;
         this.finishTimer = 0;
         this.isMatchOver = false;
@@ -265,55 +298,75 @@ export class Game {
     updateCanvasSize() {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
-        // Note: Do NOT update --game-width here to prevent UI from shrinking
+        // Sync CSS aspect ratio and max-width so the canvas isn't stretched
+        this.canvas.style.setProperty('--canvas-aspect', `${this.width} / ${this.height}`);
+        this.canvas.style.setProperty('--canvas-max-width', `${this.width}px`);
     }
 
     handleArenaShrink() {
+        // Timed shrink (every 15 seconds)
         this.arenaTimer++;
         if (this.arenaTimer >= 900) {
             this.arenaTimer = 0;
-
-            // Shrink bounds towards center
-            const shrinkFactor = 0.85;
-            const newW = Math.floor(this.arenaBounds.width * shrinkFactor);
-            const newH = Math.floor(this.arenaBounds.height * shrinkFactor);
-            const dW = (this.arenaBounds.width - newW) / 2;
-            const dH = (this.arenaBounds.height - newH) / 2;
-
-            this.arenaBounds.x += dW;
-            this.arenaBounds.y += dH;
-            this.arenaBounds.width = newW;
-            this.arenaBounds.height = newH;
-
-            // Log and visual feedback for arena shrink
-            logger.log(`ARENA SHRINKING! New size: ${newW}x${newH}`, 'error');
-            this.combatText.arenaShrink(this.width / 2, this.height / 2);
-            this.particles.spawnExplosion(this.width / 2, this.height / 2);
-            audioEngine.playHeavyImpact();
-
-            // Push entities inside
-            this.entities.forEach(e => {
-                e.x = Math.max(this.arenaBounds.x + e.radius, Math.min(e.x, this.arenaBounds.x + this.arenaBounds.width - e.radius));
-                e.y = Math.max(this.arenaBounds.y + e.radius, Math.min(e.y, this.arenaBounds.y + this.arenaBounds.height - e.radius));
-            });
+            this.shrinkArena();
         }
+
+        // No-hit shrink: if no damage dealt for 5 seconds (300 frames), force shrink
+        this.noHitTimer++;
+        if (this.noHitTimer >= 300) {
+            this.noHitTimer = 0;
+            this.shrinkArena();
+            logger.log('No hits detected — arena shrinks to force engagement!', 'warn');
+        }
+    }
+
+    /** Called from Fighter.takeDamage to reset the no-hit timer */
+    registerHit() {
+        this.noHitTimer = 0;
+    }
+
+    shrinkArena() {
+        const shrinkFactor = 0.85;
+        const newW = Math.floor(this.arenaBounds.width * shrinkFactor);
+        const newH = Math.floor(this.arenaBounds.height * shrinkFactor);
+        const dW = (this.arenaBounds.width - newW) / 2;
+        const dH = (this.arenaBounds.height - newH) / 2;
+
+        this.arenaBounds.x += dW;
+        this.arenaBounds.y += dH;
+        this.arenaBounds.width = newW;
+        this.arenaBounds.height = newH;
+
+        // Log and visual feedback for arena shrink
+        logger.log(`ARENA SHRINKING! New size: ${newW}x${newH}`, 'error');
+        this.combatText.arenaShrink(this.width / 2, this.height / 2);
+        this.particles.spawnExplosion(this.width / 2, this.height / 2);
+        audioEngine.playHeavyImpact();
+
+        // Push entities inside
+        this.entities.forEach(e => {
+            e.x = Math.max(this.arenaBounds.x + e.radius, Math.min(e.x, this.arenaBounds.x + this.arenaBounds.width - e.radius));
+            e.y = Math.max(this.arenaBounds.y + e.radius, Math.min(e.y, this.arenaBounds.y + this.arenaBounds.height - e.radius));
+        });
     }
 
     createUI() {
         const uiHeader = document.getElementById('ui-header');
         uiHeader.innerHTML = '';
 
-        this.entities.forEach(ent => {
+        this.entities.forEach((ent, idx) => {
             const div = document.createElement('div');
             div.className = 'hud-card';
             const isRight = ent.id === 2;
             div.style.alignItems = isRight ? 'flex-end' : 'flex-start';
 
+            // Use unique index-based IDs so each fighter gets its own HUD
+            const uid = `ent${idx}`;
             const skillsHTML = `
                 <div class="skills-container" style="flex-direction: ${isRight ? 'row-reverse' : 'row'}">
-                    <div id="p${ent.id}-atk" class="skill-node skill-atk"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ATK</span></div></div>
-                    <div id="p${ent.id}-def" class="skill-node skill-def"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">DEF</span></div></div>
-                    <div id="p${ent.id}-ult" class="skill-node skill-ult"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ULT</span></div></div>
+                    <div id="${uid}-atk" class="skill-node skill-atk"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ATK</span></div></div>
+                    <div id="${uid}-def" class="skill-node skill-def"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">DEF</span></div></div>
+                    <div id="${uid}-ult" class="skill-node skill-ult"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ULT</span></div></div>
                 </div>
             `;
 
@@ -326,9 +379,10 @@ export class Game {
     }
 
     updateUI() {
-        this.entities.forEach(ent => {
+        this.entities.forEach((ent, idx) => {
+            const uid = `ent${idx}`;
             const updateCircle = (type, current, max, isPassive) => {
-                const el = document.getElementById(`p${ent.id}-${type}`);
+                const el = document.getElementById(`${uid}-${type}`);
                 if (!el) return;
 
                 if (isPassive) {
@@ -371,9 +425,37 @@ export class Game {
             // They handle hit detection inside their update() component.
             if (p.handlesOwnCollision) continue;
 
+            // 2b. TOWER COLLISION — enemy projectiles can damage Ballista towers
+            if (!p.active) continue;
+            for (const ent of this.entities) {
+                if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+                // Only enemy projectiles damage towers
+                if (p.owner && p.owner.id === ent.id) continue;
+                for (const tower of ent.ballistaTowers) {
+                    if (tower.hp <= 0) continue;
+                    if (Physics.dist(p.x, p.y, tower.x, tower.y) < tower.radius + p.radius) {
+                        tower.hp -= p.damage;
+                        this.particles.spawn(tower.x, tower.y, '#8B4513', 4);
+                        audioEngine.playHit();
+                        if (tower.hp <= 0) {
+                            this.particles.spawnExplosion(tower.x, tower.y);
+                            logger.log(`${ent.name}'s tower was destroyed!`, 'combat');
+                        }
+                        if (!p.piercing) {
+                            p.active = false;
+                            break;
+                        }
+                    }
+                }
+                if (!p.active) break;
+            }
+
             // 3. GENERIC ENTITY COLLISION (Standard projectiles)
+            if (!p.active) continue;
             for (let ent of this.entities) {
                 if (ent === p.owner || ent.isDead) continue;
+                // Team check: prevent friendly fire in 2v2/3v3 modes
+                if (p.owner && ent.id === p.owner.id) continue;
 
                 // Z-Axis Check
                 if (p.z !== undefined && p.z > (ent.height || 40)) continue;
@@ -534,6 +616,40 @@ export class Game {
         }
     }
 
+    resolveTowerCollisions() {
+        // Entity vs Tower — towers are immobile solid obstacles
+        for (const ent of this.entities) {
+            if (ent.isDead) continue;
+            // Check all fighters' towers
+            for (const owner of this.entities) {
+                if (!owner.ballistaTowers) continue;
+                for (const tower of owner.ballistaTowers) {
+                    if (tower.hp <= 0) continue;
+                    const dist = Physics.dist(ent.x, ent.y, tower.x, tower.y);
+                    const minDist = ent.radius + tower.radius;
+                    if (dist < minDist && dist > 0.001) {
+                        // Push entity out (tower is immobile)
+                        const nx = (ent.x - tower.x) / dist;
+                        const ny = (ent.y - tower.y) / dist;
+                        const overlap = minDist - dist + 1;
+                        ent.x += nx * overlap;
+                        ent.y += ny * overlap;
+
+                        // Bounce entity velocity off the tower
+                        const dot = ent.dx * nx + ent.dy * ny;
+                        if (dot < 0) {
+                            ent.dx -= 2 * dot * nx;
+                            ent.dy -= 2 * dot * ny;
+                            // Dampen slightly
+                            ent.dx *= 0.8;
+                            ent.dy *= 0.8;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     checkWinCondition() {
         if (this.isMatchOver) {
             this.finishTimer++;
@@ -603,6 +719,7 @@ export class Game {
 
             // console.time('collisions');
             this.resolveCollisions();
+            this.resolveTowerCollisions();
             // console.timeEnd('collisions');
 
             this.projectiles.forEach(p => p.update(this.timeScale));

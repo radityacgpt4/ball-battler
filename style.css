@@ -643,23 +643,21 @@ canvas {
         flex-direction: column;
     }
 
-    /* Allow screen overlay to scroll on mobile */
+    /* Fixed: Prevent screen overlay from scrolling - grid should scroll independently */
     .screen-overlay {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding: 8px 8px 100px 8px;
-        /* Extra bottom padding for scroll */
+        overflow: hidden;
+        /* Prevent main overlay scroll */
+        padding: 8px;
         box-sizing: border-box;
         align-items: center;
         justify-content: flex-start;
-        /* Align to top so scrolling works */
-        -webkit-overflow-scrolling: touch;
-        /* Smooth scrolling on iOS */
+        display: flex;
+        flex-direction: column;
     }
 
     .setup-title {
@@ -695,18 +693,27 @@ canvas {
         overflow: visible;
     }
 
-    /* Character grid: center of screen on mobile */
+    /* Character grid: independently scrollable with calculated height */
     .char-grid-container {
         order: -1;
-        /* Move grid to top */
+        /* Move grid to top of selection interface */
         width: 100%;
-        max-height: 45vh;
+        flex-shrink: 1;
+        /* Allow shrinking to fit content */
+        max-height: calc(100vh - 340px);
+        /* Reduced: viewport - (title + mode selector + player toggle + detail panels + start button + padding) */
+        min-height: 150px;
+        /* Minimum height to ensure grid is always visible */
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
+        /* Smooth iOS scrolling */
         padding: 0 2px;
         display: flex;
         justify-content: center;
+        margin-bottom: 8px;
+        position: relative;
+        /* Establish scroll context */
     }
 
     .char-grid {
@@ -808,13 +815,20 @@ canvas {
         display: none;
     }
 
-    /* Start button area */
+    /* Start button area - Always visible at bottom */
     .start-container {
-        margin-top: 10px;
-        padding-bottom: 20px;
-        /* Reduced padding since overlay has bottom padding */
+        margin-top: auto;
+        /* Push to bottom */
+        padding: 10px 8px;
         width: 100%;
         flex-shrink: 0;
+        /* Don't shrink */
+        background: rgba(5, 5, 10, 0.98);
+        /* Solid background so it's visible */
+        border-top: 1px solid var(--border-color);
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
     }
 
     .sound-toggle {
@@ -895,12 +909,35 @@ canvas {
         font-size: 0.9rem;
         padding: 12px 30px;
     }
+
+    /* Mobile scrollbar - more visible for touch devices */
+    .char-grid-container::-webkit-scrollbar {
+        width: 8px;
+        /* Wider for better visibility on mobile */
+    }
+
+    .char-grid-container::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+
+    .char-grid-container::-webkit-scrollbar-thumb {
+        background: var(--accent-blue);
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
+    .char-grid-container::-webkit-scrollbar-thumb:active {
+        background: #00b8e6;
+        /* Slightly darker when active */
+    }
 }
 
 /* Extra small screens (phones) */
 @media (max-width: 400px) {
     .screen-overlay {
-        padding: 6px 6px 80px 6px;
+        padding: 6px;
+        /* Consistent padding without scroll compensation */
     }
 
     .setup-title {
@@ -917,6 +954,12 @@ canvas {
         padding: 5px 12px;
         font-size: 0.65rem;
         min-width: 55px;
+    }
+
+    .char-grid-container {
+        max-height: calc(100vh - 320px);
+        /* Further reduced for smaller screens */
+        min-height: 120px;
     }
 
     .char-grid {

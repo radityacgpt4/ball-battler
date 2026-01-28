@@ -12,7 +12,7 @@ import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-import { checkWeaponHit } from '../data/weaponGeometry.js';
+import { checkWeaponHit, checkWeaponHitTower } from '../data/weaponGeometry.js';
 
 import { MechaBeamBehavior } from '../components/ProjectileBehaviors.js';
 import { MechaBeamRenderer } from '../components/ProjectileRenderers.js';
@@ -302,6 +302,7 @@ export class MechaAtkAbility extends Ability {
 
         if (fighter.mechaRotationAccumulator >= Math.PI * 2) {
             fighter.mechaHitList = [];
+            fighter.mechaTowerHitList = []; // Reset tower hits as well
             fighter.mechaRotationAccumulator -= Math.PI * 2;
         }
 
@@ -336,6 +337,23 @@ export class MechaAtkAbility extends Ability {
                     audioEngine.playSwordSwing();
                     logger.log(`${fighter.name} landed a blade strike on ${enemy.name}!`, 'combat');
                 }
+            }
+        }
+
+        // --- TOWER COLLISION (Ballista Defensive Towers) ---
+        // Check all entities for their towers
+        for (const ent of game.entities) {
+            if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+            // Only enemy towers can be hit
+            if (ent.id === fighter.id) continue;
+
+            for (const tower of ent.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+
+                // Use the tower hit list to prevent multi-hit per rotation
+                if (!fighter.mechaTowerHitList) fighter.mechaTowerHitList = [];
+
+                checkWeaponHitTower('MECHA_BLADE', fighter, tower, this.meleeDamage, game, fighter.mechaTowerHitList);
             }
         }
 

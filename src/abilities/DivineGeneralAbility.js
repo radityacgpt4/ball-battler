@@ -11,7 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { logger } from '../systems/Logger.js';
 import { audioEngine } from '../systems/Audio.js';
-import { checkWeaponHit } from '../data/weaponGeometry.js';
+import { checkWeaponHit, checkWeaponHitTower } from '../data/weaponGeometry.js';
 
 // --- ATK: EIGHTFOLD STRIKE ---
 export class DivineGeneralAtkAbility extends Ability {
@@ -57,6 +57,27 @@ export class DivineGeneralAtkAbility extends Ability {
                     }
                 }
                 if (hit) break;
+            }
+
+            // --- TOWER COLLISION (Ballista Defensive Towers) ---
+            if (!hit) {
+                for (const ent of context.game.entities) {
+                    if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+                    if (ent.id === fighter.id) continue;
+
+                    for (const tower of ent.ballistaTowers) {
+                        if (tower.hp <= 0) continue;
+
+                        if (checkWeaponHitTower('DIVINE_GENERAL_WHEEL', fighter, tower, this.baseDamage + this.currentBonus, context.game)) {
+                            fighter.cooldowns.atk = this.attackCooldown;
+                            this.currentBonus = 0;
+                            this.lastHitTime = 0;
+                            hit = true;
+                            break;
+                        }
+                    }
+                    if (hit) break;
+                }
             }
         }
     }

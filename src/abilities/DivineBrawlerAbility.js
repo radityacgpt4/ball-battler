@@ -11,7 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-import { checkWeaponHit } from '../data/weaponGeometry.js';
+import { checkWeaponHit, checkWeaponHitTower } from '../data/weaponGeometry.js';
 
 // --- ATK: BLACK FLASH (Passive) ---
 export class DivineBrawlerAtkAbility extends Ability {
@@ -47,6 +47,25 @@ export class DivineBrawlerAtkAbility extends Ability {
                 this.performAttack(fighter, enemy);
                 hit = true;
                 break;
+            }
+        }
+
+        // --- TOWER COLLISION (Ballista Defensive Towers) ---
+        if (!hit) {
+            for (const ent of context.game.entities) {
+                if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+                if (ent.id === fighter.id) continue;
+
+                for (const tower of ent.ballistaTowers) {
+                    if (tower.hp <= 0) continue;
+
+                    if (checkWeaponHitTower('DIVINE_BRAWLER_FISTS', fighter, tower, this.baseDamage, context.game)) {
+                        let cd = this.baseAttackCooldown;
+                        if (fighter.activeEffects.focusActive) cd = this.focusAttackCooldown;
+                        fighter.cooldowns.atk = cd;
+                        break;
+                    }
+                }
             }
         }
     }

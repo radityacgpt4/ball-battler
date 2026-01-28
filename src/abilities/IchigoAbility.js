@@ -11,7 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-import { checkWeaponHit } from '../data/weaponGeometry.js';
+import { checkWeaponHit, checkWeaponHitTower } from '../data/weaponGeometry.js';
 import { Projectile } from '../entities/Projectile.js';
 import { LinearMovement, GetsugaBehavior } from '../components/ProjectileBehaviors.js';
 import { GetsugaTenshouRenderer } from '../components/ProjectileRenderers.js';
@@ -63,6 +63,25 @@ export class IchigoAtkAbility extends Ability {
                     audioEngine.playHit();
                     logger.log(`${fighter.name} hit ${enemy.name} for ${this.damage} dmg`, 'combat');
                     fighter.cooldowns.atk = this.attackCooldown;
+                }
+            }
+        }
+
+        // --- TOWER COLLISION (Ballista Defensive Towers) ---
+        for (const ent of game.entities) {
+            if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+            if (ent.id === fighter.id) continue;
+
+            for (const tower of ent.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+                if (fighter.cooldowns.atk > 0) continue;
+
+                const isBankai = fighter.activeEffects && fighter.activeEffects.bankaiActive;
+                const weaponKey = isBankai ? 'SOUL_REAPER_TENSA' : 'SOUL_REAPER_ZANGETSU';
+
+                if (checkWeaponHitTower(weaponKey, fighter, tower, this.damage, game)) {
+                    fighter.cooldowns.atk = this.attackCooldown;
+                    break;
                 }
             }
         }

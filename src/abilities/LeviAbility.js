@@ -10,7 +10,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-import { checkWeaponHit } from '../data/weaponGeometry.js';
+import { checkWeaponHit, checkWeaponHitTower } from '../data/weaponGeometry.js';
 
 /**
  * ATK: Sword Shred
@@ -120,6 +120,26 @@ export class SwordShredAbility extends Ability {
 
             audioEngine.playSlash();
             this.attackTimer = effectiveCooldown;
+        }
+
+        // --- TOWER COLLISION (Ballista Defensive Towers) ---
+        if (this.attackTimer <= 0) {
+            for (const ent of game.entities) {
+                if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+                if (ent.id === fighter.id) continue;
+
+                for (const tower of ent.ballistaTowers) {
+                    if (tower.hp <= 0) continue;
+
+                    const speedDamageBonus = currentSpeed > 8 ? 1 : 0;
+                    const damage = this.config.baseDamage + speedDamageBonus;
+
+                    if (checkWeaponHitTower('LEVI_BLADES', fighter, tower, damage, game)) {
+                        this.attackTimer = effectiveCooldown;
+                        break;
+                    }
+                }
+            }
         }
     }
 

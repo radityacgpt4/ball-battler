@@ -651,35 +651,38 @@ canvas {
         height: 100%;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 8px;
+        padding: 8px 8px 100px 8px;
+        /* Extra bottom padding for scroll */
         box-sizing: border-box;
         align-items: center;
         justify-content: flex-start;
         /* Align to top so scrolling works */
+        -webkit-overflow-scrolling: touch;
+        /* Smooth scrolling on iOS */
     }
 
     .setup-title {
-        font-size: 1rem;
-        letter-spacing: 1px;
-        margin: 10px 0 10px 0;
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+        margin: 8px 0 8px 0;
         flex-shrink: 0;
     }
 
     /* Mode Selector - Mobile */
     .mode-selector {
-        gap: 8px;
-        margin-bottom: 15px;
+        gap: 6px;
+        margin-bottom: 10px;
         flex-wrap: wrap;
         width: 100%;
         justify-content: center;
     }
 
     .mode-btn {
-        padding: 8px 20px;
-        font-size: 0.75rem;
-        letter-spacing: 1px;
+        padding: 6px 16px;
+        font-size: 0.7rem;
+        letter-spacing: 0.5px;
         flex: 0 0 auto;
-        min-width: 70px;
+        min-width: 60px;
     }
 
     .selection-interface {
@@ -707,115 +710,120 @@ canvas {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         /* 4 columns on mobile looks better */
-        gap: 6px;
+        gap: 5px;
         width: 100%;
         max-width: 100%;
         padding: 0 5px;
+        margin-bottom: 10px;
     }
 
     /* --- FIXED CLASS NAMES HERE --- */
     .grid-item {
         aspect-ratio: 1;
-        padding: 4px;
+        padding: 3px;
         max-width: none;
         /* Reset max-width constraint */
     }
 
     .grid-icon {
         width: 100%;
-        height: 60%;
-        min-height: 30px;
+        height: 55%;
+        min-height: 25px;
     }
 
     .grid-name {
-        font-size: 8px;
+        font-size: 7px;
         /* Smaller font for mobile */
-        padding: 2px;
+        padding: 1px;
         line-height: 1.1;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .select-badges {
-        gap: 2px;
-        margin-top: 2px;
+        gap: 1px;
+        margin-top: 1px;
     }
 
     .p-badge {
-        font-size: 7px;
-        padding: 1px 3px;
+        font-size: 6px;
+        padding: 1px 2px;
         border-radius: 2px;
     }
 
     /* ----------------------------- */
 
-    /* Detail panels: vertical stack on mobile */
+    /* Detail panels: vertical stack on mobile - COMPACT */
     .detail-panel {
         width: 100%;
         flex-shrink: 0;
         max-height: none;
         min-height: auto;
-        padding: 8px;
+        padding: 4px;
+        margin-bottom: 5px;
     }
 
     .p-tag {
-        font-size: 0.7rem;
-        padding: 4px 10px;
-        letter-spacing: 1px;
+        font-size: 0.65rem;
+        padding: 3px 8px;
+        letter-spacing: 0.5px;
     }
 
     .detail-content {
-        padding: 8px;
-        gap: 8px;
+        padding: 4px;
+        gap: 4px;
     }
 
     .detail-name {
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         text-align: center;
+        margin-bottom: 4px;
     }
 
     .detail-stats {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 8px;
-        font-size: 0.7rem;
+        display: none;
+        /* Hide stats on mobile to save space */
     }
 
+    /* Compact team roster for mobile */
     .team-member {
-        font-size: 0.7rem;
-        padding: 3px 6px;
-        margin: 2px 0;
+        font-size: 0.65rem;
+        padding: 2px 4px;
+        margin: 1px 0;
+        display: inline-block;
+        margin-right: 4px;
+        border-left-width: 2px;
     }
 
+    /* Hide detailed skill descriptions on mobile */
     .detail-skills {
-        font-size: 0.7rem;
+        display: none;
     }
 
     .d-skill-desc {
-        font-size: 0.65rem;
-        line-height: 1.2;
+        display: none;
     }
 
     /* Start button area */
     .start-container {
-        margin-top: 15px;
-        padding-bottom: 40px;
-        /* Extra space for scrolling on phones */
+        margin-top: 10px;
+        padding-bottom: 20px;
+        /* Reduced padding since overlay has bottom padding */
         width: 100%;
+        flex-shrink: 0;
     }
 
     .sound-toggle {
-        font-size: 0.7rem;
-        margin-bottom: 8px;
+        font-size: 0.65rem;
+        margin-bottom: 6px;
     }
 
     #start-btn {
         width: 100%;
-        max-width: 350px;
-        padding: 12px;
-        font-size: 0.9rem;
+        max-width: 300px;
+        padding: 10px;
+        font-size: 0.85rem;
         letter-spacing: 1px;
     }
 
@@ -888,39 +896,94 @@ canvas {
 
 /* Extra small screens (phones) */
 @media (max-width: 400px) {
-    .char-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 5px;
+    .screen-overlay {
+        padding: 6px 6px 80px 6px;
     }
 
     .setup-title {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
+        margin: 6px 0;
+    }
+
+    .mode-selector {
+        margin-bottom: 8px;
+        gap: 4px;
     }
 
     .mode-btn {
-        padding: 6px 15px;
-        font-size: 0.7rem;
-        min-width: 60px;
+        padding: 5px 12px;
+        font-size: 0.65rem;
+        min-width: 55px;
+    }
+
+    .char-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .grid-item {
+        padding: 2px;
+    }
+
+    .grid-icon {
+        height: 50%;
+        min-height: 22px;
     }
 
     .grid-name {
-        font-size: 7px;
+        font-size: 6px;
+    }
+
+    .p-badge {
+        font-size: 5px;
+        padding: 1px;
+    }
+
+    .detail-panel {
+        padding: 3px;
+        margin-bottom: 4px;
+    }
+
+    .p-tag {
+        font-size: 0.6rem;
+        padding: 2px 6px;
     }
 
     .detail-name {
+        font-size: 0.7rem;
+        margin-bottom: 3px;
+    }
+
+    .team-member {
+        font-size: 0.6rem;
+        padding: 1px 3px;
+    }
+
+    #start-btn {
+        max-width: 250px;
+        padding: 8px;
         font-size: 0.75rem;
     }
 
+    .sound-toggle {
+        font-size: 0.6rem;
+    }
+
     .hud-name {
-        font-size: 0.65rem;
+        font-size: 0.6rem;
     }
 
     .skill-node {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
     }
 
     .skill-label {
-        font-size: 7px;
+        font-size: 6px;
+    }
+
+    .skills-container {
+        gap: 4px;
     }
 }

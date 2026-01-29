@@ -71,6 +71,15 @@ export class Projectile {
         // COMPONENT SYSTEM (Phase 2 Refactor)
         // ============================================
         this.components = [];
+
+        // ============================================
+        // IMMOBILIZATION TRACKING (Generic Stuck Projectile Cleanup)
+        // ============================================
+        // Tracks projectiles that lose velocity due to external factors
+        // (e.g., Limitless, shields, etc.) and despawns them after threshold
+        this.immobilizedTimer = 0;
+        this.immobilizationThreshold = 120; // Frames (~2 seconds at 60fps)
+        this.velocityThreshold = 0.1; // Speed below this is considered immobilized
     }
 
     addComponent(component) {
@@ -79,6 +88,27 @@ export class Projectile {
     }
 
     update(timeScale = 1.0) {
+        // 0. IMMOBILIZATION CHECK (Generic Stuck Projectile Cleanup)
+        // Prevents projectiles from hanging indefinitely when immobilized by external factors
+        const speed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+
+        if (speed < this.velocityThreshold && !this.isEmbedded && !this.isClaymore && !this.isGrenade) {
+            // Projectile is immobilized (not counting embedded kunai or placed claymores)
+            this.immobilizedTimer++;
+
+            if (this.immobilizedTimer >= this.immobilizationThreshold) {
+                // Despawn with visual feedback
+                this.active = false;
+                if (this.game && this.game.particles) {
+                    this.game.particles.spawn(this.x, this.y, '#888888', 3);
+                }
+                return;
+            }
+        } else {
+            // Projectile is moving, reset timer
+            this.immobilizedTimer = 0;
+        }
+
         // 1. BEHAVIOR SYSTEM
         if (this.components.length > 0) {
             for (const component of this.components) {

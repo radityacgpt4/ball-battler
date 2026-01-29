@@ -47,7 +47,7 @@ export class HomingBehavior {
 
         // 1. Acquire Target
         if (!p.target || p.target.isDead) {
-            const enemies = p.game.entities.filter(e => e !== p.owner && !e.isDead);
+            const enemies = p.game.entities.filter(e => e !== p.owner && !e.isDead && (!p.owner || e.id !== p.owner.id));
             let closest = null;
             let minDist = Infinity;
             for (const e of enemies) {
@@ -517,7 +517,7 @@ export class GrenadeBehavior {
 
         const blastRadius = p.explosionRadius || 80;
         const stunDur = p.stunDuration || 60;
-        const enemies = p.game.entities.filter(ent => !ent.isDead && ent !== p.owner);
+        const enemies = p.game.entities.filter(ent => !ent.isDead && ent !== p.owner && (!p.owner || ent.id !== p.owner.id));
 
         enemies.forEach(ent => {
             const d = Math.hypot(p.x - ent.x, p.y - ent.y);
@@ -536,9 +536,19 @@ export class GrenadeBehavior {
 export class ClaymoreBehavior {
     update(p, timeScale) {
         p.handlesOwnCollision = true;
+        if (p.isFrozenByInfinity) return;
+
+        // Lifetime countdown
+        if (p.lifeTime !== undefined) {
+            p.lifeTime -= 1 * timeScale;
+            if (p.lifeTime <= 0) {
+                p.active = false;
+                return;
+            }
+        }
 
         // Proximity Check
-        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead);
+        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead && (!p.owner || ent.id !== p.owner.id));
         for (let ent of enemies) {
             if (Math.hypot(p.x - ent.x, p.y - ent.y) < ent.radius + p.radius + 5) {
                 // Trigger
@@ -559,8 +569,9 @@ export class ClaymoreBehavior {
 export class GintoTrapBehavior {
     update(p, timeScale) {
         p.handlesOwnCollision = true;
+        if (p.isFrozenByInfinity) return;
 
-        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead);
+        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead && (!p.owner || ent.id !== p.owner.id));
         for (let ent of enemies) {
             if (Math.hypot(p.x - ent.x, p.y - ent.y) < ent.radius + p.radius) {
                 // Trigger
@@ -578,6 +589,8 @@ export class GintoTrapBehavior {
 }
 
 export class BallistaBehavior {
+    update() { }
+
     onImpact(p, target) {
         if (!target) return; // Ignore walls
         p.hasHandledImpact = true;
@@ -658,6 +671,9 @@ export class WorldSlashBehavior {
     update(p, timeScale) {
         p.handlesOwnCollision = true;
 
+        // Respect Infinity freeze — skip all behavior while frozen
+        if (p.isFrozenByInfinity) return;
+
         // Visual particles
         if (Math.random() < 0.3) {
             p.game.particles.particles.push({
@@ -673,7 +689,7 @@ export class WorldSlashBehavior {
         for (let j = p.game.projectiles.length - 1; j >= 0; j--) {
             const other = p.game.projectiles[j];
             if (other === p || !other.active) continue;
-            if (other.owner === p.owner) continue; // Don't deflect own
+            if (other.owner === p.owner || (p.owner && other.owner && other.owner.id === p.owner.id)) continue; // Don't deflect own/ally
             if (other.isGroundBurn) continue; // Don't deflect ground burns
 
             if (Physics.dist(p.x, p.y, other.x, other.y) < (p.radius || 40) + (other.radius || 4)) {
@@ -696,7 +712,7 @@ export class WorldSlashBehavior {
         }
 
         // Hit entities
-        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead);
+        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead && (!p.owner || ent.id !== p.owner.id));
         for (let ent of enemies) {
             if (Physics.dist(p.x, p.y, ent.x, ent.y) < (p.radius || 40) + ent.radius) {
                 // Drag Logic
@@ -815,7 +831,7 @@ export class MechaBeamBehavior {
         game.particles.spawnEffect('mechaExplosion', p.x, p.y);
 
         // AOE damage
-        const enemies = game.entities.filter(e => e !== p.owner && !e.isDead);
+        const enemies = game.entities.filter(e => e !== p.owner && !e.isDead && (!p.owner || e.id !== p.owner.id));
         for (const enemy of enemies) {
             // Avoid double-hitting the direct target if it exists
             if (directTarget && enemy === directTarget) continue;
@@ -849,6 +865,7 @@ export class MechaBeamBehavior {
 export class GetsugaBehavior {
     update(p, timeScale) {
         p.handlesOwnCollision = true;
+        if (p.isFrozenByInfinity) return;
 
         // Visual energy particles - wider spread for larger crescent
         if (Math.random() < 0.4) {
@@ -869,7 +886,7 @@ export class GetsugaBehavior {
         for (let j = p.game.projectiles.length - 1; j >= 0; j--) {
             const other = p.game.projectiles[j];
             if (other === p || !other.active) continue;
-            if (other.owner === p.owner) continue; // Don't deflect own
+            if (other.owner === p.owner || (p.owner && other.owner && other.owner.id === p.owner.id)) continue; // Don't deflect own/ally
             if (other.isGroundBurn) continue; // Don't deflect ground burns
             if (other.isGetsugaTenshou) continue; // Don't deflect other Getsugas
 
@@ -909,7 +926,7 @@ export class GetsugaBehavior {
         }
 
         // Hit entities (similar to WorldSlash)
-        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead);
+        const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead && (!p.owner || ent.id !== p.owner.id));
         for (let ent of enemies) {
             if (Physics.dist(p.x, p.y, ent.x, ent.y) < deflectRadius + ent.radius) {
                 p.triggerImpact(ent);
@@ -944,7 +961,7 @@ export class GetsugaBehavior {
         audioEngine.play(isBankai ? 'getsugaBankai' : 'getsuga');
 
         // AOE damage
-        const enemies = game.entities.filter(e => e !== p.owner && !e.isDead);
+        const enemies = game.entities.filter(e => e !== p.owner && !e.isDead && (!p.owner || e.id !== p.owner.id));
         const aoeRadius = p.explosionRadius || 60;
 
         for (const enemy of enemies) {
@@ -1008,7 +1025,7 @@ export class BlueOrbBehavior {
         p.handlesOwnCollision = true;
 
         // ATTRACTION & DoT
-        const enemies = p.game.entities.filter(e => e !== p.owner && !e.isDead);
+        const enemies = p.game.entities.filter(e => e !== p.owner && !e.isDead && (!p.owner || e.id !== p.owner.id));
 
         // Decrement damage timer
         this.damageTimer -= timeScale;
@@ -1136,7 +1153,7 @@ export class GojoRedBehavior {
         p.active = false;
 
         // Custom Explosion Logic
-        const enemies = p.game.entities.filter(e => e !== p.owner && !e.isDead);
+        const enemies = p.game.entities.filter(e => e !== p.owner && !e.isDead && (!p.owner || e.id !== p.owner.id));
         const radius = p.explosionRadius || 60;
         let hasCrit = false;
 

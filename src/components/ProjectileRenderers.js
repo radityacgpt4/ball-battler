@@ -59,9 +59,63 @@ export class MissileRenderer {
 
 export class QuincyArrowRenderer {
     draw(ctx, p) {
+        const z = p.z || 0;
+
+        // --- PREMIUM: Vibrating Spirit Lines (Licht Regen Connection) ---
+        // Connect nearby arrows ONLY when LANDED to form a static web
+        if (p.isLichtRegen && z <= 0) {
+            const others = p.game.projectiles.filter(other =>
+                other !== p &&
+                other.isLichtRegen &&
+                other.active &&
+                (other.z === undefined || other.z <= 0) && // Must be landed
+                other.owner === p.owner
+            );
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+
+            // Thinner, sharper bolt look
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#00FFFF'; // Pure Cyan
+            ctx.shadowColor = '#00BFFF';
+            ctx.shadowBlur = 4;
+
+            others.forEach(other => {
+                const myIdx = p.game.projectiles.indexOf(p);
+                const otherIdx = p.game.projectiles.indexOf(other);
+
+                // Draw connection only once per pair (prevent double draw)
+                // And check distance
+                if (myIdx < otherIdx) {
+                    const dist = Math.hypot(p.x - other.x, p.y - other.y);
+                    const connectionRange = 180; // Increased from 100 to match spread
+                    if (dist < connectionRange) { // Connection range
+                        ctx.globalAlpha = 0.8 * (1 - Math.pow(dist / connectionRange, 2)); // Use power for slower fade near source, steeper near max
+
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+
+                        // Jittery thunder zigzag
+                        const midX = (p.x + other.x) / 2;
+                        const midY = (p.y + other.y) / 2;
+
+                        // Chaotic jitter based on time + index
+                        const time = Date.now() * 0.05;
+                        const jitterX = Math.sin(time + myIdx * 123) * 2; // Reduced jitter from 5 to 2
+                        const jitterY = Math.cos(time + otherIdx * 321) * 2;
+
+                        ctx.lineTo(midX + jitterX, midY + jitterY);
+                        ctx.lineTo(other.x, other.y);
+                        ctx.stroke();
+                    }
+                }
+            });
+            ctx.restore();
+        }
+
         ctx.save();
         // Handle z-height if present
-        const z = p.z || 0;
         ctx.translate(p.x, p.y - z);
 
         // If landed (no z height) and is Licht Regen, plant it vertically
@@ -217,28 +271,55 @@ export class ZoltraakRenderer {
     draw(ctx, p) {
         ctx.save();
         ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
 
-        // Outer glow (additive blending)
+        // === SEAMLESS LASER BEAM (like Mecha) ===
+        // Grows from 0 to maxLength based on distance traveled
+        const maxBeamLen = 200;
+        const distFromStart = Math.hypot(p.x - p.startX, p.y - p.startY);
+        const beamLen = Math.min(maxBeamLen, distFromStart);
+
         ctx.globalCompositeOperation = 'lighter';
-        ctx.fillStyle = '#4fc3f7';
-        ctx.globalAlpha = 0.4;
-        ctx.beginPath();
-        ctx.arc(0, 0, 8, 0, Math.PI * 2);
-        ctx.fill();
 
-        // Mid glow
-        ctx.fillStyle = '#87CEEB';
-        ctx.globalAlpha = 0.6;
+        // 1. Wide Bloom (Magical Cyan Aura) - Slimmer than Mecha
+        ctx.strokeStyle = '#4fc3f7';
+        ctx.lineWidth = 12; // Slimmer than Mecha's 16
+        ctx.globalAlpha = 0.15;
+        ctx.lineCap = 'butt';
         ctx.beginPath();
-        ctx.arc(0, 0, 5, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(-beamLen, 0);
+        ctx.lineTo(0, 0);
+        ctx.stroke();
 
-        // Bright core
-        ctx.fillStyle = '#ffffff';
+        // 2. High-Energy Layer (Light Cyan)
+        ctx.strokeStyle = '#87CEEB';
+        ctx.lineWidth = 6; // Slimmer than Mecha's 8
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(-beamLen, 0);
+        ctx.lineTo(0, 0);
+        ctx.stroke();
+
+        // 3. Sharp Core (Laser Line)
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2; // Slimmer than Mecha's 3
         ctx.globalAlpha = 1.0;
         ctx.beginPath();
-        ctx.arc(0, 0, 3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(-beamLen, 0);
+        ctx.lineTo(0, 0);
+        ctx.stroke();
+
+        // 4. Premium: Flight Particle Trail
+        if (Math.random() < 0.6 && beamLen > 5) {
+            const trailX = -beamLen * (0.3 + Math.random() * 0.6);
+            const trailY = (Math.random() - 0.5) * 3;
+
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = '#E0FFFF';
+            ctx.beginPath();
+            ctx.arc(trailX, trailY, 1 + Math.random() * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         ctx.restore();
     }
@@ -483,41 +564,120 @@ export class BallistaBoltRenderer {
         ctx.translate(p.x, p.y);
         ctx.rotate(p.angle);
 
+        // Scale down by 20% (0.8x original size)
+        const scale = 0.8;
+
         // Arrow shaft
         ctx.fillStyle = '#5D4037';
-        ctx.fillRect(-20, -2, 35, 4);
+        ctx.fillRect(-20 * scale, -2 * scale, 35 * scale, 4 * scale);
 
-        // Arrow head
-        ctx.fillStyle = p.isUltBolt ? '#FFD700' : '#4A4A4A';
+        // Arrow head - Silver metallic tip with gradient
+        const tipGrad = ctx.createLinearGradient(8 * scale, -6 * scale, 18 * scale, 0);
+        tipGrad.addColorStop(0, '#888888');
+        tipGrad.addColorStop(0.5, '#E8E8E8'); // Bright silver
+        tipGrad.addColorStop(1, '#C0C0C0'); // Silver
+        ctx.fillStyle = p.isUltBolt ? '#FFD700' : tipGrad;
         ctx.beginPath();
-        ctx.moveTo(18, 0);
-        ctx.lineTo(8, -6);
-        ctx.lineTo(10, 0);
-        ctx.lineTo(8, 6);
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, -6 * scale);
+        ctx.lineTo(10 * scale, 0);
+        ctx.lineTo(8 * scale, 6 * scale);
         ctx.closePath();
         ctx.fill();
 
-        // Metallic edge
-        ctx.strokeStyle = '#888';
+        // Metallic edge highlight
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, -6 * scale);
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+
+        // Silver edge outline
+        ctx.strokeStyle = '#A0A0A0';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(18, 0);
-        ctx.lineTo(8, -6);
-        ctx.moveTo(18, 0);
-        ctx.lineTo(8, 6);
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, 6 * scale);
         ctx.stroke();
 
         // Fletching
         ctx.fillStyle = p.isUltBolt ? '#8B0000' : '#2E7D32';
         ctx.beginPath();
-        ctx.moveTo(-15, -2);
-        ctx.lineTo(-22, -8);
-        ctx.lineTo(-18, -2);
+        ctx.moveTo(-15 * scale, -2 * scale);
+        ctx.lineTo(-22 * scale, -8 * scale);
+        ctx.lineTo(-18 * scale, -2 * scale);
         ctx.fill();
         ctx.beginPath();
-        ctx.moveTo(-15, 2);
-        ctx.lineTo(-22, 8);
-        ctx.lineTo(-18, 2);
+        ctx.moveTo(-15 * scale, 2 * scale);
+        ctx.lineTo(-22 * scale, 8 * scale);
+        ctx.lineTo(-18 * scale, 2 * scale);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+// Tower Defensive Bolt - 50% smaller with bronze tip
+export class TowerBoltRenderer {
+    draw(ctx, p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+
+        // Scale down to 0.65x original size (slightly smaller than Ballista bolt's 0.8x)
+        const scale = 0.65;
+
+        // Arrow shaft - darker wood
+        ctx.fillStyle = '#4A3728';
+        ctx.fillRect(-20 * scale, -2 * scale, 35 * scale, 4 * scale);
+
+        // Arrow head - Bronze metallic tip with gradient
+        const tipGrad = ctx.createLinearGradient(8 * scale, -6 * scale, 18 * scale, 0);
+        tipGrad.addColorStop(0, '#8B5A2B'); // Dark bronze
+        tipGrad.addColorStop(0.4, '#CD853F'); // Peru/mid bronze
+        tipGrad.addColorStop(0.7, '#D4A574'); // Light bronze highlight
+        tipGrad.addColorStop(1, '#CD7F32'); // Bronze
+        ctx.fillStyle = tipGrad;
+        ctx.beginPath();
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, -6 * scale);
+        ctx.lineTo(10 * scale, 0);
+        ctx.lineTo(8 * scale, 6 * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bronze edge highlight
+        ctx.strokeStyle = '#DAA520'; // Goldenrod highlight
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, -6 * scale);
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+
+        // Bronze edge outline
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(18 * scale, 0);
+        ctx.lineTo(8 * scale, 6 * scale);
+        ctx.stroke();
+
+        // Fletching - smaller, earthy brown
+        ctx.fillStyle = '#6B4423';
+        ctx.beginPath();
+        ctx.moveTo(-15 * scale, -2 * scale);
+        ctx.lineTo(-22 * scale, -8 * scale);
+        ctx.lineTo(-18 * scale, -2 * scale);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-15 * scale, 2 * scale);
+        ctx.lineTo(-22 * scale, 8 * scale);
+        ctx.lineTo(-18 * scale, 2 * scale);
         ctx.fill();
 
         ctx.restore();

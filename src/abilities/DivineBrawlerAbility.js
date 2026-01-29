@@ -11,7 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-import { checkWeaponHit } from '../data/weaponGeometry.js';
+import { checkWeaponHit, checkWeaponHitTower } from '../data/weaponGeometry.js';
 
 // --- ATK: BLACK FLASH (Passive) ---
 export class DivineBrawlerAtkAbility extends Ability {
@@ -47,6 +47,25 @@ export class DivineBrawlerAtkAbility extends Ability {
                 this.performAttack(fighter, enemy);
                 hit = true;
                 break;
+            }
+        }
+
+        // --- TOWER COLLISION (Ballista Defensive Towers) ---
+        if (!hit) {
+            for (const ent of context.game.entities) {
+                if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+                if (ent.id === fighter.id) continue;
+
+                for (const tower of ent.ballistaTowers) {
+                    if (tower.hp <= 0) continue;
+
+                    if (checkWeaponHitTower('DIVINE_BRAWLER_FISTS', fighter, tower, this.baseDamage, context.game)) {
+                        let cd = this.baseAttackCooldown;
+                        if (fighter.activeEffects.focusActive) cd = this.focusAttackCooldown;
+                        fighter.cooldowns.atk = cd;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -122,19 +141,11 @@ export class DivineBrawlerDefAbility extends Ability {
     }
 
     update(fighter, context) {
-        // Manage Focus buff timer (from ULT) - handled here since DEF.update() is called every frame
-        if (fighter.activeEffects.focusActive) {
-            fighter.activeEffects.focusTimer--;
-
-            // Particle aura
-            if (fighter.activeEffects.focusTimer % 10 === 0) {
+        // Manage Focus buff particles - now permanent once activated via ULT
+        if (fighter.activeEffects.ultActive && fighter.activeEffects.focusActive) {
+            // Particle aura visuals
+            if (fighter.game.tickCount % 10 === 0) {
                 fighter.game.particles.spawn(fighter.x, fighter.y, '#4B0082', 1);
-            }
-
-            if (fighter.activeEffects.focusTimer <= 0) {
-                fighter.activeEffects.focusActive = false;
-                fighter.mass = fighter.originalMass || 1.6;
-                logger.log(`${fighter.name}'s Focus fades.`, 'info');
             }
         }
 
@@ -251,9 +262,10 @@ export class DivineBrawlerUltAbility extends Ability {
     }
 
     execute(fighter, context) {
-        // Activate Buff
+        // Activate Buff Permamently
+        fighter.activeEffects.ultActive = true;
+        fighter.activeEffects.ultTimer = 999999;
         fighter.activeEffects.focusActive = true;
-        fighter.activeEffects.focusTimer = this.duration;
 
         // Massive Mass Increase
         fighter.originalMass = fighter.mass;

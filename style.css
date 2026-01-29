@@ -8,7 +8,7 @@
     --text-main: #e0e0e0;
     --text-dim: #888899;
     --panel-bg: rgba(20, 20, 30, 0.85);
-    --game-size: 500px;
+    --game-size: 800px;
 }
 
 body {
@@ -24,14 +24,19 @@ body {
     justify-content: flex-start;
     min-height: 100vh;
     overflow-x: hidden;
+    max-width: 100vw;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
 
+* {
+    box-sizing: border-box;
+}
+
 /* Base Container */
 #game-container {
-    width: 900px;
-    /* Widened for better UI */
+    width: 1100px;
+    /* Widened for team battles */
     max-width: 95vw;
     margin: 20px auto;
     position: relative;
@@ -164,9 +169,9 @@ body {
 canvas {
     display: block;
     width: 100%;
-    max-width: 500px;
+    max-width: var(--canvas-max-width, 800px);
     height: auto;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: var(--canvas-aspect, 8 / 5);
     background-color: var(--arena-bg);
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
     flex-shrink: 0;
@@ -222,6 +227,7 @@ canvas {
     z-index: 100;
     display: flex;
     flex-direction: column;
+    align-items: center;
     padding: 20px;
     box-sizing: border-box;
     backdrop-filter: blur(8px);
@@ -235,6 +241,50 @@ canvas {
     margin: 0 0 20px 0;
     text-align: center;
     font-weight: 300;
+}
+
+/* Game Mode Selector */
+.mode-selector {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.mode-btn {
+    padding: 10px 30px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid var(--border-color);
+    color: var(--text-dim);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+}
+
+.mode-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-blue);
+    color: var(--text-main);
+}
+
+.mode-btn.active {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: #000;
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+}
+
+/* Team Member Display */
+.team-member {
+    padding: 5px 10px;
+    margin: 3px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid currentColor;
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
 /* Character Selection Grid */
@@ -530,6 +580,48 @@ canvas {
     flex-direction: column;
 }
 
+/* Tablet Optimizations */
+@media (max-width: 1200px) and (min-width: 901px) {
+    #game-container {
+        width: 95vw;
+        max-width: 95vw;
+    }
+
+    .setup-title {
+        font-size: 1.2rem;
+    }
+
+    .mode-btn {
+        padding: 8px 24px;
+        font-size: 0.85rem;
+    }
+
+    .char-grid {
+        gap: 6px;
+    }
+
+    .grid-item {
+        max-width: 75px;
+    }
+
+    .grid-name {
+        font-size: 10px;
+    }
+
+    .detail-panel {
+        width: 200px;
+    }
+
+    .detail-name {
+        font-size: 0.95rem;
+    }
+
+    .detail-stats,
+    .team-member {
+        font-size: 0.8rem;
+    }
+}
+
 /* Mobile Optimizations */
 @media (max-width: 900px) {
 
@@ -551,25 +643,45 @@ canvas {
         flex-direction: column;
     }
 
-    /* Allow screen overlay to scroll on mobile */
+    /* Fixed: Prevent screen overlay from scrolling - grid should scroll independently */
     .screen-overlay {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        overflow-y: auto;
-        padding: 10px;
+        overflow: hidden;
+        /* Prevent main overlay scroll */
+        padding: 8px;
+        box-sizing: border-box;
         align-items: center;
         justify-content: flex-start;
-        /* Align to top so scrolling works */
+        display: flex;
+        flex-direction: column;
     }
 
     .setup-title {
-        font-size: 1.2rem;
-        letter-spacing: 2px;
-        margin: 20px 0 15px 0;
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+        margin: 8px 0 8px 0;
         flex-shrink: 0;
+    }
+
+    /* Mode Selector - Mobile */
+    .mode-selector {
+        gap: 6px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .mode-btn {
+        padding: 6px 16px;
+        font-size: 0.7rem;
+        letter-spacing: 0.5px;
+        flex: 0 0 auto;
+        min-width: 60px;
     }
 
     .selection-interface {
@@ -577,89 +689,159 @@ canvas {
         height: auto;
         width: 100%;
         max-width: 100%;
-        gap: 15px;
+        gap: 10px;
         overflow: visible;
     }
 
-    /* Character grid: center of screen on mobile */
+    /* Character grid: independently scrollable with calculated height */
     .char-grid-container {
         order: -1;
-        /* Move grid to top */
+        /* Move grid to top of selection interface */
         width: 100%;
-        height: auto;
-        overflow: visible;
-        padding: 0;
+        flex-shrink: 1;
+        /* Allow shrinking to fit content */
+        max-height: calc(100vh - 340px);
+        /* Reduced: viewport - (title + mode selector + player toggle + detail panels + start button + padding) */
+        min-height: 150px;
+        /* Minimum height to ensure grid is always visible */
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        /* Smooth iOS scrolling */
+        padding: 0 2px;
         display: flex;
         justify-content: center;
+        margin-bottom: 8px;
+        position: relative;
+        /* Establish scroll context */
     }
 
     .char-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         /* 4 columns on mobile looks better */
-        gap: 8px;
+        gap: 5px;
         width: 100%;
-        max-width: 400px;
+        max-width: 100%;
+        padding: 0 5px;
+        margin-bottom: 10px;
     }
 
     /* --- FIXED CLASS NAMES HERE --- */
     .grid-item {
         aspect-ratio: 1;
-        padding: 5px;
+        padding: 3px;
         max-width: none;
         /* Reset max-width constraint */
     }
 
+    .grid-icon {
+        width: 100%;
+        height: 55%;
+        min-height: 25px;
+    }
+
     .grid-name {
-        font-size: 9px;
+        font-size: 7px;
         /* Smaller font for mobile */
+        padding: 1px;
+        line-height: 1.1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .select-badges {
+        gap: 1px;
+        margin-top: 1px;
+    }
+
+    .p-badge {
+        font-size: 6px;
+        padding: 1px 2px;
+        border-radius: 2px;
     }
 
     /* ----------------------------- */
 
-    /* Detail panels: vertical stack on mobile */
+    /* Detail panels: vertical stack on mobile - COMPACT */
     .detail-panel {
         width: 100%;
         flex-shrink: 0;
         max-height: none;
         min-height: auto;
+        padding: 4px;
+        margin-bottom: 5px;
+    }
+
+    .p-tag {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+        letter-spacing: 0.5px;
     }
 
     .detail-content {
-        padding: 10px;
-        gap: 10px;
+        padding: 4px;
+        gap: 4px;
     }
 
     .detail-name {
-        font-size: 1rem;
+        font-size: 0.75rem;
         text-align: center;
+        margin-bottom: 4px;
     }
 
     .detail-stats {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 10px;
-        font-size: 0.8rem;
+        display: none;
+        /* Hide stats on mobile to save space */
     }
 
+    /* Compact team roster for mobile */
+    .team-member {
+        font-size: 0.65rem;
+        padding: 2px 4px;
+        margin: 1px 0;
+        display: inline-block;
+        margin-right: 4px;
+        border-left-width: 2px;
+    }
+
+    /* Hide detailed skill descriptions on mobile */
     .detail-skills {
-        font-size: 0.8rem;
+        display: none;
     }
 
-    /* Start button area */
+    .d-skill-desc {
+        display: none;
+    }
+
+    /* Start button area - Always visible at bottom */
     .start-container {
-        margin-top: 20px;
-        padding-bottom: 60px;
-        /* Extra space for scrolling on phones */
+        margin-top: auto;
+        /* Push to bottom */
+        padding: 10px 8px;
         width: 100%;
+        flex-shrink: 0;
+        /* Don't shrink */
+        background: rgba(5, 5, 10, 0.98);
+        /* Solid background so it's visible */
+        border-top: 1px solid var(--border-color);
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+    }
+
+    .sound-toggle {
+        font-size: 0.65rem;
+        margin-bottom: 6px;
     }
 
     #start-btn {
         width: 100%;
-        padding: 15px;
-        font-size: 1rem;
+        max-width: 300px;
+        padding: 10px;
+        font-size: 0.85rem;
+        letter-spacing: 1px;
     }
 
     /* Canvas scales down */
@@ -667,13 +849,14 @@ canvas {
         width: 100%;
         height: auto;
         max-width: 100%;
-        aspect-ratio: 1/1;
+        aspect-ratio: var(--canvas-aspect, 8/5);
     }
 
-    /* Hide header on small mobile to save space, or adjust it */
+    /* Game HUD - Mobile */
     #ui-header {
         padding: 5px;
         height: auto;
+        min-height: auto;
         flex-direction: column;
         gap: 5px;
     }
@@ -683,21 +866,216 @@ canvas {
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
+        padding: 3px;
     }
 
     .hud-name {
-        font-size: 0.9rem;
+        font-size: 0.7rem;
+        letter-spacing: 1px;
         margin: 0;
+    }
+
+    .skill-node {
+        width: 24px;
+        height: 24px;
+    }
+
+    .skill-label {
+        font-size: 8px;
+    }
+
+    .skills-container {
+        gap: 6px;
+    }
+
+    /* Debug section - mobile */
+    #debug-section {
+        font-size: 0.7rem;
+    }
+
+    .debug-controls button {
+        font-size: 0.7rem;
+        padding: 6px 10px;
+    }
+
+    /* End screen - mobile */
+    #win-msg {
+        font-size: 1.5rem;
+        padding: 0 10px;
+        text-align: center;
+    }
+
+    .restart-btn {
+        font-size: 0.9rem;
+        padding: 12px 30px;
+    }
+
+    /* Mobile scrollbar - more visible for touch devices */
+    .char-grid-container::-webkit-scrollbar {
+        width: 8px;
+        /* Wider for better visibility on mobile */
+    }
+
+    .char-grid-container::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+
+    .char-grid-container::-webkit-scrollbar-thumb {
+        background: var(--accent-blue);
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
+    .char-grid-container::-webkit-scrollbar-thumb:active {
+        background: #00b8e6;
+        /* Slightly darker when active */
     }
 }
 
 /* Extra small screens (phones) */
 @media (max-width: 400px) {
-    .char-grid {
-        grid-template-columns: repeat(3, 1fr);
+    .screen-overlay {
+        padding: 6px;
+        /* Consistent padding without scroll compensation */
     }
 
     .setup-title {
-        font-size: 1rem;
+        font-size: 0.8rem;
+        margin: 6px 0;
+    }
+
+    .mode-selector {
+        margin-bottom: 8px;
+        gap: 4px;
+    }
+
+    .mode-btn {
+        padding: 5px 12px;
+        font-size: 0.65rem;
+        min-width: 55px;
+    }
+
+    .char-grid-container {
+        max-height: calc(100vh - 320px);
+        /* Further reduced for smaller screens */
+        min-height: 120px;
+    }
+
+    .char-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .grid-item {
+        padding: 2px;
+    }
+
+    .grid-icon {
+        height: 50%;
+        min-height: 22px;
+    }
+
+    .grid-name {
+        font-size: 6px;
+    }
+
+    .p-badge {
+        font-size: 5px;
+        padding: 1px;
+    }
+
+    .detail-panel {
+        padding: 3px;
+        margin-bottom: 4px;
+    }
+
+    .p-tag {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    .detail-name {
+        font-size: 0.7rem;
+        margin-bottom: 3px;
+    }
+
+    .team-member {
+        font-size: 0.6rem;
+        padding: 1px 3px;
+    }
+
+    #start-btn {
+        max-width: 250px;
+        padding: 8px;
+        font-size: 0.75rem;
+    }
+
+    .sound-toggle {
+        font-size: 0.6rem;
+    }
+
+    .hud-name {
+        font-size: 0.6rem;
+    }
+
+    .skill-node {
+        width: 18px;
+        height: 18px;
+    }
+
+    .skill-label {
+        font-size: 6px;
+    }
+
+    .skills-container {
+        gap: 4px;
+    }
+}
+
+/* Mobile Player Toggle Button */
+.player-toggle {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .player-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        width: 100%;
+    }
+
+    .player-toggle-btn {
+        padding: 8px 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        border: 2px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-dim);
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        flex: 1;
+        max-width: 140px;
+        text-align: center;
+    }
+
+    .player-toggle-btn.active-p1 {
+        background: var(--accent-blue);
+        border-color: var(--accent-blue);
+        color: #000;
+        box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
+    }
+
+    .player-toggle-btn.active-p2 {
+        background: var(--accent-red);
+        border-color: var(--accent-red);
+        color: #fff;
+        box-shadow: 0 0 15px rgba(255, 42, 109, 0.4);
     }
 }

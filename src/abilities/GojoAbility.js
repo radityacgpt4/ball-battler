@@ -148,7 +148,7 @@ export class GojoBlueAbility extends Ability {
         fighter.cooldowns.def = this.cooldown;
 
         logger.log(`${fighter.name} casts BLUE!`, 'combat');
-        audioEngine.play('charge_up'); // Placeholder
+        audioEngine.playPowerUp();
 
         // Visual
         game.particles.spawnShockwave(holeX, holeY, '#0000FF', 30, 0.5);
@@ -332,7 +332,7 @@ export class GojoUltAbility extends Ability {
         fighter.infinityActive = true;
 
         context.game.particles.spawnEffect('infinityAura', fighter.x, fighter.y);
-        audioEngine.play('power_up');
+        audioEngine.playPowerUp();
         logger.log(`${fighter.name} expands Infinity!`, 'combat');
 
         fighter.cooldowns.ult = 9999;
@@ -355,6 +355,8 @@ export class GojoUltAbility extends Ability {
             // Projectile Stop Logic
             game.projectiles.forEach(p => {
                 if (p.owner === fighter) return;
+                if (!p.active) return; // Skip inactive projectiles
+
                 const dist = Physics.dist(fighter.x, fighter.y, p.x, p.y);
 
                 // Slow zone (between slow and stop radius)
@@ -378,12 +380,14 @@ export class GojoUltAbility extends Ability {
                     // Despawn after expiry
                     if (p.frozenTimer > this.projectileExpiry) {
                         this.despawnFrozenProjectile(p, game);
+                        return;
                     }
                 }
 
                 // Outside slow radius - if was frozen, despawn
                 if (dist >= this.slowRadius && p.isFrozenByInfinity) {
                     this.despawnFrozenProjectile(p, game);
+                    return;
                 }
             });
 

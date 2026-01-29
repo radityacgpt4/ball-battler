@@ -151,19 +151,17 @@ export class KingOfCursesDefAbility extends Ability {
             if (enemy === fighter || enemy.isDead) continue;
 
             const dist = Math.hypot(enemy.x - fighter.x, enemy.y - fighter.y);
-            // Check radius (Domain Radius + small buffer or strict?) 
-            const inDomain = dist < this.domainRadius + enemy.radius;
+            // Check radius (Domain Radius + small buffer) 
+            const inDomain = dist < (this.domainRadius + enemy.radius);
 
             if (inDomain) {
-                // Tracking
-                let data = this.enemiesInDomain.get(enemy.id);
-                if (!data) {
-                    data = 0; // Just frames count
-                    this.enemiesInDomain.set(enemy.id, data);
+                // Tracking - only increment frames if the enemy is NOT already stunned
+                // This prevents "charging" the next stun while already stunned (Stun-lock safeguard)
+                let frames = this.enemiesInDomain.get(enemy) || 0;
+                if (enemy.status.stun <= 0) {
+                    frames += 1 * (context.timeScale || 1.0);
+                    this.enemiesInDomain.set(enemy, frames);
                 }
-
-                const frames = data + 1;
-                this.enemiesInDomain.set(enemy.id, frames);
 
                 // Apply slow (20%)
                 enemy.status.domainSlow = 10;
@@ -173,7 +171,7 @@ export class KingOfCursesDefAbility extends Ability {
                     this.spawnDomainSlash(fighter, enemy);
                 }
 
-                // Stun Logic
+                // Stun Logic - triggers after staying in domain for stunDelay
                 if (frames >= this.stunDelay && enemy.status.stun <= 0) {
                     enemy.applyStatus('STUN', this.stunDuration);
                     logger.log(`${enemy.name} STUNNED by Malevolent Shrine!`, 'combat');
@@ -182,11 +180,12 @@ export class KingOfCursesDefAbility extends Ability {
                     this.spawnDomainSlash(fighter, enemy);
                     this.spawnDomainSlash(fighter, enemy);
 
-                    // Reset timer for next stun cycle
-                    this.enemiesInDomain.set(enemy.id, 0);
+                    // Reset timer for this specific enemy for next stun cycle
+                    this.enemiesInDomain.set(enemy, 0);
                 }
             } else {
-                this.enemiesInDomain.delete(enemy.id);
+                // Reset timer for this specific enemy if they leave
+                this.enemiesInDomain.delete(enemy);
             }
         }
     }
@@ -220,8 +219,9 @@ export class KingOfCursesUltAbility extends Ability {
         const { game } = context;
 
         fighter.cooldowns.ult = this.cooldown;
+        fighter.activeEffects.ultActive = true;
+        fighter.activeEffects.ultTimer = 999999; // Permanent once activated
         fighter.activeEffects.kingOfCursesUltActive = true;
-        fighter.activeEffects.kingOfCursesUltTimer = this.duration;
 
         game.particles.spawnShockwave(fighter.x, fighter.y, '#DC143C');
         audioEngine.playPowerUp();

@@ -13,7 +13,7 @@ import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
 import { QuincyArrowRenderer, GintoTrapRenderer } from '../components/ProjectileRenderers.js';
-import { LinearMovement, QuincyTrailBehavior, StaticLifetimeBehavior, LichtRegenBehavior } from '../components/ProjectileBehaviors.js';
+import { LinearMovement, QuincyTrailBehavior, StaticLifetimeBehavior, LichtRegenBehavior, GintoTrapBehavior } from '../components/ProjectileBehaviors.js';
 
 // --- ATK: HEILIG PFEIL (Sacred Arrow) ---
 export class QuincyAtkAbility extends Ability {
@@ -238,6 +238,29 @@ export class QuincyDefAbility extends Ability {
                 // Visual effects at departure point
                 game.particles.spawnHirenkyaku(oldX, oldY);
 
+                // --- PREMIUM: Dash-Out Streak (Connecting Beam) ---
+                // Render a high-speed motion trail connecting start and end
+                game.particles.particles.push({
+                        type: 'beam',
+                        x1: oldX, y1: oldY,
+                        x2: newX, y2: newY,
+                        color: '#E0FFFF', // Very light cyan/white
+                        width: 12, // Thick start
+                        life: 0.5, // Increased from 0.25 to make it visible
+                        decay: 0.08 // Slower decay
+                });
+
+                // Add a second thinner core line for "energy" feel
+                game.particles.particles.push({
+                        type: 'beam',
+                        x1: oldX, y1: oldY,
+                        x2: newX, y2: newY,
+                        color: '#00BFFF', // Deep blue core
+                        width: 4,
+                        life: 0.5, // Sync with outer beam
+                        decay: 0.08
+                });
+
                 // Visual effects at arrival point
                 game.particles.spawnHirenkyaku(newX, newY);
 
@@ -261,11 +284,12 @@ export class QuincyDefAbility extends Ability {
 
                 trap.renderer = new GintoTrapRenderer();
                 trap.addComponent(new StaticLifetimeBehavior(this.trapDuration));
+                trap.addComponent(new GintoTrapBehavior());
 
                 game.projectiles.push(trap);
 
                 // Audio
-                audioEngine.playPowerUp();
+                audioEngine.playHirenkyaku();
 
                 logger.log(`${fighter.name} used Hirenkyaku!`, 'info');
 

@@ -24,8 +24,14 @@ export class Game {
         this.particles = new ParticleSystem();
         this.combatText = new CombatTextHelper(this.particles);
         this.running = false;
-        this.p1Type = 'THUNDER_MAGE';
-        this.p2Type = 'SHIELDBEARER';
+
+        // Game mode and team selections
+        this.gameMode = '1v1'; // '1v1', '2v2', '3v3'
+        this.p1Team = ['THUNDER_MAGE']; // Array of fighter types for team 1
+        this.p2Team = ['SHIELDBEARER']; // Array of fighter types for team 2
+
+        // Mobile player toggle state (1 = P1, 2 = P2)
+        this.selectingPlayer = 1;
 
         this.width = CONSTANTS.WIDTH;
         this.height = CONSTANTS.HEIGHT;
@@ -36,6 +42,7 @@ export class Game {
             height: CONSTANTS.HEIGHT
         };
         this.arenaTimer = 0;
+        this.noHitTimer = 0;
         this.timeScale = 1.0;
         this.finishTimer = 0;
         this.isMatchOver = false;
@@ -51,7 +58,45 @@ export class Game {
         this.canvas = document.getElementById('arena');
         this.ctx = this.canvas.getContext('2d');
         logger.init();
+        this.setupModeSelector();
+        this.setupPlayerToggle();
         this.showSelect();
+    }
+
+    setupModeSelector() {
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active class from all buttons
+                modeButtons.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                btn.classList.add('active');
+                // Update game mode
+                this.gameMode = btn.dataset.mode;
+                // Reset team selections based on mode
+                const teamSize = parseInt(this.gameMode[0]);
+                this.p1Team = Array(teamSize).fill('THUNDER_MAGE');
+                this.p2Team = Array(teamSize).fill('SHIELDBEARER');
+                this.renderCharSelect();
+            });
+        });
+    }
+
+    setupPlayerToggle() {
+        const toggleP1 = document.getElementById('toggle-p1');
+        const toggleP2 = document.getElementById('toggle-p2');
+        if (!toggleP1 || !toggleP2) return;
+
+        toggleP1.addEventListener('click', () => {
+            this.selectingPlayer = 1;
+            toggleP1.className = 'player-toggle-btn active-p1';
+            toggleP2.className = 'player-toggle-btn';
+        });
+        toggleP2.addEventListener('click', () => {
+            this.selectingPlayer = 2;
+            toggleP2.className = 'player-toggle-btn active-p2';
+            toggleP1.className = 'player-toggle-btn';
+        });
     }
 
     showSelect() {
@@ -60,8 +105,13 @@ export class Game {
         document.getElementById('end-screen').style.display = 'none';
 
         // Default selections if none
-        if (!this.p1Type) this.p1Type = 'SWORD_MASTER';
-        if (!this.p2Type) this.p2Type = 'SNIPER';
+        const teamSize = parseInt(this.gameMode[0]);
+        if (!this.p1Team || this.p1Team.length === 0) {
+            this.p1Team = Array(teamSize).fill('SWORD_MASTER');
+        }
+        if (!this.p2Team || this.p2Team.length === 0) {
+            this.p2Team = Array(teamSize).fill('SNIPER');
+        }
 
         this.renderCharSelect();
     }
@@ -76,101 +126,113 @@ export class Game {
             const item = document.createElement('div');
             item.className = 'grid-item';
 
+            // Count how many times this fighter appears in each team
+            const p1Count = this.p1Team.filter(t => t === key).length;
+            const p2Count = this.p2Team.filter(t => t === key).length;
+
             // Highlight selections
-            if (this.p1Type === key && this.p2Type === key) item.classList.add('selected-both');
-            else if (this.p1Type === key) item.classList.add('selected-p1');
-            else if (this.p2Type === key) item.classList.add('selected-p2');
+            if (p1Count > 0 && p2Count > 0) item.classList.add('selected-both');
+            else if (p1Count > 0) item.classList.add('selected-p1');
+            else if (p2Count > 0) item.classList.add('selected-p2');
 
             item.innerHTML = `
                 <div class="grid-icon" style="background:${data.color}"></div>
                 <div class="grid-name">${data.name}</div>
                 <div class="select-badges">
-                    ${this.p1Type === key ? '<span class="p-badge p1">P1</span>' : ''}
-                    ${this.p2Type === key ? '<span class="p-badge p2">P2</span>' : ''}
+                    ${p1Count > 0 ? `<span class="p-badge p1">P1${p1Count > 1 ? 'x' + p1Count : ''}</span>` : ''}
+                    ${p2Count > 0 ? `<span class="p-badge p2">P2${p2Count > 1 ? 'x' + p2Count : ''}</span>` : ''}
                 </div>
             `;
 
+            // Click handler: on mobile uses toggle, on desktop left=P1 right=P2
             item.onclick = (e) => {
-                // simple toggle: click selects for P1, right-click (or special modifier) for P2?
-                // Let's do: if left side of button click P1, right side P2? 
-                // Or just alternate? Let's just do left-click P1, right-click P2 for ease of use in dev,
-                // but for "AI automation" maybe a simpler toggle.
-                // Let's use a clear P1/P2 button inside or just click order.
-                // Better: If already P1, move to P2.
-                if (this.p1Type !== key) {
-                    this.p1Type = key;
+                const isMobile = window.matchMedia('(max-width: 900px)').matches;
+                if (isMobile && this.selectingPlayer === 2) {
+                    // Mobile P2 selection via toggle
+                    let slotIndex = this.p2Team.findIndex((t, i) => t !== key);
+                    if (slotIndex === -1) slotIndex = 0;
+                    this.p2Team[slotIndex] = key;
                 } else {
-                    this.p2Type = key;
+                    // P1 selection (desktop left-click or mobile P1 toggle)
+                    let slotIndex = this.p1Team.findIndex((t, i) => t !== key);
+                    if (slotIndex === -1) slotIndex = 0;
+                    this.p1Team[slotIndex] = key;
                 }
                 this.renderCharSelect();
             };
 
-            // Right click for P2 selection
+            // Right click: P2 team slots (desktop only)
             item.oncontextmenu = (e) => {
                 e.preventDefault();
-                this.p2Type = key;
+                let slotIndex = this.p2Team.findIndex((t, i) => t !== key);
+                if (slotIndex === -1) slotIndex = 0;
+                this.p2Team[slotIndex] = key;
                 this.renderCharSelect();
             };
 
             grid.appendChild(item);
         });
 
-        this.updateDetailPanel(1, this.p1Type);
-        this.updateDetailPanel(2, this.p2Type);
+        this.updateDetailPanels();
     }
 
-    updateDetailPanel(playerNum, type) {
-        const data = FIGHTER_TYPES[type];
-        const prefix = `p${playerNum}`;
+    updateDetailPanels() {
+        // Update Player 1 panel
+        const p1Panel = document.getElementById('p1-detail-name');
+        const p1Stats = document.getElementById('p1-detail-stats');
+        const p1Skills = document.getElementById('p1-detail-skills');
 
-        document.getElementById(`${prefix}-detail-name`).innerText = data.name;
-        document.getElementById(`${prefix}-detail-name`).style.color = data.color;
+        p1Panel.innerText = `Team 1 (${this.gameMode})`;
+        p1Panel.style.color = '#4fc3f7';
 
-        // Stats
-        const statsEl = document.getElementById(`${prefix}-detail-stats`);
-        statsEl.innerHTML = `
-            <div class="stat-item">HP <span class="stat-val">${data.hp}</span></div>
-            <div class="stat-item">SPD <span class="stat-val">${data.speed}</span></div>
-            <div class="stat-item">MASS <span class="stat-val">${data.mass}</span></div>
-        `;
+        // Show team roster
+        p1Stats.innerHTML = this.p1Team.map((type, idx) => {
+            const data = FIGHTER_TYPES[type];
+            return `<div class="team-member" style="color: ${data.color}">${idx + 1}. ${data.name}</div>`;
+        }).join('');
 
-        // Skills
-        const skillsEl = document.getElementById(`${prefix}-detail-skills`);
-        skillsEl.innerHTML = '';
+        p1Skills.innerHTML = '<div class="d-skill-desc">Left-click fighters to add to Team 1</div>';
 
-        ['atk', 'def', 'ult'].forEach(slot => {
-            const skill = data.skills ? data.skills[slot] : null;
-            if (!skill) return; // Skip if skill is missing
+        // Update Player 2 panel
+        const p2Panel = document.getElementById('p2-detail-name');
+        const p2Stats = document.getElementById('p2-detail-stats');
+        const p2Skills = document.getElementById('p2-detail-skills');
 
-            const div = document.createElement('div');
-            div.className = 'detail-skill-item';
-            div.innerHTML = `
-                <div class="d-skill-title">${slot}</div>
-                <div class="d-skill-name">${skill.name || slot.toUpperCase()}</div>
-                <div class="d-skill-desc">${skill.desc || 'No description available.'}</div>
-            `;
-            skillsEl.appendChild(div);
-        });
+        p2Panel.innerText = `Team 2 (${this.gameMode})`;
+        p2Panel.style.color = '#ff6b6b';
+
+        // Show team roster
+        p2Stats.innerHTML = this.p2Team.map((type, idx) => {
+            const data = FIGHTER_TYPES[type];
+            return `<div class="team-member" style="color: ${data.color}">${idx + 1}. ${data.name}</div>`;
+        }).join('');
+
+        p2Skills.innerHTML = '<div class="d-skill-desc">Right-click fighters to add to Team 2</div>';
     }
 
     startMatch() {
         audioEngine.init();
         logger.clear();
-        logger.log(`MATCH START: ${this.p1Type} vs ${this.p2Type}`, 'system');
+        logger.log(`MATCH START: ${this.gameMode} - Team 1 vs Team 2`, 'system');
 
         document.getElementById('char-select').style.display = 'none';
-        this.width = CONSTANTS.WIDTH;
-        this.height = CONSTANTS.HEIGHT;
+
+        // Arena size varies by mode
+        const arenaSizes = { '1v1': [550, 550], '2v2': [750, 550], '3v3': [850, 550] };
+        const [w, h] = arenaSizes[this.gameMode] || [800, 500];
+        this.width = w;
+        this.height = h;
 
         // Reset Arena Bounds
         this.arenaBounds = {
             x: 0,
             y: 0,
-            width: CONSTANTS.WIDTH,
-            height: CONSTANTS.HEIGHT
+            width: this.width,
+            height: this.height
         };
 
         this.arenaTimer = 0;
+        this.noHitTimer = 0; // Frames since last damage between fighters
         this.timeScale = 1.0;
         this.finishTimer = 0;
         this.isMatchOver = false;
@@ -182,20 +244,48 @@ export class Game {
         this.particles = new ParticleSystem();
         this.combatText = new CombatTextHelper(this.particles);
 
-        const f1 = new Fighter(1, 100, 250, this.p1Type, FIGHTER_TYPES, this);
-        const f2 = new Fighter(2, 400, 250, this.p2Type, FIGHTER_TYPES, this);
+        // Spawn Team 1 fighters (left side)
+        const teamSize = this.p1Team.length;
+        const spacing = teamSize === 1 ? 0 : Math.min(80, 200 / (teamSize - 1));
+        const p1StartX = 120;
+        const p1StartY = this.height / 2;
 
-        // Randomize starting angles with "Anti-Facing" logic to prevent early shot advantage.
-        // F1 is on the left (x=100), facing right (0 rad) would hit F2.
-        // We force F1 to face AWAY from F2 (between PI/2 and 3PI/2).
-        f1.angle = Math.PI / 2 + Math.random() * Math.PI;
+        this.p1Team.forEach((type, idx) => {
+            const yOffset = (idx - (teamSize - 1) / 2) * spacing;
+            const fighter = new Fighter(
+                1,
+                p1StartX,
+                p1StartY + yOffset,
+                type,
+                FIGHTER_TYPES,
+                this
+            );
+            // Face away from enemies (right side)
+            fighter.angle = Math.PI / 2 + Math.random() * Math.PI;
+            this.entities.push(fighter);
+        });
 
-        // F2 is on the right (x=400), facing left (PI rad) would hit F1.
-        // We force F2 to face AWAY from F1 (between -PI/2 and PI/2).
-        f2.angle = (Math.random() - 0.5) * Math.PI;
+        // Spawn Team 2 fighters (right side)
+        const p2StartX = this.width - 120;
+        const p2StartY = this.height / 2;
 
-        this.entities.push(f1);
-        this.entities.push(f2);
+        this.p2Team.forEach((type, idx) => {
+            const yOffset = (idx - (teamSize - 1) / 2) * spacing;
+            const fighter = new Fighter(
+                2,
+                p2StartX,
+                p2StartY + yOffset,
+                type,
+                FIGHTER_TYPES,
+                this
+            );
+            // Face away from enemies (left side)
+            fighter.angle = (Math.random() - 0.5) * Math.PI;
+            this.entities.push(fighter);
+        });
+
+        logger.log(`Team 1: ${this.p1Team.join(', ')}`, 'system');
+        logger.log(`Team 2: ${this.p2Team.join(', ')}`, 'system');
 
         this.createUI();
 
@@ -208,55 +298,75 @@ export class Game {
     updateCanvasSize() {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
-        // Note: Do NOT update --game-width here to prevent UI from shrinking
+        // Sync CSS aspect ratio and max-width so the canvas isn't stretched
+        this.canvas.style.setProperty('--canvas-aspect', `${this.width} / ${this.height}`);
+        this.canvas.style.setProperty('--canvas-max-width', `${this.width}px`);
     }
 
     handleArenaShrink() {
+        // Timed shrink (every 15 seconds)
         this.arenaTimer++;
         if (this.arenaTimer >= 900) {
             this.arenaTimer = 0;
-
-            // Shrink bounds towards center
-            const shrinkFactor = 0.85;
-            const newW = Math.floor(this.arenaBounds.width * shrinkFactor);
-            const newH = Math.floor(this.arenaBounds.height * shrinkFactor);
-            const dW = (this.arenaBounds.width - newW) / 2;
-            const dH = (this.arenaBounds.height - newH) / 2;
-
-            this.arenaBounds.x += dW;
-            this.arenaBounds.y += dH;
-            this.arenaBounds.width = newW;
-            this.arenaBounds.height = newH;
-
-            // Log and visual feedback for arena shrink
-            logger.log(`ARENA SHRINKING! New size: ${newW}x${newH}`, 'error');
-            this.combatText.arenaShrink(this.width / 2, this.height / 2);
-            this.particles.spawnExplosion(this.width / 2, this.height / 2);
-            audioEngine.playHeavyImpact();
-
-            // Push entities inside
-            this.entities.forEach(e => {
-                e.x = Math.max(this.arenaBounds.x + e.radius, Math.min(e.x, this.arenaBounds.x + this.arenaBounds.width - e.radius));
-                e.y = Math.max(this.arenaBounds.y + e.radius, Math.min(e.y, this.arenaBounds.y + this.arenaBounds.height - e.radius));
-            });
+            this.shrinkArena();
         }
+
+        // No-hit shrink: if no damage dealt for 5 seconds (300 frames), force shrink
+        this.noHitTimer++;
+        if (this.noHitTimer >= 300) {
+            this.noHitTimer = 0;
+            this.shrinkArena();
+            logger.log('No hits detected — arena shrinks to force engagement!', 'warn');
+        }
+    }
+
+    /** Called from Fighter.takeDamage to reset the no-hit timer */
+    registerHit() {
+        this.noHitTimer = 0;
+    }
+
+    shrinkArena() {
+        const shrinkFactor = 0.85;
+        const newW = Math.floor(this.arenaBounds.width * shrinkFactor);
+        const newH = Math.floor(this.arenaBounds.height * shrinkFactor);
+        const dW = (this.arenaBounds.width - newW) / 2;
+        const dH = (this.arenaBounds.height - newH) / 2;
+
+        this.arenaBounds.x += dW;
+        this.arenaBounds.y += dH;
+        this.arenaBounds.width = newW;
+        this.arenaBounds.height = newH;
+
+        // Log and visual feedback for arena shrink
+        logger.log(`ARENA SHRINKING! New size: ${newW}x${newH}`, 'error');
+        this.combatText.arenaShrink(this.width / 2, this.height / 2);
+        this.particles.spawnExplosion(this.width / 2, this.height / 2);
+        audioEngine.playHeavyImpact();
+
+        // Push entities inside
+        this.entities.forEach(e => {
+            e.x = Math.max(this.arenaBounds.x + e.radius, Math.min(e.x, this.arenaBounds.x + this.arenaBounds.width - e.radius));
+            e.y = Math.max(this.arenaBounds.y + e.radius, Math.min(e.y, this.arenaBounds.y + this.arenaBounds.height - e.radius));
+        });
     }
 
     createUI() {
         const uiHeader = document.getElementById('ui-header');
         uiHeader.innerHTML = '';
 
-        this.entities.forEach(ent => {
+        this.entities.forEach((ent, idx) => {
             const div = document.createElement('div');
             div.className = 'hud-card';
             const isRight = ent.id === 2;
             div.style.alignItems = isRight ? 'flex-end' : 'flex-start';
 
+            // Use unique index-based IDs so each fighter gets its own HUD
+            const uid = `ent${idx}`;
             const skillsHTML = `
                 <div class="skills-container" style="flex-direction: ${isRight ? 'row-reverse' : 'row'}">
-                    <div id="p${ent.id}-atk" class="skill-node skill-atk"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ATK</span></div></div>
-                    <div id="p${ent.id}-def" class="skill-node skill-def"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">DEF</span></div></div>
-                    <div id="p${ent.id}-ult" class="skill-node skill-ult"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ULT</span></div></div>
+                    <div id="${uid}-atk" class="skill-node skill-atk"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ATK</span></div></div>
+                    <div id="${uid}-def" class="skill-node skill-def"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">DEF</span></div></div>
+                    <div id="${uid}-ult" class="skill-node skill-ult"><div class="skill-progress"></div><div class="skill-inner"><span class="skill-label">ULT</span></div></div>
                 </div>
             `;
 
@@ -269,9 +379,10 @@ export class Game {
     }
 
     updateUI() {
-        this.entities.forEach(ent => {
+        this.entities.forEach((ent, idx) => {
+            const uid = `ent${idx}`;
             const updateCircle = (type, current, max, isPassive) => {
-                const el = document.getElementById(`p${ent.id}-${type}`);
+                const el = document.getElementById(`${uid}-${type}`);
                 if (!el) return;
 
                 if (isPassive) {
@@ -314,9 +425,37 @@ export class Game {
             // They handle hit detection inside their update() component.
             if (p.handlesOwnCollision) continue;
 
+            // 2b. TOWER COLLISION — enemy projectiles can damage Ballista towers
+            if (!p.active) continue;
+            for (const ent of this.entities) {
+                if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+                // Only enemy projectiles damage towers
+                if (p.owner && p.owner.id === ent.id) continue;
+                for (const tower of ent.ballistaTowers) {
+                    if (tower.hp <= 0) continue;
+                    if (Physics.dist(p.x, p.y, tower.x, tower.y) < tower.radius + p.radius) {
+                        tower.hp -= p.damage;
+                        this.particles.spawn(tower.x, tower.y, '#8B4513', 4);
+                        audioEngine.playHit();
+                        if (tower.hp <= 0) {
+                            this.particles.spawnExplosion(tower.x, tower.y);
+                            logger.log(`${ent.name}'s tower was destroyed!`, 'combat');
+                        }
+                        if (!p.piercing) {
+                            p.active = false;
+                            break;
+                        }
+                    }
+                }
+                if (!p.active) break;
+            }
+
             // 3. GENERIC ENTITY COLLISION (Standard projectiles)
+            if (!p.active) continue;
             for (let ent of this.entities) {
                 if (ent === p.owner || ent.isDead) continue;
+                // Team check: prevent friendly fire in 2v2/3v3 modes
+                if (p.owner && ent.id === p.owner.id) continue;
 
                 // Z-Axis Check
                 if (p.z !== undefined && p.z > (ent.height || 40)) continue;
@@ -477,31 +616,74 @@ export class Game {
         }
     }
 
+    resolveTowerCollisions() {
+        // Entity vs Tower — towers are immobile solid obstacles
+        for (const ent of this.entities) {
+            if (ent.isDead) continue;
+            // Check all fighters' towers
+            for (const owner of this.entities) {
+                if (!owner.ballistaTowers) continue;
+                for (const tower of owner.ballistaTowers) {
+                    if (tower.hp <= 0) continue;
+                    const dist = Physics.dist(ent.x, ent.y, tower.x, tower.y);
+                    const minDist = ent.radius + tower.radius;
+                    if (dist < minDist && dist > 0.001) {
+                        // Push entity out (tower is immobile)
+                        const nx = (ent.x - tower.x) / dist;
+                        const ny = (ent.y - tower.y) / dist;
+                        const overlap = minDist - dist + 1;
+                        ent.x += nx * overlap;
+                        ent.y += ny * overlap;
+
+                        // Bounce entity velocity off the tower
+                        const dot = ent.dx * nx + ent.dy * ny;
+                        if (dot < 0) {
+                            ent.dx -= 2 * dot * nx;
+                            ent.dy -= 2 * dot * ny;
+                            // Dampen slightly
+                            ent.dx *= 0.8;
+                            ent.dy *= 0.8;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     checkWinCondition() {
         if (this.isMatchOver) {
             this.finishTimer++;
             // Wait 120 frames (approx 2s at 60fps, but effectively longer due to timescale)
             if (this.finishTimer > 150) {
                 this.running = false;
-                const alive = this.entities.filter(e => !e.isDead);
+                const team1Alive = this.entities.filter(e => !e.isDead && e.id === 1);
+                const team2Alive = this.entities.filter(e => !e.isDead && e.id === 2);
                 const overlay = document.getElementById('end-screen');
                 const msg = document.getElementById('win-msg');
                 overlay.style.display = 'flex';
-                if (alive.length === 0) {
+
+                if (team1Alive.length === 0 && team2Alive.length === 0) {
                     msg.innerText = "DRAW";
                     msg.style.color = "white";
                     logger.log("MATCH END: DRAW", 'system');
+                } else if (team1Alive.length > 0) {
+                    msg.innerText = `TEAM 1 WINS!`;
+                    msg.style.color = '#4fc3f7';
+                    logger.log(`MATCH END: TEAM 1 WINS! (${team1Alive.length} survivors)`, 'system');
                 } else {
-                    msg.innerText = `P${alive[0].id} - ${alive[0].name} WINS`;
-                    msg.style.color = alive[0].color;
-                    logger.log(`MATCH END: ${alive[0].name} WINS!`, 'system');
+                    msg.innerText = `TEAM 2 WINS!`;
+                    msg.style.color = '#ff6b6b';
+                    logger.log(`MATCH END: TEAM 2 WINS! (${team2Alive.length} survivors)`, 'system');
                 }
             }
             return;
         }
 
-        const alive = this.entities.filter(e => !e.isDead);
-        if (alive.length <= 1) {
+        // Check if entire team is eliminated
+        const team1Alive = this.entities.filter(e => !e.isDead && e.id === 1);
+        const team2Alive = this.entities.filter(e => !e.isDead && e.id === 2);
+
+        if (team1Alive.length === 0 || team2Alive.length === 0) {
             this.isMatchOver = true;
             this.timeScale = 0.2; // SLOW MOTION
             audioEngine.playWin();
@@ -537,6 +719,7 @@ export class Game {
 
             // console.time('collisions');
             this.resolveCollisions();
+            this.resolveTowerCollisions();
             // console.timeEnd('collisions');
 
             this.projectiles.forEach(p => p.update(this.timeScale));

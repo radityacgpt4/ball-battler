@@ -11,7 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-import { checkWeaponHit } from '../data/weaponGeometry.js';
+import { checkWeaponHit, checkWeaponHitTower } from '../data/weaponGeometry.js';
 
 export class AxeAtkAbility extends Ability {
     constructor(config, slot) {
@@ -44,19 +44,16 @@ export class AxeAtkAbility extends Ability {
 
             // Use weapon geometry registry for collision
             if (checkWeaponHit('AXEMAN_AXE', fighter, enemy)) {
-                // Check shield block
-                if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
-                    if (fighter.cooldowns.atk <= 0) {
+                if (fighter.cooldowns.atk <= 0) {
+                    // Check shield block (only when actually attacking)
+                    if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                         game.combatText.blocked(enemy.x, enemy.y - enemy.radius);
                         game.particles.spawn(enemy.x, enemy.y, '#ffffff', 5);
                         audioEngine.playBlock();
                         logger.log(`${enemy.name} blocked axe attack from ${fighter.name}`, 'combat');
                         fighter.cooldowns.atk = this.blockedCooldown;
+                        continue;
                     }
-                    continue;
-                }
-
-                if (fighter.cooldowns.atk <= 0) {
                     fighter.cooldowns.atk = this.swingCooldown;
 
                     // Damage
@@ -85,6 +82,23 @@ export class AxeAtkAbility extends Ability {
                         game.particles.spawn(enemy.x, enemy.y, '#ff0000', 5);
                         logger.log(`${enemy.name} is BLEEDING from Axeman combo!`, 'status');
                     }
+                }
+            }
+        }
+
+        // --- TOWER COLLISION (Ballista Defensive Towers) ---
+        for (const ent of game.entities) {
+            if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+            if (ent.id === fighter.id) continue;
+
+            for (const tower of ent.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+                if (fighter.cooldowns.atk > 0) continue;
+
+                if (checkWeaponHitTower('AXEMAN_AXE', fighter, tower, this.damage, game)) {
+                    fighter.cooldowns.atk = this.swingCooldown;
+                    fighter.rotationSpeed *= -1; // Change direction like normal hits
+                    break;
                 }
             }
         }

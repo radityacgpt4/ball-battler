@@ -63,6 +63,9 @@ export class StaticPassiveAbility extends Ability {
     // Static is handled in collision resolution
     // This stores the config values
     onEntityCollision(fighter, other, context) {
+        // Only damage enemies (different team)
+        if (fighter.id === other.id) return false;
+
         if (fighter.status.stun <= 0 && other.status.stun <= 0) {
             other.takeDamage(this.damage, false, false, fighter);
             other.applyStatus('STUN');
@@ -182,6 +185,9 @@ export class MomentumPassiveAbility extends Ability {
      * @returns {boolean} True if a special collision was handled (e.g. slam result)
      */
     onEntityCollision(fighter, other, context) {
+        // Only damage enemies (different team)
+        if (fighter.id === other.id) return false;
+
         if (other.collisionImmunity > 0) return false;
 
         const speedTier = Math.floor((this.currentSpeed - fighter.baseSpeed) / this.speedGain);

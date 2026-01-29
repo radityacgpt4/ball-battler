@@ -9,6 +9,8 @@
  */
 
 import { Physics } from '../systems/Physics.js';
+import { audioEngine } from '../systems/Audio.js';
+import { logger } from '../systems/Logger.js';
 
 // ============================================================================
 // WEAPON GEOMETRY DEFINITIONS
@@ -316,6 +318,82 @@ export function checkWeaponHit(weaponKey, fighter, target) {
                     return true;
                 }
                 break;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Check if weapon hits Ballista tower and apply damage
+ * @param {string} weaponKey - Key from weaponGeometry
+ * @param {object} fighter - Fighter instance
+ * @param {object} tower - Tower instance
+ * @param {number} damage - Damage to apply
+ * @param {object} game - Game instance for particles/audio
+ * @param {Array} hitList - Optional hit list to prevent multi-hit per rotation
+ * @returns {boolean} True if weapon hits tower
+ */
+export function checkWeaponHitTower(weaponKey, fighter, tower, damage, game, hitList = null) {
+    if (tower.hp <= 0) return false;
+
+    // Check if already hit this rotation cycle
+    if (hitList && hitList.includes(tower)) return false;
+
+    const hitboxes = getWeaponHitboxes(weaponKey, fighter);
+
+    for (const hitbox of hitboxes) {
+        let hit = false;
+
+        switch (hitbox.type) {
+            case 'line':
+                // Blade weapon vs tower (circle collision)
+                if (Physics.lineCircleIntersect(
+                    hitbox.startX, hitbox.startY,
+                    hitbox.endX, hitbox.endY,
+                    tower.x, tower.y, tower.radius
+                )) {
+                    hit = true;
+                }
+                break;
+
+            case 'orb':
+                // Orb weapon vs tower (point-circle collision)
+                const dist = Physics.dist(hitbox.x, hitbox.y, tower.x, tower.y);
+                if (dist < hitbox.radius + tower.radius) {
+                    hit = true;
+                }
+                break;
+
+            case 'circle':
+                // Fists vs tower (circle-circle collision)
+                const distToCenter = Physics.dist(hitbox.x, hitbox.y, tower.x, tower.y);
+                if (distToCenter < hitbox.radius + tower.radius) {
+                    hit = true;
+                }
+                break;
+        }
+
+        if (hit) {
+            // Apply damage
+            tower.hp -= damage;
+
+            // Add to hit list if provided
+            if (hitList) hitList.push(tower);
+
+            // Particles and audio
+            game.particles.spawn(tower.x, tower.y, '#8B4513', 4);
+
+            audioEngine.playHit();
+
+            if (tower.hp <= 0) {
+                game.particles.spawnExplosion(tower.x, tower.y);
+                audioEngine.playExplosion();
+
+                logger.log(`${tower.owner.name}'s Defensive Tower destroyed by ${fighter.name}!`, 'combat');
+            }
+
+            return true;
         }
     }
 

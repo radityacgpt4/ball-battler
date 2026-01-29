@@ -12,8 +12,8 @@ import { Projectile } from '../entities/Projectile.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-import { BallistaBoltRenderer } from '../components/ProjectileRenderers.js';
-import { LinearMovement, DragBehavior } from '../components/ProjectileBehaviors.js';
+import { BallistaBoltRenderer, TowerBoltRenderer } from '../components/ProjectileRenderers.js';
+import { LinearMovement, DragBehavior, BallistaBehavior } from '../components/ProjectileBehaviors.js';
 
 export class BallistaAtkAbility extends Ability {
     constructor(config, slot) {
@@ -25,7 +25,6 @@ export class BallistaAtkAbility extends Ability {
         this.boltRadius = config.boltRadius || 8;
         this.dragDuration = config.dragDuration || 25;
         this.normalBoltCount = config.normalBoltCount || 2;
-        this.ultBoltCount = config.ultBoltCount || 3;
     }
 
     update(fighter, context) {
@@ -36,25 +35,10 @@ export class BallistaAtkAbility extends Ability {
         if (fighter.cooldowns.atk <= 0) {
             fighter.cooldowns.atk = this.cooldown;
 
-            // Check if ULT is active
-            const isUltActive = fighter.ballistaUltShots > 0;
-
-            let angles;
-            if (isUltActive) {
-                // ULT: more bolts in cone
-                angles = [];
-                for (let i = 0; i < this.ultBoltCount; i++) {
-                    const offset = (i - (this.ultBoltCount - 1) / 2) * this.spreadAngle;
-                    angles.push(fighter.angle + offset);
-                }
-                fighter.ballistaUltShots--;
-            } else {
-                // Normal: 2 bolts
-                angles = [
-                    fighter.angle - this.spreadAngle / 2,
-                    fighter.angle + this.spreadAngle / 2
-                ];
-            }
+            const angles = [
+                fighter.angle - this.spreadAngle / 2,
+                fighter.angle + this.spreadAngle / 2
+            ];
 
             angles.forEach((angle) => {
                 const p = new Projectile(
@@ -68,13 +52,13 @@ export class BallistaAtkAbility extends Ability {
                 );
 
                 p.isBallistaBolt = true;
-                p.isUltBolt = isUltActive;
                 p.radius = this.boltRadius;
                 p.dragTarget = null;
                 p.dragDuration = this.dragDuration;
 
                 p.renderer = new BallistaBoltRenderer();
                 p.addComponent(new LinearMovement());
+                p.addComponent(new BallistaBehavior());
                 p.addComponent(new DragBehavior());
 
                 game.projectiles.push(p);
@@ -302,40 +286,168 @@ export class BallistaDefAbility extends Ability {
 export class BallistaUltAbility extends Ability {
     constructor(config, slot) {
         super(config, slot);
-        // All values from config (fighters.js)
-        this.cooldown = config.cooldown || 120;
-        this.damage = config.damage || 15;
-        this.ultShots = config.ultShots || 3;
-        this.ultVisualDuration = config.ultVisualDuration || 60;
+        this.spawnInterval = config.spawnInterval || 120;
+        this.maxTowers = config.maxTowers || 3;
+        this.towerHp = config.towerHp || 20;
+        this.towerLifetime = config.towerLifetime || 240;
+        this.towerFireRate = config.towerFireRate || 60;
+        this.towerRotationSpeed = config.towerRotationSpeed || 0.04;
+        this.towerBoltDamage = config.towerBoltDamage || 8;
+        this.towerBoltSpeed = config.towerBoltSpeed || 10;
+        this.towerRadius = config.towerRadius || 15;
+
+        this.spawnTimer = 0;
     }
 
     execute(fighter, context) {
+        // No-op: towers spawn passively via update once ULT is available
+    }
+
+    canUse() {
+        // Disable the default execute trigger — tower spawning is handled in update()
+        return false;
+    }
+
+    update(fighter, context) {
         const { game } = context;
 
-        fighter.cooldowns.ult = this.cooldown;
-        fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = this.ultVisualDuration;
+        if (!fighter.ballistaTowers) fighter.ballistaTowers = [];
 
-        // ULT buffs ATK - next few shots are enhanced
-        fighter.ballistaUltShots = this.ultShots;
+        // Clean up all towers if owner is dead
+        if (fighter.isDead) {
+            fighter.ballistaTowers.forEach(t => game.particles.spawn(t.x, t.y, '#8B4513', 5));
+            fighter.ballistaTowers = [];
+            return;
+        }
 
-        game.particles.spawn(fighter.x, fighter.y, '#8B4513', 10);
+        // Clean up dead/expired towers
+        fighter.ballistaTowers = fighter.ballistaTowers.filter(t => t.hp > 0 && t.timer > 0);
+
+        // Spawn timer — towers drop passively every spawnInterval frames once HP <= 50%
+        const ultAvailable = fighter.hp <= fighter.maxHp * 0.5;
+        if (ultAvailable) {
+            this.spawnTimer++;
+
+            // Sync cooldown UI to show spawn progress
+            fighter.maxCooldowns.ult = this.spawnInterval;
+            fighter.cooldowns.ult = Math.max(0, this.spawnInterval - this.spawnTimer);
+
+            if (this.spawnTimer >= this.spawnInterval) {
+                this.spawnTimer = 0;
+                this.spawnTower(fighter, game);
+            }
+        }
+
+        // Update all active towers
+        for (const tower of fighter.ballistaTowers) {
+            tower.timer -= 1;
+            tower.angle += tower.rotationSpeed;
+            tower.fireTimer -= 1;
+
+            // Fire bolt
+            if (tower.fireTimer <= 0) {
+                tower.fireTimer = this.towerFireRate;
+                this.fireTowerBolt(tower, game);
+            }
+        }
+    }
+
+    spawnTower(fighter, game) {
+        // Enforce max tower cap — remove oldest if at limit
+        while (fighter.ballistaTowers.length >= this.maxTowers) {
+            const oldest = fighter.ballistaTowers.shift();
+            // Despawn particle
+            game.particles.spawn(oldest.x, oldest.y, '#8B4513', 5);
+        }
+
+        const tower = {
+            x: fighter.x,
+            y: fighter.y,
+            hp: this.towerHp,
+            maxHp: this.towerHp,
+            angle: Math.random() * Math.PI * 2,
+            rotationSpeed: this.towerRotationSpeed,
+            timer: this.towerLifetime,
+            fireTimer: this.towerFireRate,
+            owner: fighter,
+            id: fighter.id, // Same team
+            radius: this.towerRadius
+        };
+
+        fighter.ballistaTowers.push(tower);
+
+        // Spawn visual feedback
+        game.particles.spawn(tower.x, tower.y, '#8B4513', 8);
         audioEngine.playHeavyImpact();
+        logger.log(`${fighter.name} deployed a Defensive Tower!`, 'info');
+    }
 
-        // Visual effect
-        for (let i = 0; i < 12; i++) {
-            const angle = (Math.PI * 2 / 12) * i;
-            game.particles.particles.push({
-                x: fighter.x + Math.cos(angle) * 30,
-                y: fighter.y + Math.sin(angle) * 30,
-                vx: Math.cos(angle) * 3,
-                vy: Math.sin(angle) * 3,
-                life: 0.8,
-                decay: 0.05,
-                size: 6,
-                color: '#8B4513',
-                type: 'dot'
-            });
+    fireTowerBolt(tower, game) {
+        const p = new Projectile(
+            tower.owner,
+            tower.x + Math.cos(tower.angle) * (tower.radius + 5),
+            tower.y + Math.sin(tower.angle) * (tower.radius + 5),
+            tower.angle,
+            this.towerBoltSpeed,
+            this.towerBoltDamage,
+            game
+        );
+
+        p.isBallistaBolt = true;
+        p.radius = 4;
+        p.dragTarget = null;
+        p.dragDuration = 20;
+        p.impactSound = 'hit';
+        p.renderer = new TowerBoltRenderer();
+        p.addComponent(new LinearMovement());
+        p.addComponent(new BallistaBehavior());
+        p.addComponent(new DragBehavior());
+
+        game.projectiles.push(p);
+    }
+
+    draw(fighter, ctx) {
+        if (!fighter.ballistaTowers) return;
+
+        for (const tower of fighter.ballistaTowers) {
+            // Renderer calls draw() with ctx translated to fighter position,
+            // so offset back to get absolute tower coordinates
+            const dx = tower.x - fighter.x;
+            const dy = tower.y - fighter.y;
+
+            // Tower body — dark brown circle
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(dx, dy, tower.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#5C3A1E';
+            ctx.fill();
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Aiming direction indicator
+            const tipX = dx + Math.cos(tower.angle) * (tower.radius + 6);
+            const tipY = dy + Math.sin(tower.angle) * (tower.radius + 6);
+            ctx.beginPath();
+            ctx.moveTo(dx, dy);
+            ctx.lineTo(tipX, tipY);
+            ctx.strokeStyle = '#D2691E';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // HP bar
+            const barW = tower.radius * 2;
+            const barH = 3;
+            const barX = dx - barW / 2;
+            const barY = dy - tower.radius - 8;
+            const hpRatio = tower.hp / tower.maxHp;
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(barX, barY, barW, barH);
+            ctx.fillStyle = hpRatio > 0.5 ? '#4CAF50' : hpRatio > 0.25 ? '#FF9800' : '#F44336';
+            ctx.fillRect(barX, barY, barW * hpRatio, barH);
+
+            ctx.restore();
         }
     }
 }

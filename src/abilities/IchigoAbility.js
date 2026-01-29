@@ -11,7 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
-import { checkWeaponHit } from '../data/weaponGeometry.js';
+import { checkWeaponHit, checkWeaponHitTower } from '../data/weaponGeometry.js';
 import { Projectile } from '../entities/Projectile.js';
 import { LinearMovement, GetsugaBehavior } from '../components/ProjectileBehaviors.js';
 import { GetsugaTenshouRenderer } from '../components/ProjectileRenderers.js';
@@ -40,9 +40,9 @@ export class IchigoAtkAbility extends Ability {
 
             // Use weapon geometry registry for collision
             if (checkWeaponHit(weaponKey, fighter, enemy)) {
-                // Check if blocked by shield
-                if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
-                    if (fighter.cooldowns.atk <= 0) {
+                if (fighter.cooldowns.atk <= 0) {
+                    // Check if blocked by shield (only when actually attacking)
+                    if (enemy.isBlockedByShield(fighter.x, fighter.y, this.damage)) {
                         const shieldX = enemy.x + Math.cos(enemy.angle) * (enemy.radius + 8);
                         const shieldY = enemy.y + Math.sin(enemy.angle) * (enemy.radius + 8);
                         game.combatText.blocked(enemy.x, enemy.y - enemy.radius);
@@ -50,11 +50,8 @@ export class IchigoAtkAbility extends Ability {
                         audioEngine.playBlock();
                         logger.log(`${enemy.name} blocked attack from ${fighter.name}`, 'combat');
                         fighter.cooldowns.atk = this.attackCooldown;
+                        continue;
                     }
-                    continue;
-                }
-
-                if (fighter.cooldowns.atk <= 0) {
                     fighter.meleeHits++;
                     enemy.takeDamage(this.damage, false, false, fighter);
 
@@ -66,6 +63,25 @@ export class IchigoAtkAbility extends Ability {
                     audioEngine.playHit();
                     logger.log(`${fighter.name} hit ${enemy.name} for ${this.damage} dmg`, 'combat');
                     fighter.cooldowns.atk = this.attackCooldown;
+                }
+            }
+        }
+
+        // --- TOWER COLLISION (Ballista Defensive Towers) ---
+        for (const ent of game.entities) {
+            if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+            if (ent.id === fighter.id) continue;
+
+            for (const tower of ent.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+                if (fighter.cooldowns.atk > 0) continue;
+
+                const isBankai = fighter.activeEffects && fighter.activeEffects.bankaiActive;
+                const weaponKey = isBankai ? 'SOUL_REAPER_TENSA' : 'SOUL_REAPER_ZANGETSU';
+
+                if (checkWeaponHitTower(weaponKey, fighter, tower, this.damage, game)) {
+                    fighter.cooldowns.atk = this.attackCooldown;
+                    break;
                 }
             }
         }
@@ -220,9 +236,8 @@ export class IchigoUltAbility extends Ability {
 
         fighter.cooldowns.ult = this.cooldown;
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = this.duration; // Global sync
+        fighter.activeEffects.ultTimer = 999999; // Permanent once activated
         fighter.activeEffects.bankaiActive = true;
-        fighter.activeEffects.bankaiTimer = this.duration;
 
         // Store original values
         fighter.activeEffects.bankaiSpeedBoost = this.speedBoost;
@@ -269,9 +284,7 @@ export class IchigoUltAbility extends Ability {
     }
 
     stop(fighter, context) {
-        fighter.activeEffects.bankaiActive = false;
-        context.game.combatText.text(fighter.x, fighter.y - fighter.radius - 20, "Bankai expires!", "#888");
-        logger.log(`${fighter.name}'s Bankai expires!`, 'combat');
+        // Bankai is permanent once activated — this should not be called
     }
 
     onDamage(fighter, damage, context) {

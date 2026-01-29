@@ -11,7 +11,7 @@ import { Ability } from './Ability.js';
 import { Physics } from '../systems/Physics.js';
 import { logger } from '../systems/Logger.js';
 import { audioEngine } from '../systems/Audio.js';
-import { checkWeaponHit } from '../data/weaponGeometry.js';
+import { checkWeaponHit, checkWeaponHitTower } from '../data/weaponGeometry.js';
 
 // --- ATK: EIGHTFOLD STRIKE ---
 export class DivineGeneralAtkAbility extends Ability {
@@ -57,6 +57,27 @@ export class DivineGeneralAtkAbility extends Ability {
                     }
                 }
                 if (hit) break;
+            }
+
+            // --- TOWER COLLISION (Ballista Defensive Towers) ---
+            if (!hit) {
+                for (const ent of context.game.entities) {
+                    if (!ent.ballistaTowers || ent.ballistaTowers.length === 0) continue;
+                    if (ent.id === fighter.id) continue;
+
+                    for (const tower of ent.ballistaTowers) {
+                        if (tower.hp <= 0) continue;
+
+                        if (checkWeaponHitTower('DIVINE_GENERAL_WHEEL', fighter, tower, this.baseDamage + this.currentBonus, context.game)) {
+                            fighter.cooldowns.atk = this.attackCooldown;
+                            this.currentBonus = 0;
+                            this.lastHitTime = 0;
+                            hit = true;
+                            break;
+                        }
+                    }
+                    if (hit) break;
+                }
             }
         }
     }
@@ -161,8 +182,20 @@ export class DivineGeneralDefAbility extends Ability {
             fighter.maxCooldowns.def = this.healDelay;
 
             if (this.healDelayTimer >= this.healDelay) {
-                // Trigger Heal
-                const healAmount = this.storedDamage * this.healPercent;
+                // Trigger Heal — scaled by current movement speed ratio
+                // Stunned (0 speed) = 0% heal, slowed = reduced heal
+                let speedRatio = 1.0;
+                if (fighter.status.stun > 0) {
+                    speedRatio = 0;
+                } else {
+                    if (fighter.status.slow > 0) speedRatio *= 0.3;
+                    if (fighter.status.domainSlow > 0) speedRatio *= 0.8;
+                    if (fighter.status.burn > 0) {
+                        const burnSlow = (fighter.status.burnStacks || 1) * 0.1;
+                        speedRatio *= (1 - burnSlow);
+                    }
+                }
+                const healAmount = this.storedDamage * this.healPercent * speedRatio;
                 if (healAmount > 0) {
                     const oldHp = fighter.hp;
                     fighter.hp = Math.min(fighter.hp + healAmount, fighter.maxHp);
@@ -171,7 +204,7 @@ export class DivineGeneralDefAbility extends Ability {
                     if (healed > 0) {
                         fighter.game.combatText.healing(fighter.x, fighter.y, Math.ceil(healed));
                         fighter.game.particles.spawn(fighter.x, fighter.y, '#00FF00', 8);
-                        logger.log(`${fighter.name} Adapted & Healed ${Math.ceil(healed)} HP`, 'info');
+                        logger.log(`${fighter.name} Adapted & Healed ${Math.ceil(healed)} HP (speed: ${Math.round(speedRatio * 100)}%)`, 'info');
                     }
                 }
 

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1v1 Fighter Ball - Auto Battler Engine v3 (With Sound)</title>
+    <title>Fighter Ball - Auto Battler Engine v3 (1v1 / 2v2 / 3v3)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -14,10 +14,23 @@
         <div id="ui-header"></div>
 
         <div id="game-wrapper">
-            <canvas id="arena" width="500" height="500"></canvas>
+            <canvas id="arena" width="800" height="500"></canvas>
 
             <div id="char-select" class="screen-overlay">
                 <h2 class="setup-title">SELECT YOUR FIGHTER</h2>
+
+                <!-- Game Mode Selector -->
+                <div class="mode-selector">
+                    <button class="mode-btn active" data-mode="1v1">1v1</button>
+                    <button class="mode-btn" data-mode="2v2">2v2</button>
+                    <button class="mode-btn" data-mode="3v3">3v3</button>
+                </div>
+
+                <!-- Mobile Player Toggle -->
+                <div class="player-toggle" id="player-toggle">
+                    <button class="player-toggle-btn active-p1" id="toggle-p1">PLAYER 1</button>
+                    <button class="player-toggle-btn" id="toggle-p2">PLAYER 2</button>
+                </div>
 
                 <div class="selection-interface">
                     <!-- Player 1 Detail Panel -->

@@ -366,8 +366,7 @@ export const FIGHTER_TYPES = {
                 spreadAngle: 0.15,
                 boltRadius: 8,
                 dragDuration: 25,
-                normalBoltCount: 2,
-                ultBoltCount: 3
+                normalBoltCount: 2
             },
             def: {
                 name: "Gate Barrier",
@@ -381,15 +380,20 @@ export const FIGHTER_TYPES = {
                 shieldRadius: 8
             },
             ult: {
-                name: "Siege Mode",
-                desc: "Doubles fire rate but disables movement.",
+                name: "Defensive Tower",
+                desc: "Deploys auto-firing towers (max 3). Towers last 4s and have 20 HP.",
                 type: "SIEGE_MODE",
                 isPassive: false,
-                // Configurable properties
-                cooldown: 120,
-                damage: 15,
-                ultShots: 3,
-                ultVisualDuration: 60
+                // Tower properties
+                spawnInterval: 120,
+                maxTowers: 3,
+                towerHp: 20,
+                towerLifetime: 240,
+                towerFireRate: 60,
+                towerRotationSpeed: 0.04,
+                towerBoltDamage: 8,
+                towerBoltSpeed: 10,
+                towerRadius: 15
             }
         }
     },
@@ -413,11 +417,11 @@ export const FIGHTER_TYPES = {
             },
             def: {
                 name: "Healing Stance",
-                desc: "Stores 90% of damage taken and heals it after 5s.",
+                desc: "Stores 90% of damage taken and heals it after 5.5s.",
                 type: "ADAPTATION_HEAL",
                 isPassive: false,
                 // Configurable properties
-                healDelay: 300,
+                healDelay: 330,
                 healPercent: 0.9
             },
             ult: {
@@ -530,8 +534,8 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 180,
-                damage: 4,
-                arrowCount: 6,
+                damage: 5,
+                arrowCount: 5,
                 stunDuration: 45,
                 arrowSpeed: 22,
                 arrowRadius: 2,
@@ -578,7 +582,7 @@ export const FIGHTER_TYPES = {
                 slashDamage: 8,
                 slashSpeed: 18,
                 slashFireRate: 60,
-                slashWidth: 120, // Parabolic width
+                slashWidth: 160, // Parabolic width
                 dragStrength: 0.15 // Drag factor
             }
         }

@@ -173,7 +173,9 @@ export class Fighter {
         // Update visual rotation for wheel
         this.wheelRotation += 0.05 * timeScale;
 
-        this.updateSkills(allEntities, timeScale);
+        // Filter to only enemies (different team ID)
+        const enemies = allEntities.filter(e => e.id !== this.id && !e.isDead);
+        this.updateSkills(enemies, timeScale);
     }
 
     handleMovement(timeScale) {
@@ -434,6 +436,9 @@ export class Fighter {
         const dmg = Math.ceil(amount);
         this.game.combatText.damage(this.x, this.y - this.radius, dmg);
         this.hp -= amount;
+
+        // Notify game of hit for no-hit arena shrink timer
+        if (this.game.registerHit) this.game.registerHit();
 
         logger.log(`${this.name} took ${dmg} dmg. HP: ${Math.ceil(this.hp)}/${this.maxHp}`, 'combat');
 

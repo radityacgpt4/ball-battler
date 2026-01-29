@@ -108,19 +108,40 @@ export class ZoltraakAbility extends Ability {
         p.addComponent(new ZoltraakBehavior(this.homingStrength, this.range));
 
         // Unified impact properties
-        p.impactSound = 'hit';
+        p.impactSound = 'zoltraakImpact';
         p.impactParticle = 'zoltraakImpact';
 
         game.projectiles.push(p);
 
-        // Visual: Muzzle Flash (Lighter for rapid fire)
+        // Visual: Enhanced Muzzle Flash (Premium magical laser)
         game.particles.particles.push({
             type: 'shockwave',
             x: startX, y: startY,
-            radius: 5, maxRadius: 15,
-            life: 0.2, decay: 0.1,
-            color: '#4fc3f7', width: 2
+            radius: 5, maxRadius: 20,
+            life: 0.3, decay: 0.12,
+            color: '#4fc3f7', width: 3
         });
+
+        // Secondary inner shockwave
+        game.particles.particles.push({
+            type: 'shockwave',
+            x: startX, y: startY,
+            radius: 3, maxRadius: 12,
+            life: 0.2, decay: 0.15,
+            color: '#E0FFFF', width: 2
+        });
+
+        // Sparkle particles
+        for (let i = 0; i < 5; i++) {
+            const sparkAngle = aimAngle + (Math.random() - 0.5) * 0.8;
+            game.particles.particles.push({
+                x: startX, y: startY,
+                vx: Math.cos(sparkAngle) * (2 + Math.random() * 3),
+                vy: Math.sin(sparkAngle) * (2 + Math.random() * 3),
+                life: 0.3, decay: 0.1,
+                size: 2, color: '#87CEEB', type: 'dot'
+            });
+        }
 
         audioEngine.playZoltraak(); // Magical laser sound
 

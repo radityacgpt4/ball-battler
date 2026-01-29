@@ -5,6 +5,7 @@
 import { audioEngine } from '../systems/Audio.js';
 import { Physics } from '../systems/Physics.js';
 import { logger } from '../systems/Logger.js';
+import { trackTowerDamage } from '../systems/BattleLogger.js';
 
 // BASE COMPONENT INTERFACE
 // class Behavior {
@@ -543,7 +544,7 @@ export class GrenadeBehavior {
 
                 const d = Math.hypot(p.x - tower.x, p.y - tower.y);
                 if (d < blastRadius + tower.radius) {
-                    tower.hp -= p.damage;
+                    trackTowerDamage(tower, p.damage, p.owner);
                     p.game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
                     audioEngine.playHit();
 
@@ -600,7 +601,7 @@ export class ClaymoreBehavior {
 
                 if (Math.hypot(p.x - tower.x, p.y - tower.y) < tower.radius + p.radius + 5) {
                     // Trigger - damage tower
-                    tower.hp -= p.damage;
+                    trackTowerDamage(tower, p.damage, p.owner);
                     p.game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
                     p.game.particles.spawnExplosion(p.x, p.y);
                     audioEngine.playExplosion();
@@ -795,7 +796,7 @@ export class WorldSlashBehavior {
                 if (tower.hp <= 0) continue;
 
                 if (Physics.dist(p.x, p.y, tower.x, tower.y) < (p.radius || 40) + tower.radius) {
-                    tower.hp -= p.damage;
+                    trackTowerDamage(tower, p.damage, p.owner);
                     p.game.particles.spawn(tower.x, tower.y, '#8B4513', 4);
                     audioEngine.playHit();
 
@@ -937,7 +938,7 @@ export class MechaBeamBehavior {
 
                 const dist = Math.hypot(tower.x - p.x, tower.y - p.y);
                 if (dist < p.explosionRadius + tower.radius) {
-                    tower.hp -= p.explosionDamage;
+                    trackTowerDamage(tower, p.explosionDamage, p.owner);
                     game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
                     audioEngine.playHit();
 
@@ -1062,7 +1063,7 @@ export class GetsugaBehavior {
             // Check if target is a tower (doesn't have takeDamage method like fighters)
             if (target.owner && target.radius && !target.takeDamage) {
                 // It's a tower
-                target.hp -= p.damage;
+                trackTowerDamage(target, p.damage, p.owner);
                 p.game.particles.spawn(target.x, target.y, '#8B4513', 4);
                 audioEngine.playHit();
 
@@ -1074,7 +1075,7 @@ export class GetsugaBehavior {
                 // It's a fighter
                 const dealt = target.takeDamage(p.damage, false, false, p.owner);
                 if (dealt !== false && p.statusEffect) {
-                    target.applyStatus(p.statusEffect.type, p.statusEffect.duration);
+                    target.applyStatus(p.statusEffect.type, p.statusEffect.duration, p.owner);
                 }
             }
         }
@@ -1102,7 +1103,7 @@ export class GetsugaBehavior {
             if (dist < aoeRadius + enemy.radius) {
                 enemy.takeDamage(p.explosionDamage, false, false, p.owner);
                 if (p.statusEffect) {
-                    enemy.applyStatus(p.statusEffect.type, p.statusEffect.duration);
+                    enemy.applyStatus(p.statusEffect.type, p.statusEffect.duration, p.owner);
                 }
 
                 // Knockback
@@ -1126,7 +1127,7 @@ export class GetsugaBehavior {
 
                 const dist = Physics.dist(p.x, p.y, tower.x, tower.y);
                 if (dist < aoeRadius + tower.radius) {
-                    tower.hp -= p.explosionDamage;
+                    trackTowerDamage(tower, p.explosionDamage, p.owner);
                     game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
                     audioEngine.playHit();
 
@@ -1468,7 +1469,7 @@ export class GojoRedBehavior {
                 const dist = Physics.dist(p.x, p.y, tower.x, tower.y);
                 if (dist < radius + tower.radius) {
                     // Towers just take normal damage (no crit bonus)
-                    tower.hp -= p.damage;
+                    trackTowerDamage(tower, p.damage, p.owner);
                     p.game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
                     audioEngine.playHit();
 

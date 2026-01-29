@@ -72,6 +72,21 @@ export class Fighter {
         // Visuals
         this.wheelRotation = 0;
 
+        // Battle stats tracking
+        this.battleStats = {
+            damageDealt: 0,
+            damageReceived: 0,
+            damageBlocked: 0,
+            kills: 0,
+            healingDone: 0,
+            abilityUsage: { atk: 0, def: 0, ult: 0 },
+            _abilityActivated: { atk: false, def: false, ult: false },
+            statusesApplied: {},
+            statusesReceived: {},
+            damageByAbility: {},
+            damageTakenBySource: {}
+        };
+
         // Initialize abilities
         this.abilities = this.createAbilities(stats.skills);
     }
@@ -109,7 +124,7 @@ export class Fighter {
             this.status.bleed = tick(this.status.bleed);
             this.status.bleedTick += 1 * timeScale;
             if (this.status.bleedTick >= 30) {
-                this.takeDamage(1, false, true); // isDoT = true
+                this.takeDamage(1, false, true, this.status.bleedSource); // isDoT = true
                 this.game.particles.spawn(this.x, this.y, '#ff0000', 2);
                 this.status.bleedTick = 0;
             }
@@ -126,7 +141,7 @@ export class Fighter {
 
             // Tick every 0.5 seconds (30 frames) - deals fixed 1 dmg per tick = 2 dmg/sec
             if (this.status.burnTick >= 30) {
-                this.takeDamage(1, false, true); // Fixed 1 damage per tick
+                this.takeDamage(1, false, true, this.status.burnSource); // Fixed 1 damage per tick
                 this.game.particles.spawn(this.x, this.y, '#FF4500', 3);
                 this.status.burnTick = 0;
             }
@@ -206,7 +221,7 @@ export class Fighter {
             const attacker = this.pendingWallSlam.owner;
             const damage = attacker.skills.ult.damage;
 
-            this.takeDamage(damage);
+            this.takeDamage(damage, false, false, attacker);
             audioEngine.playHeavyImpact();
 
             this.status.stun = 30;
@@ -384,6 +399,10 @@ export class Fighter {
 
         const context = { enemies, game: this.game, timeScale };
 
+        // Track cooldown states before updates for ability usage counting
+        const prevCd = { atk: this.cooldowns.atk, def: this.cooldowns.def, ult: this.cooldowns.ult };
+        const prevUltActive = this.activeEffects.ultActive;
+
         // Update attack ability
         if (this.abilities.atk && this.abilities.atk.update) {
             this.abilities.atk.update(this, context);
@@ -397,6 +416,37 @@ export class Fighter {
         // Check ultimate condition (Auto-trigger when possible)
         if (this.abilities.ult && this.abilities.ult.canUse && this.abilities.ult.canUse(this, context)) {
             this.abilities.ult.execute(this, context);
+        }
+
+        // Count ability usages
+        for (const slot of ['atk', 'def', 'ult']) {
+            const ability = this.abilities[slot];
+            if (!ability) continue;
+
+            if (ability.isPassive) {
+                // Passive: count once on first activation
+                if (!this.battleStats._abilityActivated[slot]) {
+                    if (prevCd[slot] <= 0 && this.cooldowns[slot] > 0) {
+                        this.battleStats.abilityUsage[slot]++;
+                        this.battleStats._abilityActivated[slot] = true;
+                    }
+                }
+            } else {
+                // Active: count each cooldown transition
+                if (prevCd[slot] <= 0 && this.cooldowns[slot] > 0) {
+                    this.battleStats.abilityUsage[slot]++;
+                }
+            }
+        }
+
+        // Detect ultActive going false→true (covers ults like DivineGeneral that set ultActive without cooldown)
+        if (!prevUltActive && this.activeEffects.ultActive) {
+            if (!this.battleStats._abilityActivated.ult || !this.abilities.ult || !this.abilities.ult.isPassive) {
+                // Only count if we didn't already count it via cooldown transition above
+                if (!(prevCd.ult <= 0 && this.cooldowns.ult > 0)) {
+                    this.battleStats.abilityUsage.ult++;
+                }
+            }
         }
 
         // Update active ultimate ability
@@ -427,13 +477,22 @@ export class Fighter {
             for (const ability of Object.values(this.abilities)) {
                 if (ability && ability.onDamage) {
                     const result = ability.onDamage(this, amount, context);
-                    if (result === false) return; // Damage was blocked
+                    if (result === false) {
+                        this.battleStats.damageBlocked += amount;
+                        return;
+                    }
                     amount = result;
                 }
             }
         }
 
         const dmg = Math.ceil(amount);
+        this.battleStats.damageReceived += amount;
+        if (attacker && attacker.battleStats) {
+            attacker.battleStats.damageDealt += amount;
+            const srcName = attacker.name || 'Unknown';
+            this.battleStats.damageTakenBySource[srcName] = (this.battleStats.damageTakenBySource[srcName] || 0) + amount;
+        }
         this.game.combatText.damage(this.x, this.y - this.radius, dmg);
         this.hp -= amount;
 
@@ -446,6 +505,7 @@ export class Fighter {
             this.hp = 0;
             if (!this.isDead) {
                 this.isDead = true;
+                if (attacker && attacker.battleStats) attacker.battleStats.kills++;
                 this.game.combatText.knockout(this.x, this.y - this.radius, this.name);
                 logger.log(`${this.name} was KNOCKED OUT!`, 'error');
                 this.game.particles.spawnExplosion(this.x, this.y);
@@ -465,9 +525,13 @@ export class Fighter {
         return amount; // Return final damage dealt
     }
 
-    applyStatus(type, duration = null) {
+    applyStatus(type, duration = null, applier = null) {
+        this.battleStats.statusesReceived[type] = (this.battleStats.statusesReceived[type] || 0) + 1;
         logger.log(`${this.name} applied status: ${type}`, 'info');
-        if (type === 'BLEED') this.status.bleed = duration || 180;
+        if (type === 'BLEED') {
+            this.status.bleed = duration || 180;
+            if (applier) this.status.bleedSource = applier;
+        }
         if (type === 'STUN') this.status.stun = duration || 60;
         if (type === 'SLOW') {
             if (this.status.slow <= 0) {
@@ -478,10 +542,13 @@ export class Fighter {
         if (type === 'BURN') {
             this.status.burn = duration || 180;
             if (!this.status.burnStacks) this.status.burnStacks = 1;
+            if (applier) this.status.burnSource = applier;
         }
     }
 
     heal(amount) {
+        const actual = Math.min(amount, this.maxHp - this.hp);
+        this.battleStats.healingDone += actual;
         this.hp = Math.min(this.hp + amount, this.maxHp);
         this.game.combatText.healing(this.x, this.y - 20, amount);
         logger.log(`${this.name} healed ${amount}. HP: ${this.hp}/${this.maxHp}`, 'combat');

@@ -202,6 +202,7 @@ export class DivineGeneralDefAbility extends Ability {
                     const healed = fighter.hp - oldHp;
 
                     if (healed > 0) {
+                        if (fighter.battleStats) fighter.battleStats.healingDone += healed;
                         fighter.game.combatText.healing(fighter.x, fighter.y, Math.ceil(healed));
                         fighter.game.particles.spawn(fighter.x, fighter.y, '#00FF00', 8);
                         logger.log(`${fighter.name} Adapted & Healed ${Math.ceil(healed)} HP (speed: ${Math.round(speedRatio * 100)}%)`, 'info');

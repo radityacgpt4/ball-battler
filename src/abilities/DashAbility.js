@@ -59,7 +59,7 @@ export class DashAssaultAbility extends Ability {
                 if (Physics.lineCircleIntersect(startX, startY, finalX, finalY, e.x, e.y, hitWidth)) {
                     // HIT!
                     e.takeDamage(this.damage, false, false, fighter);
-                    e.applyStatus('BLEED', 180);
+                    e.applyStatus('BLEED', 180, fighter);
                     e.applyStatus('STUN', 30); // Slight stun from impact
 
                     // Hit Visuals

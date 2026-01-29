@@ -117,7 +117,9 @@ export class DivineBrawlerAtkAbility extends Ability {
         if (fighter.activeEffects.focusActive && damageDealt !== false && fighter.lifestealPercent) {
             const lifestealAmount = Math.ceil(damageDealt * fighter.lifestealPercent);
             if (lifestealAmount > 0) {
+                const actualHeal = Math.min(lifestealAmount, fighter.maxHp - fighter.hp);
                 fighter.hp = Math.min(fighter.maxHp, fighter.hp + lifestealAmount);
+                if (fighter.battleStats) fighter.battleStats.healingDone += actualHeal;
                 // Visual feedback for lifesteal
                 fighter.game.combatText.healing(fighter.x, fighter.y - fighter.radius, lifestealAmount);
                 fighter.game.particles.spawn(fighter.x, fighter.y, '#00FF00', 3);

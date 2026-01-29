@@ -55,7 +55,7 @@ export class MeleeAbility extends Ability {
                     fighter.cooldowns.atk = this.attackCooldown;
 
                     if (fighter.meleeHits % this.procRate === 0) {
-                        enemy.applyStatus('BLEED');
+                        enemy.applyStatus('BLEED', null, fighter);
                         game.combatText.bleed(enemy.x, enemy.y - enemy.radius);
                         game.particles.spawn(enemy.x, enemy.y, '#ff0000', 5);
                         logger.log(`${enemy.name} is BLEEDING!`, 'status');

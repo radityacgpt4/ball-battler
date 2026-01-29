@@ -273,13 +273,13 @@ export class KunaiAbility extends Ability {
                             // The "Big impact" still happens at the end (timer <= 0) or we can trigger it on first?
                             // To follow "hit-them-all", we should NOT stop.
                             game.combatText.flash(e.x, e.y - e.radius);
-                            e.takeDamage(this.damage * 1.5, true); // Direct-hit type damage but continues
+                            e.takeDamage(this.damage * 1.5, true, false, fighter); // Direct-hit type damage but continues
                             game.particles.spawn(e.x, e.y, '#00BFFF', 10);
                             audioEngine.playHit();
                         } else {
                             // Normal Dash Hit
                             game.combatText.flash(e.x, e.y - e.radius);
-                            e.takeDamage(8);
+                            e.takeDamage(8, false, false, fighter);
                             game.particles.spawn(e.x, e.y, '#ffd700', 5);
                         }
                     }
@@ -338,7 +338,7 @@ export class KunaiAbility extends Ability {
 
         if (directHitTarget) {
             logger.log(`${fighter.name} RASENGAN DIRECT HIT on ${directHitTarget.name}!`, 'combat');
-            directHitTarget.takeDamage(rasenganDamage * 1.5, true);
+            directHitTarget.takeDamage(rasenganDamage * 1.5, true, false, fighter);
         } else {
             logger.log(`${fighter.name} Rasengan exploded!`, 'info');
         }
@@ -348,7 +348,7 @@ export class KunaiAbility extends Ability {
             const dist = Physics.dist(fighter.x, fighter.y, e.x, e.y);
             if (dist < rasenganRadius + e.radius) {
                 // Avoid double damage if direct hit? Simplest is to just damage.
-                if (e !== directHitTarget) e.takeDamage(rasenganDamage, true);
+                if (e !== directHitTarget) e.takeDamage(rasenganDamage, true, false, fighter);
 
                 const knockAngle = Math.atan2(e.y - fighter.y, e.x - fighter.x);
                 e.dx = Math.cos(knockAngle) * 12;

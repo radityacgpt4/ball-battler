@@ -13,6 +13,7 @@ import { logger } from '../systems/Logger.js';
 
 import { ZoltraakRenderer } from '../components/ProjectileRenderers.js';
 import { ZoltraakBehavior } from '../components/ProjectileBehaviors.js';
+import { trackTowerDamage } from '../systems/BattleLogger.js';
 // ATK: Zoltraak - Ordinary Offensive Magic (Homing Beam Projectile)
 // ============================================================================
 export class ZoltraakAbility extends Ability {
@@ -512,7 +513,7 @@ export function updateBlackholes(game, timeScale = 1) {
 
                 // DoT in core (same radius as entities)
                 if (hole.dotTimer <= 0 && dist < hole.radius * 0.4) {
-                    tower.hp -= hole.dotDamage;
+                    trackTowerDamage(tower, hole.dotDamage, hole.owner);
                     game.particles.spawn(tower.x, tower.y, '#8B4513', 2);
 
                     if (tower.hp <= 0) {

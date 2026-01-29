@@ -14,6 +14,7 @@ import { CollisionHandler } from '../systems/CollisionHandler.js';
 import { Fighter } from '../entities/Fighter.js';
 import { Projectile } from '../entities/Projectile.js';
 import { updateBlackholes } from '../abilities/FrierenAbility.js';
+import { battleLogger, trackTowerDamage } from '../systems/BattleLogger.js';
 
 export class Game {
     constructor() {
@@ -292,6 +293,9 @@ export class Game {
         this.running = true;
         this.lastFrameTime = performance.now();
         this.frameAccumulator = 0;
+
+        battleLogger.startBattle(this.entities);
+
         requestAnimationFrame(this.loop.bind(this));
     }
 
@@ -434,7 +438,7 @@ export class Game {
                 for (const tower of ent.ballistaTowers) {
                     if (tower.hp <= 0) continue;
                     if (Physics.dist(p.x, p.y, tower.x, tower.y) < tower.radius + p.radius) {
-                        tower.hp -= p.damage;
+                        trackTowerDamage(tower, p.damage, p.owner);
                         this.particles.spawn(tower.x, tower.y, '#8B4513', 4);
                         audioEngine.playHit();
                         if (tower.hp <= 0) {
@@ -519,9 +523,9 @@ export class Game {
                         ent.takeDamage(p.damage, p.isUnblockable, false, p.owner);
 
                         if (p.statusEffect) {
-                            ent.applyStatus(p.statusEffect.type, p.statusEffect.duration);
+                            ent.applyStatus(p.statusEffect.type, p.statusEffect.duration, p.owner);
                         } else if (p.stunDuration > 0) {
-                            ent.applyStatus('STUN', p.stunDuration);
+                            ent.applyStatus('STUN', p.stunDuration, p.owner);
                         }
 
                         audioEngine.play(p.impactSound);
@@ -662,6 +666,16 @@ export class Game {
                 const team2Alive = this.entities.filter(e => !e.isDead && e.id === 2);
                 const overlay = document.getElementById('end-screen');
                 const msg = document.getElementById('win-msg');
+
+                // Finalize battle logging
+                const winLabel = (team1Alive.length === 0 && team2Alive.length === 0) ? 'Draw'
+                    : team1Alive.length > 0 ? 'Team 1' : 'Team 2';
+                battleLogger.endBattle(winLabel, this.entities);
+
+                // Update export badge
+                const badge = document.getElementById('battle-count-badge');
+                if (badge) badge.textContent = `${battleLogger.getBattleCount()} battle(s) recorded`;
+
                 overlay.style.display = 'flex';
 
                 if (team1Alive.length === 0 && team2Alive.length === 0) {
@@ -729,6 +743,7 @@ export class Game {
             // Update blackholes (Frieren ULT)
             updateBlackholes(this, this.timeScale);
 
+            battleLogger.recordInterval(this.entities);
             this.updateUI();
             this.checkWinCondition();
 

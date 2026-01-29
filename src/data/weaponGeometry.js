@@ -11,6 +11,7 @@
 import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
+import { trackTowerDamage } from '../systems/BattleLogger.js';
 
 // ============================================================================
 // WEAPON GEOMETRY DEFINITIONS
@@ -376,7 +377,7 @@ export function checkWeaponHitTower(weaponKey, fighter, tower, damage, game, hit
 
         if (hit) {
             // Apply damage
-            tower.hp -= damage;
+            trackTowerDamage(tower, damage, fighter);
 
             // Add to hit list if provided
             if (hitList) hitList.push(tower);

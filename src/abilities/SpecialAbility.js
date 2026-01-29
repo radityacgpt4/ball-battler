@@ -83,7 +83,7 @@ export class DoubleZapUltAbility extends Ability {
             audioEngine.playZap();
             enemies.forEach(e => {
                 if (e !== fighter && !e.isDead && Physics.dist(rx, ry, e.x, e.y) < e.radius + 20) {
-                    e.takeDamage(5);
+                    e.takeDamage(5, false, false, fighter);
                     e.applyStatus('STUN');
                 }
             });

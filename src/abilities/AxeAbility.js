@@ -63,7 +63,9 @@ export class AxeAtkAbility extends Ability {
                     if (fighter.activeEffects.ultActive && damageDealt !== false && fighter.lifestealPercent) {
                         const lifestealAmount = Math.ceil(damageDealt * fighter.lifestealPercent);
                         if (lifestealAmount > 0) {
+                            const actualHeal = Math.min(lifestealAmount, fighter.maxHp - fighter.hp);
                             fighter.hp = Math.min(fighter.maxHp, fighter.hp + lifestealAmount);
+                            if (fighter.battleStats) fighter.battleStats.healingDone += actualHeal;
                             // Visual feedback for lifesteal
                             game.combatText.healing(fighter.x, fighter.y - fighter.radius, lifestealAmount);
                             game.particles.spawn(fighter.x, fighter.y, '#00FF00', 3);
@@ -91,7 +93,7 @@ export class AxeAtkAbility extends Ability {
 
                     // Bleed condition
                     if (fighter.axemanHits >= this.comboThreshold) {
-                        enemy.applyStatus('BLEED', this.bleedDuration);
+                        enemy.applyStatus('BLEED', this.bleedDuration, fighter);
                         game.combatText.bleed(enemy.x, enemy.y - enemy.radius);
                         game.particles.spawn(enemy.x, enemy.y, '#ff0000', 5);
                         logger.log(`${enemy.name} is BLEEDING from Axeman combo!`, 'status');
@@ -230,7 +232,9 @@ export class ExecuteUltAbility extends Ability {
                 // Lifesteal during ULT (configurable % of BASE damage only, not execute damage)
                 const lifestealAmount = Math.ceil(this.stunDamage * this.lifestealPercent);
                 if (lifestealAmount > 0) {
+                    const actualHeal = Math.min(lifestealAmount, fighter.maxHp - fighter.hp);
                     fighter.hp = Math.min(fighter.maxHp, fighter.hp + lifestealAmount);
+                    if (fighter.battleStats) fighter.battleStats.healingDone += actualHeal;
                     // Visual feedback for lifesteal
                     game.combatText.healing(fighter.x, fighter.y - fighter.radius, lifestealAmount);
                     game.particles.spawn(fighter.x, fighter.y, '#00FF00', 3);

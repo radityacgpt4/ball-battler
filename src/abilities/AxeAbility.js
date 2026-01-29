@@ -57,7 +57,21 @@ export class AxeAtkAbility extends Ability {
                     fighter.cooldowns.atk = this.swingCooldown;
 
                     // Damage
-                    enemy.takeDamage(this.damage, false, false, fighter);
+                    const damageDealt = enemy.takeDamage(this.damage, false, false, fighter);
+
+                    // Lifesteal during ULT (configurable % of damage dealt)
+                    if (fighter.activeEffects.ultActive && damageDealt !== false && fighter.lifestealPercent) {
+                        const lifestealAmount = Math.ceil(damageDealt * fighter.lifestealPercent);
+                        if (lifestealAmount > 0) {
+                            fighter.hp = Math.min(fighter.maxHp, fighter.hp + lifestealAmount);
+                            // Visual feedback for lifesteal
+                            game.combatText.healing(fighter.x, fighter.y - fighter.radius, lifestealAmount);
+                            game.particles.spawn(fighter.x, fighter.y, '#00FF00', 3);
+                            const percent = Math.floor(fighter.lifestealPercent * 100);
+                            logger.log(`${fighter.name} lifesteal: +${lifestealAmount} HP (${percent}% of ${damageDealt} damage)`, 'combat');
+                        }
+                    }
+
                     const tipX = fighter.x + Math.cos(fighter.angle) * (fighter.radius + this.range);
                     const tipY = fighter.y + Math.sin(fighter.angle) * (fighter.radius + this.range);
                     game.particles.spawn(tipX, tipY, '#ff0000', 5);
@@ -162,6 +176,7 @@ export class ExecuteUltAbility extends Ability {
         this.stunDamage = config.stunDamage || 10;
         this.ultVisualDuration = config.ultVisualDuration || 30;
         this.comboRequired = config.comboRequired || 2;
+        this.lifestealPercent = config.lifestealPercent || 0.15;  // Default 15%
     }
 
     execute(fighter, context) {
@@ -184,13 +199,15 @@ export class ExecuteUltAbility extends Ability {
             return;
         }
 
+        // Permanent lifesteal buff activation
         fighter.activeEffects.ultActive = true;
-        fighter.activeEffects.ultTimer = this.ultVisualDuration;
+        fighter.activeEffects.ultTimer = 999999; // Permanent (like Divine Brawler)
+        fighter.lifestealPercent = this.lifestealPercent;  // Store lifesteal % on fighter
         fighter.cooldowns.ult = this.cooldown;
 
         game.combatText.execute(fighter.x, fighter.y);
         game.particles.spawn(fighter.x, fighter.y, '#ff0000', 10);
-        logger.log(`${fighter.name} uses EXECUTE!`, 'combat');
+        logger.log(`${fighter.name} uses EXECUTE! (Lifesteal ${Math.floor(this.lifestealPercent * 100)}% now active)`, 'combat');
 
         enemies.forEach(enemy => {
             if (enemy === fighter || enemy.isDead) return;
@@ -208,6 +225,17 @@ export class ExecuteUltAbility extends Ability {
                     enemy.takeDamage(this.stunDamage, false, false, fighter);
                     enemy.applyStatus('STUN', this.stunDuration);
                     audioEngine.playHeavyImpact();
+                }
+
+                // Lifesteal during ULT (configurable % of BASE damage only, not execute damage)
+                const lifestealAmount = Math.ceil(this.stunDamage * this.lifestealPercent);
+                if (lifestealAmount > 0) {
+                    fighter.hp = Math.min(fighter.maxHp, fighter.hp + lifestealAmount);
+                    // Visual feedback for lifesteal
+                    game.combatText.healing(fighter.x, fighter.y - fighter.radius, lifestealAmount);
+                    game.particles.spawn(fighter.x, fighter.y, '#00FF00', 3);
+                    const percent = Math.floor(this.lifestealPercent * 100);
+                    logger.log(`${fighter.name} Execute lifesteal: +${lifestealAmount} HP (${percent}% of ${this.stunDamage} base damage)`, 'combat');
                 }
 
                 game.particles.spawnExplosion(enemy.x, enemy.y);

@@ -111,7 +111,20 @@ export class DivineBrawlerAtkAbility extends Ability {
             enemy.dy += Math.sin(angle) * speed;
         }
 
-        enemy.takeDamage(damage, false, false, fighter);
+        const damageDealt = enemy.takeDamage(damage, false, false, fighter);
+
+        // Lifesteal during ULT (configurable % of damage dealt)
+        if (fighter.activeEffects.focusActive && damageDealt !== false && fighter.lifestealPercent) {
+            const lifestealAmount = Math.ceil(damageDealt * fighter.lifestealPercent);
+            if (lifestealAmount > 0) {
+                fighter.hp = Math.min(fighter.maxHp, fighter.hp + lifestealAmount);
+                // Visual feedback for lifesteal
+                fighter.game.combatText.healing(fighter.x, fighter.y - fighter.radius, lifestealAmount);
+                fighter.game.particles.spawn(fighter.x, fighter.y, '#00FF00', 3);
+                const percent = Math.floor(fighter.lifestealPercent * 100);
+                logger.log(`${fighter.name} lifesteal: +${lifestealAmount} HP (${percent}% of ${damageDealt} damage)`, 'combat');
+            }
+        }
 
         // Standard Visuals
         audioEngine.playHit();
@@ -259,6 +272,7 @@ export class DivineBrawlerUltAbility extends Ability {
         this.duration = config.duration || 300;
         this.cooldown = config.cooldown || 600;
         this.immovableMass = config.immovableMass || 20;
+        this.lifestealPercent = config.lifestealPercent || 0.20;  // Default 20%
     }
 
     execute(fighter, context) {
@@ -266,6 +280,7 @@ export class DivineBrawlerUltAbility extends Ability {
         fighter.activeEffects.ultActive = true;
         fighter.activeEffects.ultTimer = 999999;
         fighter.activeEffects.focusActive = true;
+        fighter.lifestealPercent = this.lifestealPercent;  // Store lifesteal % on fighter
 
         // Massive Mass Increase
         fighter.originalMass = fighter.mass;
@@ -274,7 +289,7 @@ export class DivineBrawlerUltAbility extends Ability {
         // Visuals
         audioEngine.playPowerUp();
         fighter.game.particles.spawn(fighter.x, fighter.y, '#4B0082', 30);
-        logger.log(`${fighter.name} enters UNSHAKEABLE FOCUS!`, 'combat');
+        logger.log(`${fighter.name} enters UNSHAKEABLE FOCUS! (Lifesteal ${Math.floor(this.lifestealPercent * 100)}% active)`, 'combat');
 
         // Set CD
         fighter.cooldowns.ult = this.cooldown;

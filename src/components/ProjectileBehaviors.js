@@ -530,6 +530,30 @@ export class GrenadeBehavior {
                 ent.applyStatus('STUN', stunDur);
             }
         });
+
+        // Damage Ballista Defensive Towers in blast radius
+        for (const owner of p.game.entities) {
+            if (!owner.ballistaTowers) continue;
+            // Only hit enemy towers
+            if (p.owner && owner.id === p.owner.id) continue;
+
+            for (const tower of owner.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+
+                const d = Math.hypot(p.x - tower.x, p.y - tower.y);
+                if (d < blastRadius + tower.radius) {
+                    tower.hp -= p.damage;
+                    p.game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
+                    audioEngine.playHit();
+
+                    if (tower.hp <= 0) {
+                        p.game.particles.spawnExplosion(tower.x, tower.y);
+                        audioEngine.playExplosion();
+                        logger.log(`${owner.name}'s Defensive Tower destroyed by Grenade!`, 'combat');
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -547,7 +571,7 @@ export class ClaymoreBehavior {
             }
         }
 
-        // Proximity Check
+        // Proximity Check - Enemies
         const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead && (!p.owner || ent.id !== p.owner.id));
         for (let ent of enemies) {
             if (Math.hypot(p.x - ent.x, p.y - ent.y) < ent.radius + p.radius + 5) {
@@ -560,7 +584,33 @@ export class ClaymoreBehavior {
                 // logger.log(`${ent.name} triggered ${p.owner.name}'s CLAYMORE!`, 'combat');
 
                 p.active = false;
-                break;
+                return; // Exit after explosion
+            }
+        }
+
+        // Proximity Check - Ballista Towers
+        for (const owner of p.game.entities) {
+            if (!owner.ballistaTowers) continue;
+            // Only hit enemy towers
+            if (p.owner && owner.id === p.owner.id) continue;
+
+            for (const tower of owner.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+
+                if (Math.hypot(p.x - tower.x, p.y - tower.y) < tower.radius + p.radius + 5) {
+                    // Trigger - damage tower
+                    tower.hp -= p.damage;
+                    p.game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
+                    p.game.particles.spawnExplosion(p.x, p.y);
+                    audioEngine.playExplosion();
+
+                    if (tower.hp <= 0) {
+                        logger.log(`${owner.name}'s Defensive Tower destroyed by Claymore!`, 'combat');
+                    }
+
+                    p.active = false;
+                    return; // Exit after explosion
+                }
             }
         }
     }
@@ -733,6 +783,29 @@ export class WorldSlashBehavior {
                 }
             }
         }
+
+        // Hit Ballista Defensive Towers
+        for (const owner of p.game.entities) {
+            if (!owner.ballistaTowers) continue;
+            // Only hit enemy towers
+            if (p.owner && owner.id === p.owner.id) continue;
+
+            for (const tower of owner.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+
+                if (Physics.dist(p.x, p.y, tower.x, tower.y) < (p.radius || 40) + tower.radius) {
+                    tower.hp -= p.damage;
+                    p.game.particles.spawn(tower.x, tower.y, '#8B4513', 4);
+                    audioEngine.playHit();
+
+                    if (tower.hp <= 0) {
+                        p.game.particles.spawnExplosion(tower.x, tower.y);
+                        audioEngine.playExplosion();
+                        logger.log(`${owner.name}'s Defensive Tower destroyed by World Cutting Slash!`, 'combat');
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -830,7 +903,7 @@ export class MechaBeamBehavior {
         // Spawn explosion effect
         game.particles.spawnEffect('mechaExplosion', p.x, p.y);
 
-        // AOE damage
+        // AOE damage - Enemies
         const enemies = game.entities.filter(e => e !== p.owner && !e.isDead && (!p.owner || e.id !== p.owner.id));
         for (const enemy of enemies) {
             // Avoid double-hitting the direct target if it exists
@@ -846,6 +919,31 @@ export class MechaBeamBehavior {
                     const angle = Math.atan2(enemy.y - p.y, enemy.x - p.x);
                     enemy.dx += Math.cos(angle) * 6;
                     enemy.dy += Math.sin(angle) * 6;
+                }
+            }
+        }
+
+        // AOE damage - Ballista Towers
+        for (const owner of game.entities) {
+            if (!owner.ballistaTowers) continue;
+            // Only hit enemy towers
+            if (p.owner && owner.id === p.owner.id) continue;
+
+            for (const tower of owner.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+                // Avoid double-hitting if tower was the direct target
+                if (directTarget && tower === directTarget) continue;
+
+                const dist = Math.hypot(tower.x - p.x, tower.y - p.y);
+                if (dist < p.explosionRadius + tower.radius) {
+                    tower.hp -= p.explosionDamage;
+                    game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
+                    audioEngine.playHit();
+
+                    if (tower.hp <= 0) {
+                        game.particles.spawnExplosion(tower.x, tower.y);
+                        logger.log(`${owner.name}'s Defensive Tower destroyed by Mecha Beam explosion!`, 'combat');
+                    }
                 }
             }
         }
@@ -925,6 +1023,23 @@ export class GetsugaBehavior {
             }
         }
 
+        // Hit Ballista Defensive Towers
+        for (const owner of p.game.entities) {
+            if (!owner.ballistaTowers) continue;
+            // Only hit enemy towers
+            if (p.owner && owner.id === p.owner.id) continue;
+
+            for (const tower of owner.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+
+                if (Physics.dist(p.x, p.y, tower.x, tower.y) < deflectRadius + tower.radius) {
+                    // Trigger impact on tower (explodes like hitting an entity)
+                    p.triggerImpact(tower);
+                    return; // Exit after explosion
+                }
+            }
+        }
+
         // Hit entities (similar to WorldSlash)
         const enemies = p.game.entities.filter(ent => ent !== p.owner && !ent.isDead && (!p.owner || ent.id !== p.owner.id));
         for (let ent of enemies) {
@@ -941,11 +1056,25 @@ export class GetsugaBehavior {
         p.hasExploded = true;
         p.active = false;
 
-        // If hitting a target, apply direct damage + stun first
+        // If hitting a target, apply direct damage
         if (target) {
-            const dealt = target.takeDamage(p.damage, false, false, p.owner);
-            if (dealt !== false && p.statusEffect) {
-                target.applyStatus(p.statusEffect.type, p.statusEffect.duration);
+            // Check if target is a tower (doesn't have takeDamage method like fighters)
+            if (target.owner && target.radius && !target.takeDamage) {
+                // It's a tower
+                target.hp -= p.damage;
+                p.game.particles.spawn(target.x, target.y, '#8B4513', 4);
+                audioEngine.playHit();
+
+                if (target.hp <= 0) {
+                    p.game.particles.spawnExplosion(target.x, target.y);
+                    logger.log(`${target.owner.name}'s Defensive Tower destroyed by Getsuga Tenshou!`, 'combat');
+                }
+            } else {
+                // It's a fighter
+                const dealt = target.takeDamage(p.damage, false, false, p.owner);
+                if (dealt !== false && p.statusEffect) {
+                    target.applyStatus(p.statusEffect.type, p.statusEffect.duration);
+                }
             }
         }
 
@@ -960,7 +1089,7 @@ export class GetsugaBehavior {
         game.particles.spawnEffect(p.impactParticle, p.x, p.y);
         audioEngine.play(isBankai ? 'getsugaBankai' : 'getsuga');
 
-        // AOE damage
+        // AOE damage - Enemies
         const enemies = game.entities.filter(e => e !== p.owner && !e.isDead && (!p.owner || e.id !== p.owner.id));
         const aoeRadius = p.explosionRadius || 60;
 
@@ -980,6 +1109,31 @@ export class GetsugaBehavior {
                 const force = 6;
                 enemy.dx += Math.cos(angle) * force;
                 enemy.dy += Math.sin(angle) * force;
+            }
+        }
+
+        // AOE damage - Ballista Towers
+        for (const owner of game.entities) {
+            if (!owner.ballistaTowers) continue;
+            // Only hit enemy towers
+            if (p.owner && owner.id === p.owner.id) continue;
+
+            for (const tower of owner.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+                // Avoid double-hitting if tower was the direct target
+                if (directTarget && tower === directTarget) continue;
+
+                const dist = Physics.dist(p.x, p.y, tower.x, tower.y);
+                if (dist < aoeRadius + tower.radius) {
+                    tower.hp -= p.explosionDamage;
+                    game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
+                    audioEngine.playHit();
+
+                    if (tower.hp <= 0) {
+                        game.particles.spawnExplosion(tower.x, tower.y);
+                        logger.log(`${owner.name}'s Defensive Tower destroyed by Getsuga explosion!`, 'combat');
+                    }
+                }
             }
         }
     }
@@ -1065,6 +1219,8 @@ export class BlueOrbBehavior {
         if (this.damageTimer <= 0) {
             this.damageTimer = this.tickRate;
         }
+
+        // NOTE: Blue Orb has damage: 0 in config - it only pulls/repels, does NOT damage towers or fighters
 
         // Deflect/Suck Projectiles
         p.game.projectiles.forEach(proj => {
@@ -1295,6 +1451,30 @@ export class GojoRedBehavior {
                 e.dy += Math.sin(angle) * force;
             }
         });
+
+        // AOE damage - Ballista Towers
+        for (const owner of p.game.entities) {
+            if (!owner.ballistaTowers) continue;
+            // Only hit enemy towers
+            if (p.owner && owner.id === p.owner.id) continue;
+
+            for (const tower of owner.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+
+                const dist = Physics.dist(p.x, p.y, tower.x, tower.y);
+                if (dist < radius + tower.radius) {
+                    // Towers just take normal damage (no crit bonus)
+                    tower.hp -= p.damage;
+                    p.game.particles.spawn(tower.x, tower.y, '#8B4513', 5);
+                    audioEngine.playHit();
+
+                    if (tower.hp <= 0) {
+                        p.game.particles.spawnExplosion(tower.x, tower.y);
+                        logger.log(`${owner.name}'s Defensive Tower destroyed by Red!`, 'combat');
+                    }
+                }
+            }
+        }
 
         // Base explosion visual (Red or Purple depending on crit)
         if (hasCrit) {

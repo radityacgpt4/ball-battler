@@ -345,7 +345,8 @@ export const FIGHTER_TYPES = {
                 stunDuration: 45,
                 stunDamage: 5,
                 ultVisualDuration: 30,
-                comboRequired: 2
+                comboRequired: 2,
+                lifestealPercent: 0.15  // 15% lifesteal on all attacks after ULT activation
             }
         }
     },
@@ -449,11 +450,11 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 damage: 5,
-                range: 15,
+                range: 20,
                 hitCountForCrit: 4,
                 critMultHigh: 6,
-                critMultMid: 3,
-                critMultLow: 2,
+                critMultMid: 3.5,
+                critMultLow: 2.5,
                 hpThresholdHigh: 0.8,
                 hpThresholdMid: 0.5,
                 baseKnockback: 12,
@@ -482,7 +483,8 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 240,
                 duration: 180,
-                immovableMass: 16
+                immovableMass: 16,
+                lifestealPercent: 0.30  // 20% lifesteal on all attacks during ULT
             }
         }
     },

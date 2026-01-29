@@ -499,6 +499,31 @@ export function updateBlackholes(game, timeScale = 1) {
             }
         }
 
+        // Damage Ballista Defensive Towers
+        for (const owner of game.entities) {
+            if (!owner.ballistaTowers) continue;
+            // Only hit enemy towers
+            if (hole.owner && owner.id === hole.owner.id) continue;
+
+            for (const tower of owner.ballistaTowers) {
+                if (tower.hp <= 0) continue;
+
+                const dist = Physics.dist(hole.x, hole.y, tower.x, tower.y);
+
+                // DoT in core (same radius as entities)
+                if (hole.dotTimer <= 0 && dist < hole.radius * 0.4) {
+                    tower.hp -= hole.dotDamage;
+                    game.particles.spawn(tower.x, tower.y, '#8B4513', 2);
+
+                    if (tower.hp <= 0) {
+                        game.particles.spawnExplosion(tower.x, tower.y);
+                        audioEngine.playExplosion();
+                        logger.log(`${owner.name}'s Defensive Tower destroyed by Blackhole!`, 'combat');
+                    }
+                }
+            }
+        }
+
         // Reset DoT timer
         if (hole.dotTimer <= 0) {
             hole.dotTimer = hole.dotRate;

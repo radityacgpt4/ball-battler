@@ -419,25 +419,34 @@ export class AudioEngine {
     }
 
     playHollowPurple() {
-        // Massive, devastating energy fusion sound
+        // === HOLLOW PURPLE PREMIUM SFX ===
+        // Massive, devastating energy fusion sound - Layered for Impact
         if (!this.enabled || !this.ctx) return;
 
+        // LAYER 1: The "Snap" (Reality Break) - High-pitched crystalline impact
+        this.playZoltraakImpact();
+
+        // LAYER 2: The "Crackle" (Energy Discharge) - Raw electrical texture
+        this.playThunder();
+
         const now = this.ctx.currentTime;
-        const duration = 1.2;
+        const duration = 1.5;
 
-        // 1. Deep Sub-Bass Impact (The weight of the hit)
-        this.playTone(40, 'sine', duration, 0.8, 20);
+        // LAYER 3: The "Weight" (Sub-Bass Drop) - Double oscillator for thickness
+        this.playTone(50, 'sine', duration, 1.0, 5);         // Primary Deep Bass
+        this.playTone(35, 'square', duration * 0.7, 0.3, 5); // Gritty Sub-Bass
 
-        // 2. Rising Energy Resonance (The "Hum" of Purple)
+        // LAYER 4: The "Scream" (Inverted Frequency Sweep)
+        // Aggressive Sawtooth: Low -> High -> Low (Doppler-like tearing sound)
         const osc1 = this.ctx.createOscillator();
         const gain1 = this.ctx.createGain();
         osc1.type = 'sawtooth';
-        osc1.frequency.setValueAtTime(100, now);
-        osc1.frequency.exponentialRampToValueAtTime(800, now + 0.4);
-        osc1.frequency.exponentialRampToValueAtTime(400, now + duration);
+        osc1.frequency.setValueAtTime(150, now);
+        osc1.frequency.exponentialRampToValueAtTime(1500, now + 0.15); // Fast rise
+        osc1.frequency.exponentialRampToValueAtTime(50, now + duration); // Slow fall
 
         gain1.gain.setValueAtTime(0, now);
-        gain1.gain.linearRampToValueAtTime(0.5, now + 0.1);
+        gain1.gain.linearRampToValueAtTime(0.5, now + 0.05); // Sharp attack
         gain1.gain.exponentialRampToValueAtTime(0.01, now + duration);
 
         osc1.connect(gain1);
@@ -445,17 +454,12 @@ export class AudioEngine {
         osc1.start();
         osc1.stop(now + duration);
 
-        // 3. High-Freq Shimmer/Glass-shatter feel
-        this.playTone(2400, 'triangle', 0.5, 0.3, 1200);
-        this.playTone(3600, 'sine', 0.3, 0.2, 2000);
-
-        // 4. Massive Explosion/Void Collapse Noise
-        // Starts with a filter sweep for "implosion" feel
+        // LAYER 5: The "Void" (Implosion Noise)
+        // Filter sweeps High->Low to simulate collapse
         const filter = this.ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(2000, now);
-        filter.frequency.exponentialRampToValueAtTime(200, now + 0.3);
-        filter.frequency.exponentialRampToValueAtTime(800, now + 0.8);
+        filter.frequency.setValueAtTime(4000, now); // Start bright
+        filter.frequency.exponentialRampToValueAtTime(50, now + duration); // End dark
 
         const noiseBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * duration, this.ctx.sampleRate);
         const noiseData = noiseBuffer.getChannelData(0);
@@ -464,7 +468,7 @@ export class AudioEngine {
         const noise = this.ctx.createBufferSource();
         noise.buffer = noiseBuffer;
         const noiseGain = this.ctx.createGain();
-        noiseGain.gain.setValueAtTime(0.8, now);
+        noiseGain.gain.setValueAtTime(0.8, now); // Loud volume
         noiseGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
 
         noise.connect(filter);

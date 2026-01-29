@@ -179,10 +179,15 @@ export class GojoBlueAbility extends Ability {
                 return false;
             }
 
-            // PULL MECHANIC (The "Blue" Logic)
-            for (const entity of game.entities) {
-                if (entity === fighter || entity.isDead) continue;
+            // PULL MECHANIC (The "Blue" Logic) - Only pull enemies, NOT teammates
+            // Pre-filter to enemies only (same team filtering pattern used throughout codebase)
+            const enemies = game.entities.filter(e =>
+                e !== fighter &&
+                !e.isDead &&
+                e.id !== fighter.id  // Different team only
+            );
 
+            for (const entity of enemies) {
                 const dist = Physics.dist(orb.x, orb.y, entity.x, entity.y);
                 // Use pullRadius (config value), not visual radius
                 if (dist < orb.pullRadius && dist > 10) {

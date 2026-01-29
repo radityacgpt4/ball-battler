@@ -29,7 +29,7 @@ export class Projectile {
         this.isKunai = false;
         this.maxDist = 0;
         this.travelled = 0;
-        this.hitList = []; // For piercing (ID tracking)
+        this.hitList = []; // For piercing (tracks entity references, not IDs)
         this.isEmbedded = false;
 
         // Missile props

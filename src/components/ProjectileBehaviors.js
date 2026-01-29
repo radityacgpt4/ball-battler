@@ -4,6 +4,7 @@
  */
 import { audioEngine } from '../systems/Audio.js';
 import { Physics } from '../systems/Physics.js';
+import { logger } from '../systems/Logger.js';
 
 // BASE COMPONENT INTERFACE
 // class Behavior {
@@ -708,9 +709,9 @@ export class KunaiBehavior {
         if (!target) return;
         p.hasHandledImpact = true;
 
-        if (!p.hitList.includes(target.id)) {
+        if (!p.hitList.includes(target)) {
             target.takeDamage(p.damage, false, false, p.owner);
-            p.hitList.push(target.id);
+            p.hitList.push(target);
             p.game.particles.spawn(target.x, target.y, '#ffd700', 3);
             audioEngine.playHit();
         }
@@ -775,9 +776,9 @@ export class WorldSlashBehavior {
 
                 // Damage
                 if (!p.hitList) p.hitList = [];
-                if (!p.hitList.includes(ent.id)) {
+                if (!p.hitList.includes(ent)) {
                     ent.takeDamage(p.damage, true, false, p.owner); // Unblockable
-                    p.hitList.push(ent.id);
+                    p.hitList.push(ent);
                     p.game.particles.spawnSlash(ent.x, ent.y, ent.x + (Math.random() - 0.5) * 20, ent.y + (Math.random() - 0.5) * 20, '#DC143C', 30);
                     audioEngine.playSlash();
                 }
@@ -1222,9 +1223,12 @@ export class BlueOrbBehavior {
 
         // NOTE: Blue Orb has damage: 0 in config - it only pulls/repels, does NOT damage towers or fighters
 
-        // Deflect/Suck Projectiles
+        // Deflect/Suck Projectiles (only pull enemy projectiles, not friendly)
         p.game.projectiles.forEach(proj => {
-            if (proj === p || proj.owner === p.owner || !proj.active) return;
+            if (proj === p || !proj.active) return;
+            // Team check: don't pull friendly projectiles
+            if (proj.owner && p.owner && proj.owner.id === p.owner.id) return;
+
             const d = Physics.dist(p.x, p.y, proj.x, proj.y);
             if (d < this.effectRadius) {
                 const ang = Math.atan2(p.y - proj.y, p.x - proj.x);

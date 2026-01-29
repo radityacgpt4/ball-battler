@@ -307,7 +307,7 @@ export const FIGHTER_TYPES = {
     AXEMAN: {
         name: "Axeman",
         color: "#800000",
-        hp: 100, mass: 1.4, speed: 4.2, rotationSpeed: 0.13,
+        hp: 100, mass: 1.4, speed: 4.4, rotationSpeed: 0.15,
         skills: {
             atk: {
                 name: "Heavy Swing",
@@ -584,7 +584,7 @@ export const FIGHTER_TYPES = {
                 slashDamage: 8,
                 slashSpeed: 18,
                 slashFireRate: 60,
-                slashWidth: 160, // Parabolic width
+                slashWidth: 140, // Parabolic width
                 dragStrength: 0.15 // Drag factor
             }
         }
@@ -694,13 +694,13 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 90,
-                projectileDamage: 6,
-                explosionDamage: 4,
-                stunDuration: 30, //
+                projectileDamage: 7,
+                explosionDamage: 6,
+                stunDuration: 45, //
                 projectileSpeed: 36,
                 explosionRadius: 80,
                 // Melee dash properties
-                meleeDamage: 3,
+                meleeDamage: 4,
                 dashSpeed: 24,
                 dashDistance: 1000,
                 ultDashDistance: 1400,
@@ -850,8 +850,8 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 90,
-                damage: 7,
-                critDamage: 15,
+                damage: 8,
+                critDamage: 18,
                 projectileSpeed: 11,
                 knockback: 18,
                 radius: 12,
@@ -884,7 +884,7 @@ export const FIGHTER_TYPES = {
                 activeDuration: 180,
                 rechargeTime: 90,
                 stopRadius: 100,
-                slowRadius: 200,
+                slowRadius: 180,
                 slowAmount: 0.8,
                 projectileExpiry: 120
             }

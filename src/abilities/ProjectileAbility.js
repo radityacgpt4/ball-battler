@@ -259,39 +259,35 @@ export class KunaiAbility extends Ability {
                 fighter.x = next.x;
                 fighter.y = next.y;
 
-                // Hit Detection
+                // Hit Detection - Hit ALL enemies in trajectory
                 const enemies = game.entities.filter(e => e !== fighter && !e.isDead);
-                let hitTarget = null;
+                let anyHit = false;
+
                 for (const e of enemies) {
                     if (Physics.lineCircleIntersect(current.x, current.y, next.x, next.y, e.x, e.y, e.radius + 15)) {
-                        hitTarget = e;
-                        if (fighter.pendingRasengan) break;
+                        anyHit = true;
+
+                        // Apply damage to everyone in path
+                        if (fighter.pendingRasengan) {
+                            // While dashing with Rasengan, we trigger a smaller impact on everyone passed through
+                            // The "Big impact" still happens at the end (timer <= 0) or we can trigger it on first?
+                            // To follow "hit-them-all", we should NOT stop.
+                            game.combatText.flash(e.x, e.y - e.radius);
+                            e.takeDamage(this.damage * 1.5, true); // Direct-hit type damage but continues
+                            game.particles.spawn(e.x, e.y, '#00BFFF', 10);
+                            audioEngine.playHit();
+                        } else {
+                            // Normal Dash Hit
+                            game.combatText.flash(e.x, e.y - e.radius);
+                            e.takeDamage(8);
+                            game.particles.spawn(e.x, e.y, '#ffd700', 5);
+                        }
                     }
                 }
 
-                if (hitTarget) {
-                    if (fighter.pendingRasengan) {
-                        // Rasengan Hit
-                        const impactAngle = Math.atan2(hitTarget.y - current.y, hitTarget.x - current.x);
-                        const stopDist = hitTarget.radius + fighter.radius + 1;
-                        fighter.x = hitTarget.x - Math.cos(impactAngle) * stopDist;
-                        fighter.y = hitTarget.y - Math.sin(impactAngle) * stopDist;
-
-                        this.triggerRasengan(fighter, hitTarget);
-
-                        fighter.chainDashQueue = [];
-                        fighter.dashTimer = 0;
-                        fighter.isDashing = false;
-                        fighter.pendingRasengan = null;
-                        fighter.dashHandler = null;
-                        game.projectiles = game.projectiles.filter(p => !p.isKunai || p.owner !== fighter);
-                        return;
-                    } else {
-                        // Normal Dash Hit
-                        game.combatText.flash(hitTarget.x, hitTarget.y - hitTarget.radius);
-                        hitTarget.takeDamage(8);
-                        game.particles.spawn(hitTarget.x, hitTarget.y, '#ffd700', 5);
-                    }
+                if (anyHit && !fighter.pendingRasengan) {
+                    // General hit visual/sound if we hit someone during normal dash
+                    audioEngine.playHit();
                 }
             }
         }

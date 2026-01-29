@@ -506,11 +506,13 @@ export class Game {
                         // This handles simple projectiles without custom behaviors
                         if (!p.active) break; // If destroyed by something else
 
-                        // Piercing Check
+                        // Piercing Check (only applies to piercing projectiles like arrows)
+                        // NOTE: Most projectiles (missiles, bullets, etc.) are NOT piercing
                         if (p.piercing) {
-                            if (p.hitList && p.hitList.includes(ent.id)) continue;
+                            // Use entity reference for tracking, not ID (which is team ID in team battles)
+                            if (p.hitList && p.hitList.includes(ent)) continue;
                             if (!p.hitList) p.hitList = [];
-                            p.hitList.push(ent.id);
+                            p.hitList.push(ent);
                         }
 
                         // Apply Effects

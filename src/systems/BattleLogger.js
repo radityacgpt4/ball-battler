@@ -8,27 +8,52 @@ export class BattleLogger {
         this.currentBattle = null;
         this.frameCounter = 0;
         this.intervalFrames = 300; // 5s at 60fps
+        this.secondFrameCounter = 0;
+        this._lastSecondSnapshot = null;
     }
 
     startBattle(entities) {
         this.frameCounter = 0;
+        this.secondFrameCounter = 0;
         this.currentBattle = {
             timestamp: new Date().toISOString(),
             startTime: performance.now(),
             entities: entities,
             intervals: [],
+            secondSnapshots: [],
             winner: null,
             duration: 0
         };
 
         // Snapshot initial stats for interval deltas
         this._lastSnapshot = this._snapshotStats(entities);
+        this._lastSecondSnapshot = this._snapshotStats(entities);
     }
 
     recordInterval(entities) {
         if (!this.currentBattle) return;
 
         this.frameCounter++;
+
+        // Per-second DPS tracking (every 60 frames)
+        this.secondFrameCounter++;
+        if (this.secondFrameCounter >= 60) {
+            this.secondFrameCounter = 0;
+            const currentSnap = this._snapshotStats(entities);
+            const secondIndex = this.currentBattle.secondSnapshots.length;
+            const fighters = [];
+
+            for (const ent of entities) {
+                const curr = currentSnap.get(ent);
+                const prev = this._lastSecondSnapshot ? this._lastSecondSnapshot.get(ent) : null;
+                const dmgThisSecond = prev ? (curr.damageDealt - prev.damageDealt) : curr.damageDealt;
+                fighters.push({ name: ent.name, type: ent.typeKey, dmgThisSecond: Math.round(dmgThisSecond) });
+            }
+
+            this.currentBattle.secondSnapshots.push({ second: secondIndex, fighters });
+            this._lastSecondSnapshot = currentSnap;
+        }
+
         if (this.frameCounter % this.intervalFrames !== 0) return;
 
         const intervalIndex = this.frameCounter / this.intervalFrames;

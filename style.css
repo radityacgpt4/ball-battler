@@ -1079,3 +1079,578 @@ canvas {
         box-shadow: 0 0 15px rgba(255, 42, 109, 0.4);
     }
 }
+
+/* ===================== */
+/* Tournament UI Styles  */
+/* ===================== */
+
+/* Tournament header */
+.tournament-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0 10px;
+}
+
+.minimize-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-size: 1.2rem;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.minimize-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#tournament-ui.minimized {
+    height: auto;
+    min-height: 0;
+    padding: 10px;
+}
+
+/* Tournament content container */
+.tournament-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 15px;
+}
+
+/* Current matchup display */
+.current-matchup-display {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.matchup-title {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+}
+
+.matchup-fighters {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.fighter-card {
+    padding: 8px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.p1-card {
+    border-color: var(--accent-blue);
+}
+
+.p2-card {
+    border-color: var(--accent-red);
+}
+
+.vs-separator {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-weight: 300;
+}
+
+.matchup-score {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-top: 8px;
+    letter-spacing: 4px;
+}
+
+/* Leaderboard */
+.leaderboard-container,
+.matchup-history-container {
+    width: 100%;
+    max-width: 600px;
+}
+
+.leaderboard-header,
+.matchup-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+}
+
+.toggle-leaderboard-btn,
+.toggle-matchup-history-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.leaderboard-table {
+    width: 100%;
+    font-size: 0.75rem;
+}
+
+.leaderboard-row {
+    display: flex;
+    padding: 4px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.leaderboard-row.header-row {
+    color: var(--text-dim);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.leaderboard-row.rank-1 {
+    background: rgba(255, 215, 0, 0.1);
+}
+
+.leaderboard-row.rank-2 {
+    background: rgba(192, 192, 192, 0.08);
+}
+
+.leaderboard-row.rank-3 {
+    background: rgba(205, 127, 50, 0.08);
+}
+
+.rank-col {
+    width: 30px;
+    flex-shrink: 0;
+}
+
+.name-col {
+    flex: 1;
+}
+
+.wins-col,
+.losses-col,
+.draws-col {
+    width: 35px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.winrate-col {
+    width: 55px;
+    text-align: right;
+    flex-shrink: 0;
+    color: var(--accent-gold);
+}
+
+/* Matchup Matrix */
+.matchup-matrix-container {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.matchup-matrix {
+    border-collapse: collapse;
+    font-size: 10px;
+    width: 100%;
+}
+
+.matchup-matrix th,
+.matchup-matrix td {
+    padding: 3px 5px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.matrix-corner {
+    background: transparent;
+}
+
+.matrix-header {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 9px;
+}
+
+.row-header {
+    text-align: right !important;
+    padding-right: 8px !important;
+}
+
+.matrix-cell {
+    font-weight: 600;
+    font-size: 10px;
+}
+
+.win-cell {
+    background: rgba(0, 180, 0, 0.2);
+    color: #4ade80;
+}
+
+.loss-cell {
+    background: rgba(180, 0, 0, 0.2);
+    color: #f87171;
+}
+
+.draw-cell {
+    background: rgba(180, 180, 0, 0.15);
+    color: #facc15;
+}
+
+.self-cell {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-dim);
+}
+
+.pending-cell {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.matrix-legend {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 6px;
+    font-size: 9px;
+}
+
+.legend-item {
+    padding: 2px 6px;
+    border-radius: 2px;
+}
+
+.win-legend {
+    background: rgba(0, 180, 0, 0.2);
+    color: #4ade80;
+}
+
+.draw-legend {
+    background: rgba(180, 180, 0, 0.15);
+    color: #facc15;
+}
+
+.loss-legend {
+    background: rgba(180, 0, 0, 0.2);
+    color: #f87171;
+}
+
+.pending-legend {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Tournament stats */
+.tournament-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+}
+
+.stat-label {
+    color: var(--text-dim);
+}
+
+.stat-value {
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+/* Tournament progress */
+.tournament-progress {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-bar-container {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--accent-blue);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.progress-percentage {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-blue);
+    min-width: 40px;
+    text-align: right;
+}
+
+/* Tournament controls */
+.tournament-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.restart-btn {
+    padding: 10px 25px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.restart-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--accent-blue);
+}
+
+.danger-btn {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+.danger-btn:hover {
+    background: rgba(255, 42, 109, 0.2);
+}
+
+/* Tournament info / summary */
+.tournament-info {
+    width: 100%;
+    max-width: 400px;
+}
+
+.tournament-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.8rem;
+}
+
+.anomaly-warning {
+    color: var(--accent-red) !important;
+    font-weight: 800;
+}
+
+/* Anomaly Section */
+.anomaly-section {
+    width: 100%;
+    max-width: 600px;
+    margin-top: 10px;
+}
+
+.anomaly-toggle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 42, 109, 0.1);
+    border: 1px solid rgba(255, 42, 109, 0.3);
+    cursor: pointer;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--accent-red);
+}
+
+.anomaly-toggle-content {
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    border-top: none;
+}
+
+.anomaly-report {
+    padding: 10px;
+    font-size: 0.8rem;
+}
+
+.anomaly-report.success h3 {
+    color: #4ade80;
+}
+
+.anomaly-report.warning h3 {
+    color: var(--accent-red);
+}
+
+.anomaly-list {
+    margin: 8px 0;
+    padding-left: 20px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+.anomaly-suggestion {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+}
+
+.completion-message {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+/* Test Phase HUD */
+.test-phase-hud {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: auto;
+    height: auto;
+    background: rgba(5, 5, 10, 0.85);
+    z-index: 100;
+    padding: 10px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    backdrop-filter: blur(8px);
+}
+
+.test-phase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.test-phase-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent-blue);
+}
+
+.test-phase-speed {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+
+.test-phase-progress {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 6px 0;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar-mini {
+    height: 100%;
+    background: var(--accent-blue);
+    transition: width 0.3s;
+}
+
+.test-phase-info {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+
+.test-phase-info p {
+    margin: 3px 0;
+}
+
+.test-stop-btn {
+    margin-top: 6px;
+    padding: 4px 12px;
+    background: rgba(255, 42, 109, 0.2);
+    border: 1px solid var(--accent-red);
+    color: var(--accent-red);
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.test-stop-btn:hover {
+    background: rgba(255, 42, 109, 0.4);
+}
+
+/* DPS Time-Series Charts */
+.dps-chart-section {
+    width: 100%;
+    max-width: 700px;
+    margin-top: 10px;
+}
+
+.dps-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+}
+
+.dps-chart-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    border-top: none;
+}
+
+.dps-fighter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dps-fighter-label {
+    width: 140px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dps-fighter-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.dps-avg-value {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+}
+
+.dps-canvas {
+    flex: 1;
+    height: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+}

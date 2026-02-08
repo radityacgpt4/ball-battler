@@ -8,7 +8,7 @@ export const FIGHTER_TYPES = {
     SWORD_MASTER: {
         name: "Sword Master",
         color: "#ff6b6b",
-        hp: 100, mass: 1.0, speed: 4.5, rotationSpeed: 0.15,
+        hp: 100, mass: 1.0, speed: 4.5, rotationSpeed: 0.2,
         skills: {
             atk: {
                 name: "Melee Slash",
@@ -17,17 +17,17 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 range: 50,
-                damage: 7,
+                damage: 8,
                 procRate: 3,
                 attackCooldown: 20
             },
             def: {
                 name: "Parry",
-                desc: "17% chance to block and negate incoming damage.",
+                desc: "18% chance to block and negate incoming damage.",
                 type: "PARRY_PASSIVE",
                 isPassive: true,
                 // Configurable properties
-                chance: 0.17
+                chance: 0.18
             },
             ult: {
                 name: "Dash Assault",
@@ -36,9 +36,8 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 120,
-                damage: 8,
-                dashDistance: 300,
-                dashTimer: 15
+                damage: 9,
+                dashDistance: 300
             }
         }
     },
@@ -57,8 +56,8 @@ export const FIGHTER_TYPES = {
                 range: 800,
                 damage: 15,
                 bounces: 2,
-                damageDecayWall: 0.9,
-                damageDecayShield: 0.9
+                damageDecayWall: 0.8,
+                damageDecayShield: 0.8
             },
             def: {
                 name: "Static Field",
@@ -68,7 +67,8 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 radius: 60,
                 damage: 5,
-                tickRate: 30
+                tickRate: 30,
+                stunDuration: 45
             },
             ult: {
                 name: "Double Zap",
@@ -76,15 +76,15 @@ export const FIGHTER_TYPES = {
                 type: "DOUBLE_ZAP",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 100,
-                angleSpread: 0.20
+                cooldown: 120,
+                angleSpread: 0.22
             }
         }
     },
     SOLDIER: {
         name: "Rifleman",
         color: "#54a0ff",
-        hp: 100, mass: 1.2, speed: 4, rotationSpeed: 0.12,
+        hp: 100, mass: 1.2, speed: 4, rotationSpeed: 0.13,
         skills: {
             atk: {
                 name: "Burst Fire",
@@ -92,7 +92,7 @@ export const FIGHTER_TYPES = {
                 type: "BURST_FIRE",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 100,
+                cooldown: 90,
                 count: 10,
                 damage: 3,
                 projectileSpeed: 15,
@@ -128,7 +128,7 @@ export const FIGHTER_TYPES = {
     SHIELDBEARER: {
         name: "Shieldbearer",
         color: "#8b5cf6",
-        hp: 100, mass: 1.6, speed: 4, rotationSpeed: 0.10,
+        hp: 100, mass: 1.6, speed: 3, rotationSpeed: 0.10,
         skills: {
             atk: {
                 name: "Momentum Strike",
@@ -136,9 +136,9 @@ export const FIGHTER_TYPES = {
                 type: "MOMENTUM_PASSIVE",
                 isPassive: true,
                 // Configurable properties
-                maxSpeed: 8,
+                maxSpeed: 7,
                 speedGain: 1,
-                damagePerTier: 5,
+                damagePerTier: 4,
                 knockback: 12
             },
             def: {
@@ -158,8 +158,8 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 120,
                 damage: 10,
-                stunDuration: 60,
-                wallBonusDamage: 15
+                stunDuration: 300,
+                wallBonusDamage: 5
             }
         }
     },
@@ -213,7 +213,7 @@ export const FIGHTER_TYPES = {
     CYBORG: {
         name: "Cyborg",
         color: "#c0c0c0",
-        hp: 75, mass: 1.4, speed: 4.5, rotationSpeed: 0.10,
+        hp: 100, mass: 1.4, speed: 4.5, rotationSpeed: 0.10,
         skills: {
             atk: {
                 name: "Plasma Laser",
@@ -221,17 +221,17 @@ export const FIGHTER_TYPES = {
                 type: "LASER_BEAM",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 120,
                 duration: 180,
-                chargeTime: 120,
+                chargeTime: 90,
                 damage: 1,
                 range: 2000,
-                rotationSlow: 0.15,
+                rotationSlow: 0.1,
                 speedSlow: 0.50,
-                beamWidth: 14,
+                beamWidth: 16,
                 coreWidth: 5,
-                tickRate: 3,
-                slowDuration: 45
+                tickRate: 2,
+                slowDuration: 60,
+                slowStrength: 0.2
             },
             def: {
                 name: "Energy Shield",
@@ -239,8 +239,8 @@ export const FIGHTER_TYPES = {
                 type: "FORCE_FIELD",
                 isPassive: true,
                 // Configurable properties
-                maxShield: 75,
-                regenRate: 0.033,
+                maxShield: 50,
+                regenRate: 1,
                 regenTickFrames: 30
             },
             ult: {
@@ -250,11 +250,11 @@ export const FIGHTER_TYPES = {
                 isPassive: false,
                 // Configurable properties
                 cooldown: 120,
-                damage: 7,
-                count: 5,
+                damage: 5,
+                count: 7,
                 spreadAngle: 0.5,
-                projectileSpeed: 6,
-                turnSpeed: 0.08,
+                projectileSpeed: 7,
+                turnSpeed: 0.1,
                 radius: 6
             }
         }
@@ -307,7 +307,7 @@ export const FIGHTER_TYPES = {
     AXEMAN: {
         name: "Axeman",
         color: "#800000",
-        hp: 100, mass: 1.4, speed: 4.4, rotationSpeed: 0.15,
+        hp: 100, mass: 1.2, speed: 4.6, rotationSpeed: 0.16,
         skills: {
             atk: {
                 name: "Heavy Swing",
@@ -330,8 +330,8 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 stackThreshold: 0.1,
-                speedBonusPerStack: 0.11,
-                rotBonusPerStack: 0.17
+                speedBonusPerStack: 0.15,
+                rotBonusPerStack: 0.2
             },
             ult: {
                 name: "Execution",
@@ -344,9 +344,8 @@ export const FIGHTER_TYPES = {
                 executeThreshold: 30,
                 stunDuration: 45,
                 stunDamage: 5,
-                ultVisualDuration: 30,
                 comboRequired: 2,
-                lifestealPercent: 0.15  // 15% lifesteal on all attacks after ULT activation
+                lifestealPercent: 1
             }
         }
     },
@@ -376,7 +375,7 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 barrierMaxHp: 30,
-                barrierCount: 4,
+                barrierCount: 2,
                 arcAngle: 1.22,
                 shieldRadius: 8
             },
@@ -411,9 +410,9 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 baseDamage: 2,
                 resetTime: 300,
-                orbCount: 8,
-                orbRadius: 3,
-                orbDistance: 18,
+                orbCount: 8, // Used by weaponGeometry.js
+                orbRadius: 3, // Used by weaponGeometry.js
+                orbDistance: 18, // Used by weaponGeometry.js
                 attackCooldown: 12
             },
             def: {
@@ -541,7 +540,6 @@ export const FIGHTER_TYPES = {
                 stunDuration: 45,
                 arrowSpeed: 22,
                 arrowRadius: 2,
-                rainHeight: 150,
                 rainSpread: 120,
                 plantedArrowLifeTime: 120
             }
@@ -569,8 +567,8 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 domainRadius: 125, // Diameter 250
-                slowAmount: 0.2, // 20% slow
-                stunDelay: 60, // 1 second before stun
+                slowAmount: 0.18, // 20% slow
+                stunDelay: 90, // 1 second before stun
                 stunDuration: 60 // 1 second stun
             },
             ult: {
@@ -583,7 +581,7 @@ export const FIGHTER_TYPES = {
                 duration: 360,
                 slashDamage: 8,
                 slashSpeed: 18,
-                slashFireRate: 60,
+                slashFireRate: 75,
                 slashWidth: 140, // Parabolic width
                 dragStrength: 0.15 // Drag factor
             }
@@ -605,15 +603,13 @@ export const FIGHTER_TYPES = {
                 fistDamage: 1,
                 fireRate: 3,
                 range: 240,
-                spread: 0.25,
-                cooldown: 120
+                spread: 0.22,
+                cooldown: 100
             },
             def: {
                 name: "Balloon",
                 desc: "Inflates body to deflect projectiles and bounce melee attackers.",
                 type: "BALLOON_DEFLECT",
-                isPassive: true, // It's an active toggle usually, but config style? 
-                // Config:
                 isPassive: false, // Auto-cast when ready
                 cooldown: 180,
                 duration: 120,
@@ -625,15 +621,15 @@ export const FIGHTER_TYPES = {
                 type: "CONQUEROR_HAKI",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 300,
-                radius: 350,
-                stunDuration: 120, // 2 seconds
+                cooldown: 280,
+                radius: 300,
+                stunDuration: 120,
                 knockback: 25
             }
         }
     },
     MAGE_OF_ERA: {
-        name: "Mage of the Era",
+        name: "Grand Mage",
         color: "#4fc3f7", // Light blue
         hp: 90, mass: 0.9, speed: 5.2, rotationSpeed: 0.14,
         skills: {
@@ -645,11 +641,11 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 damage: 5,
                 speed: 50,
-                range: 500,
+                range: 350,
                 cooldown: 180, // Full cooldown after burst finishes
                 homingStrength: 0.018,
-                aimError: 0.55,
-                recoil: 3.5,
+                aimError: 0.57,
+                recoil: 2,
                 burstCount: 4,  // Firing 4 times
                 burstDelay: 6   // Frames between shots
             },
@@ -695,10 +691,10 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 90,
                 projectileDamage: 7,
-                explosionDamage: 6,
+                explosionDamage: 5,
                 stunDuration: 45, //
                 projectileSpeed: 36,
-                explosionRadius: 80,
+                explosionRadius: 60,
                 // Melee dash properties
                 meleeDamage: 4,
                 dashSpeed: 24,
@@ -715,7 +711,7 @@ export const FIGHTER_TYPES = {
                 type: "MECHA_DODGE",
                 isPassive: false,
                 // Configurable properties
-                cooldown: 90,
+                cooldown: 120,
                 detectionRadius: 90,
                 approachThreshold: 0.6,
                 dodgeDistance: 30,
@@ -808,11 +804,11 @@ export const FIGHTER_TYPES = {
                 hpThreshold: 5,
                 damage: 8,
                 ultDamage: 10, // Damage in Bankai form
-                projectileSpeed: 16,
-                explosionRadius: 75,
-                explosionDamage: 6,
-                explosionUltDamage: 8,
-                stunDuration: 60, // 1 second stun
+                projectileSpeed: 15,
+                explosionRadius: 60,
+                explosionDamage: 5,
+                explosionUltDamage: 7,
+                stunDuration: 45, // 1 second stun
                 getsugaDelay: 8, // Frames between each getsuga
                 explodeOnWall: true
             },
@@ -824,8 +820,8 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 300,
                 duration: 480, // 8 seconds
-                speedBoost: 0.75, // 75% increase
-                rotationBoost: 0.75, // 75% increase
+                speedBoost: 0.70, // 75% increase
+                rotationBoost: 0.70, // 75% increase
                 bankaiPulseInterval: 90, // Every 1.5 seconds
                 bankaiPulseRadius: 180,
                 bankaiPulseStun: 45, // 0.75 second stun
@@ -833,7 +829,7 @@ export const FIGHTER_TYPES = {
                 baseEvasion: 0.15,
                 extraEvasionPerStep: 0.05, // +3% evasion
                 hpStep: 5,                 // for every 5 HP lost
-                maxEvasion: 0.6,          // Cap
+                maxEvasion: 0.55,          // Cap
                 evasionHPThreshold: 0.5    // Starts scaling below 50% HP
             }
         }
@@ -871,7 +867,6 @@ export const FIGHTER_TYPES = {
                 pullStrength: 2.1,
                 damage: 0,
                 launchSpeed: 2.9,
-                friction: 0.87,
                 growthSpeed: 0.3
             },
             ult: {

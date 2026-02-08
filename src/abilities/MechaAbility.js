@@ -52,10 +52,10 @@ export class MechaAtkAbility extends Ability {
 
         // Handle dash delay after projectile impact (1-second delay)
         if (fighter.mechaDashDelayTimer > 0) {
-            fighter.mechaDashDelayTimer--;
+            fighter.mechaDashDelayTimer -= (context.timeScale || 1);
 
             // Visual charging effect
-            if (fighter.mechaDashDelayTimer % 10 === 0) {
+            if (Math.floor(fighter.mechaDashDelayTimer) % 10 < (context.timeScale || 1)) {
                 game.particles.particles.push({
                     x: fighter.x + (Math.random() - 0.5) * 40,
                     y: fighter.y + (Math.random() - 0.5) * 40,
@@ -289,7 +289,7 @@ export class MechaAtkAbility extends Ability {
     handleMeleeDash(fighter, context) {
         const { game, enemies, timeScale = 1.0 } = context;
 
-        fighter.mechaDashTimer--;
+        fighter.mechaDashTimer -= (timeScale || 1);
 
         // Track rotation for multi-hit (resets hit list every 360 degrees)
         let angleDiff = fighter.angle - fighter.mechaLastAngle;
@@ -769,8 +769,8 @@ export class MechaUltAbility extends Ability {
     update(fighter, context) {
         // Permanent ULT — visual pulse every 60 frames while active
         if (fighter.mechaUltActive) {
-            this.pulseTimer = (this.pulseTimer || 0) + 1;
-            if (this.pulseTimer % 60 === 0) {
+            this.pulseTimer = (this.pulseTimer || 0) + (context.timeScale || 1);
+            if (Math.floor(this.pulseTimer) % 60 < (context.timeScale || 1)) {
                 context.game.particles.spawnShockwave(fighter.x, fighter.y, '#00BFFF', 40, 0.2);
             }
         }

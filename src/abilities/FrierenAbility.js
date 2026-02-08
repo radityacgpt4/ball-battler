@@ -40,7 +40,7 @@ export class ZoltraakAbility extends Ability {
 
         // Handle active burst
         if (this.currentBurst > 0) {
-            this.burstFrameTimer--;
+            this.burstFrameTimer -= (context.timeScale || 1);
             if (this.burstFrameTimer <= 0) {
                 this.fireProjectile(fighter, context.game, this.burstTarget);
                 this.currentBurst--;

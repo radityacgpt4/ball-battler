@@ -62,6 +62,9 @@ class AbilityRegistryClass {
         if (type === 'FLASH_BARRAGE' && extraArgs.atkConfig && extraArgs.ProjectileClass) {
             return new Constructor(config, slot, extraArgs.atkConfig, extraArgs.ProjectileClass);
         }
+        if (type === 'ADAPTATION_HEAL' && extraArgs.ultConfig) {
+            return new Constructor(config, slot, extraArgs.ultConfig);
+        }
 
         return new Constructor(config, slot);
     }

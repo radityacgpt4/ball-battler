@@ -48,11 +48,11 @@ export class KingOfCursesAtkAbility extends Ability {
             }
 
             if (hit) {
-                fighter.cleaveTimer = 6; // Fixed 10 DPS rate (6 frames)
+                fighter.cleaveTimer = this.cooldown;
                 audioEngine.playRealisticSlash();
             }
         } else {
-            fighter.cleaveTimer--;
+            fighter.cleaveTimer -= (context.timeScale || 1);
         }
 
         // --- 2. ACTIVE: World Cutting Slash (Ult Mode) ---
@@ -163,8 +163,9 @@ export class KingOfCursesDefAbility extends Ability {
                     this.enemiesInDomain.set(enemy, frames);
                 }
 
-                // Apply slow (20%)
+                // Apply slow
                 enemy.status.domainSlow = 10;
+                enemy.status.domainSlowAmount = this.slowAmount;
 
                 // Random visual
                 if (Math.random() < 0.05) {

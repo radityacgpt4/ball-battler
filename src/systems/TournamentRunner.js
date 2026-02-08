@@ -16,7 +16,7 @@ import { battleLogger } from './BattleLogger.js';
 // CONFIGURATION
 const TOURNAMENT_CONFIG = {
     timeScale: 5.0,          // Speed multiplier (1.0 = normal, 5.0 = 5x speed)
-    roundsPerMatchup: 3,     // Best of X format (3 or 5)
+    roundsPerMatchup: 5,     // Best of X format (1, 3, 5, or 7)
     includeMirrorMatches: false,  // Same fighter vs same fighter
     visualTestCount: 3,      // Number of test battles to run visually before headless mode
     enableAnomalyDetection: true  // Log suspicious battle results
@@ -37,8 +37,10 @@ export class TournamentRunner {
         this.isRunningVisualTests = false;
         this.startTime = 0; // Track tournament start time for ETA
         this.isMinimized = false; // Track UI minimization state
-        this.leaderboard = new Map(); // Fighter name -> {wins, losses, draws}
+        this.leaderboard = new Map(); // Fighter name -> {wins, losses, draws, totalWinHpPct, winCount}
         this.fighterDpsData = new Map(); // fighterType -> { seconds: Map<secondIndex, {totalDmg, count}> }
+        this.winsNeeded = Math.ceil(this.roundsPerMatchup / 2);
+        this.totalBattlesPlayed = 0;
     }
 
     /**
@@ -73,18 +75,20 @@ export class TournamentRunner {
      */
     getProgress() {
         const totalBattles = this.getTotalBattles();
-        const completedBattles = (this.currentMatchupIndex * this.roundsPerMatchup) + this.currentRound;
-        const percentage = totalBattles > 0 ? (completedBattles / totalBattles * 100).toFixed(1) : 0;
+        const completedBattles = this.totalBattlesPlayed || 0;
+        const percentage = this.matchups.length > 0
+            ? (this.currentMatchupIndex / this.matchups.length * 100).toFixed(1) : 0;
 
-        // Calculate ETA (only after sufficient sample size for accuracy)
+        // Calculate ETA using matchup-based estimation (accounts for early termination)
         const elapsed = this.startTime > 0 ? (performance.now() - this.startTime) / 1000 : 0; // seconds
         const MIN_BATTLES_FOR_ETA = 20; // Need at least 20 battles for accurate prediction
 
         let etaSeconds = 0;
-        if (completedBattles >= MIN_BATTLES_FOR_ETA) {
-            const battlesPerSecond = completedBattles / elapsed;
-            const remainingBattles = totalBattles - completedBattles;
-            etaSeconds = remainingBattles / battlesPerSecond;
+        if (this.totalBattlesPlayed >= MIN_BATTLES_FOR_ETA) {
+            const avgBattlesPerMatchup = this.totalBattlesPlayed / Math.max(this.currentMatchupIndex, 1);
+            const remainingMatchups = this.matchups.length - this.currentMatchupIndex;
+            const battlesPerSecond = this.totalBattlesPlayed / elapsed;
+            etaSeconds = (remainingMatchups * avgBattlesPerMatchup) / battlesPerSecond;
         }
 
         return {
@@ -97,7 +101,7 @@ export class TournamentRunner {
             roundsPerMatchup: this.roundsPerMatchup,
             elapsedTime: Math.floor(elapsed),
             etaSeconds: Math.floor(etaSeconds),
-            hasValidETA: completedBattles >= MIN_BATTLES_FOR_ETA
+            hasValidETA: this.totalBattlesPlayed >= MIN_BATTLES_FOR_ETA
         };
     }
 
@@ -114,7 +118,10 @@ export class TournamentRunner {
     /**
      * Start the tournament
      */
-    async start(fighterTypes) {
+    async start(fighterTypes, bestOf) {
+        this.roundsPerMatchup = bestOf || TOURNAMENT_CONFIG.roundsPerMatchup;
+        this.winsNeeded = Math.ceil(this.roundsPerMatchup / 2);
+        this.totalBattlesPlayed = 0;
         this.matchups = this.generateMatchups(fighterTypes);
         this.currentMatchupIndex = 0;
         this.currentRound = 0;
@@ -322,7 +329,14 @@ export class TournamentRunner {
 
         // Move to next battle
         this.currentRound++;
-        if (this.currentRound >= this.roundsPerMatchup) {
+        this.totalBattlesPlayed++;
+
+        // Early termination: skip remaining rounds when one side clinches
+        const key = `${matchup.fighter1}_vs_${matchup.fighter2}`;
+        const result = this.results.get(key);
+        const earlyWin = result && (result.wins[0] >= this.winsNeeded || result.wins[1] >= this.winsNeeded);
+
+        if (this.currentRound >= this.roundsPerMatchup || earlyWin) {
             this.currentRound = 0;
             this.currentMatchupIndex++;
         }
@@ -359,18 +373,26 @@ export class TournamentRunner {
         const result = this.results.get(key);
 
         // Determine winner from last battle
-        const team1Alive = this.game.entities.filter(e => !e.isDead && e.id === 1).length;
-        const team2Alive = this.game.entities.filter(e => !e.isDead && e.id === 2).length;
+        const team1AliveFighters = this.game.entities.filter(e => !e.isDead && e.id === 1);
+        const team2AliveFighters = this.game.entities.filter(e => !e.isDead && e.id === 2);
+        const team1Alive = team1AliveFighters.length;
+        const team2Alive = team2AliveFighters.length;
+
+        // Capture remaining HP% for alive fighters
+        const team1HpPct = team1AliveFighters.length > 0
+            ? Math.round(team1AliveFighters.reduce((s, f) => s + f.hp, 0) / team1AliveFighters.reduce((s, f) => s + f.maxHp, 0) * 100) : 0;
+        const team2HpPct = team2AliveFighters.length > 0
+            ? Math.round(team2AliveFighters.reduce((s, f) => s + f.hp, 0) / team2AliveFighters.reduce((s, f) => s + f.maxHp, 0) * 100) : 0;
 
         // Initialize leaderboard entries if needed
         const f1Name = this.game.getFighterName(matchup.fighter1);
         const f2Name = this.game.getFighterName(matchup.fighter2);
 
         if (!this.leaderboard.has(f1Name)) {
-            this.leaderboard.set(f1Name, { wins: 0, losses: 0, draws: 0 });
+            this.leaderboard.set(f1Name, { wins: 0, losses: 0, draws: 0, totalWinHpPct: 0, winCount: 0 });
         }
         if (!this.leaderboard.has(f2Name)) {
-            this.leaderboard.set(f2Name, { wins: 0, losses: 0, draws: 0 });
+            this.leaderboard.set(f2Name, { wins: 0, losses: 0, draws: 0, totalWinHpPct: 0, winCount: 0 });
         }
 
         const f1Stats = this.leaderboard.get(f1Name);
@@ -381,11 +403,15 @@ export class TournamentRunner {
             result.wins[0]++;
             f1Stats.wins++;
             f2Stats.losses++;
+            f1Stats.totalWinHpPct += team1HpPct;
+            f1Stats.winCount++;
             battleResult = 'fighter1';
         } else if (team2Alive > team1Alive) {
             result.wins[1]++;
             f2Stats.wins++;
             f1Stats.losses++;
+            f2Stats.totalWinHpPct += team2HpPct;
+            f2Stats.winCount++;
             battleResult = 'fighter2';
         } else {
             result.draws++;
@@ -398,7 +424,9 @@ export class TournamentRunner {
             round: result.battles.length + 1,
             winner: battleResult,
             team1Alive,
-            team2Alive
+            team2Alive,
+            team1HpPct,
+            team2HpPct
         });
 
         // Collect DPS time-series data
@@ -499,6 +527,7 @@ export class TournamentRunner {
                                 <span class="losses-col">L</span>
                                 <span class="draws-col">D</span>
                                 <span class="winrate-col">Win%</span>
+                                <span class="hp-col">HP%</span>
                             </div>
                             <div id="leaderboard-rows"></div>
                         </div>
@@ -630,6 +659,7 @@ export class TournamentRunner {
                                 <span class="losses-col">L</span>
                                 <span class="draws-col">D</span>
                                 <span class="winrate-col">Win%</span>
+                                <span class="hp-col">HP%</span>
                             </div>
                             <div id="leaderboard-rows"></div>
                         </div>
@@ -820,7 +850,8 @@ export class TournamentRunner {
             .map(([name, stats]) => {
                 const totalGames = stats.wins + stats.losses + stats.draws;
                 const winRate = totalGames > 0 ? (stats.wins / totalGames * 100).toFixed(1) : 0;
-                return { name, ...stats, winRate: parseFloat(winRate), totalGames };
+                const avgHpPct = stats.winCount > 0 ? (stats.totalWinHpPct / stats.winCount).toFixed(0) : '-';
+                return { name, ...stats, winRate: parseFloat(winRate), totalGames, avgHpPct };
             })
             .sort((a, b) => {
                 if (b.winRate !== a.winRate) return b.winRate - a.winRate;
@@ -837,6 +868,7 @@ export class TournamentRunner {
                     <span class="losses-col">${fighter.losses}</span>
                     <span class="draws-col">${fighter.draws}</span>
                     <span class="winrate-col">${fighter.winRate}%</span>
+                    <span class="hp-col">${fighter.avgHpPct}${fighter.avgHpPct !== '-' ? '%' : ''}</span>
                 </div>
             `;
         }).join('');
@@ -928,9 +960,18 @@ export class TournamentRunner {
                         else if (f1Wins < f2Wins) cellClass += ' loss-cell';
                         else cellClass += ' draw-cell';
 
+                        // Calculate avg HP% for the row fighter's wins in this matchup
+                        const f1WinBattles = result.battles.filter(b => {
+                            return (isF1First && b.winner === 'fighter1') || (!isF1First && b.winner === 'fighter2');
+                        });
+                        const avgHp = f1WinBattles.length > 0
+                            ? Math.round(f1WinBattles.reduce((s, b) => s + (isF1First ? b.team1HpPct : b.team2HpPct), 0) / f1WinBattles.length)
+                            : null;
+                        const hpSub = avgHp !== null ? `<div class="matrix-hp-sub">${avgHp}%</div>` : '';
+
                         const scoreText = `${f1Wins}-${f2Wins}`;
                         const title = `${this.game.getFighterName(f1)} vs ${this.game.getFighterName(f2)}: ${scoreText}`;
-                        matrixHTML += `<td class="${cellClass}" title="${title}">${scoreText}</td>`;
+                        matrixHTML += `<td class="${cellClass}" title="${title}">${scoreText}${hpSub}</td>`;
                     } else {
                         // Not played yet
                         matrixHTML += '<td class="matrix-cell pending-cell">-</td>';
@@ -1050,7 +1091,7 @@ export class TournamentRunner {
                 summaryDiv.innerHTML = `
                     <div class="tournament-stat">
                         <span class="stat-label">Total Battles:</span>
-                        <span class="stat-value">${this.getTotalBattles()}</span>
+                        <span class="stat-value">${this.totalBattlesPlayed}</span>
                     </div>
                     <div class="tournament-stat">
                         <span class="stat-label">Matchups Tested:</span>

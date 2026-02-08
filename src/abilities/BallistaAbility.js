@@ -35,10 +35,11 @@ export class BallistaAtkAbility extends Ability {
         if (fighter.cooldowns.atk <= 0) {
             fighter.cooldowns.atk = this.cooldown;
 
-            const angles = [
-                fighter.angle - this.spreadAngle / 2,
-                fighter.angle + this.spreadAngle / 2
-            ];
+            const angles = [];
+            for (let i = 0; i < this.normalBoltCount; i++) {
+                const t = this.normalBoltCount === 1 ? 0 : (i / (this.normalBoltCount - 1) - 0.5);
+                angles.push(fighter.angle + t * this.spreadAngle);
+            }
 
             angles.forEach((angle) => {
                 const p = new Projectile(
@@ -86,8 +87,11 @@ export class BallistaDefAbility extends Ability {
         if (!this.initialized) {
             fighter.ballistaBarriers = [];
 
-            // Create 2 barriers: Right (PI/2) and Left (-PI/2)
-            const angles = [Math.PI / 2, -Math.PI / 2];
+            // Create barriers evenly spaced around sides
+            const angles = [];
+            for (let i = 0; i < this.barrierCount; i++) {
+                angles.push(Math.PI / 2 - (Math.PI / (this.barrierCount - 1 || 1)) * i);
+            }
 
             for (const angle of angles) {
                 fighter.ballistaBarriers.push({
@@ -107,7 +111,10 @@ export class BallistaDefAbility extends Ability {
         localAngle = Physics.normalizeAngle(localAngle);
 
         const halfArc = this.arcAngle / 2;
-        const barrierAngles = [Math.PI / 2, -Math.PI / 2];
+        const barrierAngles = [];
+        for (let i = 0; i < this.barrierCount; i++) {
+            barrierAngles.push(Math.PI / 2 - (Math.PI / (this.barrierCount - 1 || 1)) * i);
+        }
 
         for (let i = 0; i < barrierAngles.length; i++) {
             const diff = Physics.normalizeAngle(localAngle - barrierAngles[i]);
@@ -326,7 +333,7 @@ export class BallistaUltAbility extends Ability {
         // Spawn timer — towers drop passively every spawnInterval frames once HP <= 50%
         const ultAvailable = fighter.hp <= fighter.maxHp * 0.5;
         if (ultAvailable) {
-            this.spawnTimer++;
+            this.spawnTimer += (context.timeScale || 1);
 
             // Sync cooldown UI to show spawn progress
             fighter.maxCooldowns.ult = this.spawnInterval;
@@ -340,9 +347,9 @@ export class BallistaUltAbility extends Ability {
 
         // Update all active towers
         for (const tower of fighter.ballistaTowers) {
-            tower.timer -= 1;
-            tower.angle += tower.rotationSpeed;
-            tower.fireTimer -= 1;
+            tower.timer -= (context.timeScale || 1);
+            tower.angle += tower.rotationSpeed * (context.timeScale || 1);
+            tower.fireTimer -= (context.timeScale || 1);
 
             // Fire bolt
             if (tower.fireTimer <= 0) {

@@ -143,7 +143,7 @@ export class IchigoDefAbility extends Ability {
 
         // Decrement cooldown
         if (this.getsugaCooldown > 0) {
-            this.getsugaCooldown--;
+            this.getsugaCooldown -= (context.timeScale || 1);
         }
     }
 
@@ -256,7 +256,7 @@ export class IchigoUltAbility extends Ability {
     update(fighter, context) {
         // --- Pulsating Stun Logic ---
         if (fighter.activeEffects.bankaiActive) {
-            fighter.activeEffects.bankaiPulseTimer++;
+            fighter.activeEffects.bankaiPulseTimer += (context.timeScale || 1);
             if (fighter.activeEffects.bankaiPulseTimer >= this.pulseInterval) {
                 fighter.activeEffects.bankaiPulseTimer = 0;
 

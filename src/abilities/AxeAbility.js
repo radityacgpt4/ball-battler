@@ -31,7 +31,7 @@ export class AxeAtkAbility extends Ability {
 
         // Manage combo timer
         if (fighter.axemanComboTimer > 0) {
-            fighter.axemanComboTimer--;
+            fighter.axemanComboTimer -= (context.timeScale || 1);
             if (fighter.axemanComboTimer <= 0) {
                 fighter.axemanHits = 0;
             }
@@ -176,7 +176,6 @@ export class ExecuteUltAbility extends Ability {
         this.executeThreshold = config.executeThreshold || 30;
         this.stunDuration = config.stunDuration || 120;
         this.stunDamage = config.stunDamage || 10;
-        this.ultVisualDuration = config.ultVisualDuration || 30;
         this.comboRequired = config.comboRequired || 2;
         this.lifestealPercent = config.lifestealPercent || 0.15;  // Default 15%
     }

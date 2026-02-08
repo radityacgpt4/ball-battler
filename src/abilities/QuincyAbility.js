@@ -87,7 +87,7 @@ export class QuincyAtkAbility extends Ability {
 
                 // Lock-on charging
                 if (Math.abs(angleDiff) < this.alignmentThreshold) {
-                        this.lockProgress = Math.min(this.lockProgress + this.lockChargeRate * 2, this.perfectLockThreshold);
+                        this.lockProgress = Math.min(this.lockProgress + this.lockChargeRate * 2 * (context.timeScale || 1), this.perfectLockThreshold);
                 } else {
                         this.lockProgress *= this.lockDecayRate;
                 }

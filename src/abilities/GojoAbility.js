@@ -157,7 +157,7 @@ export class GojoBlueAbility extends Ability {
     updateBlueOrbs(fighter, context) {
         if (!fighter.blueOrbs) return;
         const { game } = context;
-        const timeScale = 1; // context.timeScale || 1
+        const timeScale = context.timeScale || 1;
 
         fighter.blueOrbs = fighter.blueOrbs.filter(orb => {
             orb.timer -= timeScale;
@@ -165,13 +165,13 @@ export class GojoBlueAbility extends Ability {
 
             // Growth
             if (orb.radius < orb.maxRadius) {
-                orb.radius += (orb.maxRadius - orb.radius) * orb.growthSpeed;
-                orb.coreRadius += (orb.maxCoreRadius - orb.coreRadius) * orb.growthSpeed;
+                orb.radius += (orb.maxRadius - orb.radius) * orb.growthSpeed * timeScale;
+                orb.coreRadius += (orb.maxCoreRadius - orb.coreRadius) * orb.growthSpeed * timeScale;
             }
 
             // Continuous Movement (No friction - orb keeps moving)
-            orb.x += orb.vx;
-            orb.y += orb.vy;
+            orb.x += orb.vx * timeScale;
+            orb.y += orb.vy * timeScale;
 
             if (orb.timer <= 0) {
                 // Collapse visual
@@ -211,7 +211,7 @@ export class GojoBlueAbility extends Ability {
             // Clean up old status
             context.enemies.forEach(e => {
                 if (e.status.blueTrapTimer > 0) {
-                    e.status.blueTrapTimer--;
+                    e.status.blueTrapTimer -= (context.timeScale || 1);
                     if (e.status.blueTrapTimer <= 0) e.status.isTrappedInBlue = false;
                 }
             });
@@ -355,7 +355,7 @@ export class GojoUltAbility extends Ability {
         }
 
         if (this.isActive) {
-            this.timer--;
+            this.timer -= (context.timeScale || 1);
 
             // Projectile Stop Logic
             game.projectiles.forEach(p => {
@@ -380,7 +380,7 @@ export class GojoUltAbility extends Ability {
                     p.dx = 0;
                     p.dy = 0;
                     p.isFrozenByInfinity = true;
-                    p.frozenTimer = (p.frozenTimer || 0) + 1;
+                    p.frozenTimer = (p.frozenTimer || 0) + (context.timeScale || 1);
 
                     // Despawn after expiry
                     if (p.frozenTimer > this.projectileExpiry) {

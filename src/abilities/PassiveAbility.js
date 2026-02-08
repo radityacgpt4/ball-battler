@@ -58,6 +58,7 @@ export class StaticPassiveAbility extends Ability {
         this.radius = config.radius || 60;
         this.damage = config.damage || 2;
         this.tickRate = config.tickRate || 30;
+        this.stunDuration = config.stunDuration || 60;
     }
 
     // Static is handled in collision resolution
@@ -68,7 +69,7 @@ export class StaticPassiveAbility extends Ability {
 
         if (fighter.status.stun <= 0 && other.status.stun <= 0) {
             other.takeDamage(this.damage, false, false, fighter);
-            other.applyStatus('STUN');
+            other.applyStatus('STUN', this.stunDuration);
 
             // Visuals
             context.game.particles.spawnBolt([{ x: fighter.x, y: fighter.y }, { x: other.x, y: other.y }], '#00FFFF', 4);
@@ -255,9 +256,9 @@ export class ForceFieldAbility extends Ability {
 
         // Regen logic
         if (this.currentShield < this.maxShield && fighter.hp > 0) {
-            this.regenTimer++;
+            this.regenTimer += (context.timeScale || 1);
             if (this.regenTimer >= this.regenTickFrames) {
-                this.currentShield = Math.min(this.currentShield + 1, this.maxShield);
+                this.currentShield = Math.min(this.currentShield + this.regenRate, this.maxShield);
                 this.regenTimer = 0;
 
                 // Visual feedback

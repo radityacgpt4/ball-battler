@@ -62,12 +62,23 @@
                 <div class="start-container">
                     <div class="sound-toggle">SOUND AUTO-MUTES UNTIL START</div>
                     <button id="start-btn">ENGAGE BATTLE</button>
+                    <button id="tournament-btn" class="tournament-btn">RUN AUTO-TOURNAMENT</button>
+                    <div class="bestof-selector" id="bestof-selector">
+                        <span class="bestof-label">FORMAT:</span>
+                        <button class="bestof-btn" data-bestof="1">Bo1</button>
+                        <button class="bestof-btn" data-bestof="3">Bo3</button>
+                        <button class="bestof-btn active" data-bestof="5">Bo5</button>
+                        <button class="bestof-btn" data-bestof="7">Bo7</button>
+                    </div>
+                    <div class="tournament-info-text" id="tournament-info-text">Auto-battles all 1v1 matchups (Best of 5, first to 3) and exports results</div>
                 </div>
             </div>
 
             <div id="end-screen" class="screen-overlay">
                 <h1 id="win-msg">WINNER</h1>
                 <button class="restart-btn" id="restart-btn">SETUP NEW FIGHT</button>
+                <button class="restart-btn export-btn" id="export-csv-btn">EXPORT BATTLE DATA</button>
+                <div class="battle-count-badge" id="battle-count-badge">0 battle(s) recorded</div>
             </div>
         </div>
 
@@ -85,9 +96,15 @@
 
     <script type="module">
         import { Game } from './src/core/Game.js';
+        import { battleLogger } from './src/systems/BattleLogger.js';
+        import { TournamentRunner } from './src/systems/TournamentRunner.js';
+        import { FIGHTER_TYPES } from './src/data/fighters.js';
 
         // Create global game instance
         const game = new Game();
+
+        // Initialize tournament runner
+        game.tournamentRunner = new TournamentRunner(game);
 
         // Initialize the game
         game.init();
@@ -101,6 +118,39 @@
 
         document.getElementById('restart-btn').addEventListener('click', () => {
             game.showSelect();
+        });
+
+        document.getElementById('export-csv-btn').addEventListener('click', () => {
+            battleLogger.downloadCSV();
+        });
+
+        // Best-of selector
+        let selectedBestOf = 5;
+        const bestOfButtons = document.querySelectorAll('.bestof-btn');
+
+        function updateTournamentText() {
+            const fighterCount = Object.keys(FIGHTER_TYPES).length;
+            const matchups = (fighterCount * (fighterCount - 1)) / 2;
+            const maxBattles = matchups * selectedBestOf;
+            const winsNeeded = Math.ceil(selectedBestOf / 2);
+            document.getElementById('tournament-btn').textContent =
+                `RUN AUTO-TOURNAMENT (up to ${maxBattles} battles)`;
+            document.getElementById('tournament-info-text').textContent =
+                `Auto-battles all 1v1 matchups (Best of ${selectedBestOf}, first to ${winsNeeded}) and exports results`;
+        }
+
+        bestOfButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                bestOfButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedBestOf = parseInt(btn.dataset.bestof);
+                updateTournamentText();
+            });
+        });
+        updateTournamentText();
+
+        document.getElementById('tournament-btn').addEventListener('click', () => {
+            game.tournamentRunner.start(FIGHTER_TYPES, selectedBestOf);
         });
 
         // Debug Toggle

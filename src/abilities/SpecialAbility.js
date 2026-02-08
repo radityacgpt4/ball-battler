@@ -3,6 +3,7 @@
  * Handles unique abilities like Wall Slam
  */
 import { Ability } from './Ability.js';
+import { Physics } from '../systems/Physics.js';
 import { audioEngine } from '../systems/Audio.js';
 import { logger } from '../systems/Logger.js';
 
@@ -76,7 +77,7 @@ export class DoubleZapUltAbility extends Ability {
         if (!fighter.activeEffects.ultActive) return;
         const { enemies, game } = context;
 
-        if (fighter.activeEffects.ultTimer % 10 === 0) {
+        if (Math.floor(fighter.activeEffects.ultTimer) % 10 < (context.timeScale || 1)) {
             const rx = fighter.x + (Math.random() - 0.5) * 300;
             const ry = fighter.y + (Math.random() - 0.5) * 300;
             game.particles.spawnBolt([{ x: rx, y: ry - 200 }, { x: rx, y: ry }], '#ffaa00');

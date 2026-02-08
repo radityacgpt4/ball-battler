@@ -60,10 +60,10 @@ export class GatlingAbility extends Ability {
         }
 
         if (this.state === 'CHARGING') {
-            this.timer--;
+            this.timer -= (context.timeScale || 1);
 
             // Charge visuals - arms stretching back
-            if (this.timer % 10 === 0) { // Reduced frequency from %6
+            if (Math.floor(this.timer) % 10 < (context.timeScale || 1)) { // timeScale-safe interval
                 const angle = fighter.angle + Math.PI; // Behind fighter
                 context.game.particles.particles.push({
                     x: fighter.x + Math.cos(angle) * 20,
@@ -105,20 +105,20 @@ export class GatlingAbility extends Ability {
                 audioEngine.playHeavyImpact();
             }
         } else if (this.state === 'FIRING') {
-            this.timer--;
+            this.timer -= (context.timeScale || 1);
 
             // Keep fighter locked
             fighter.angle = this.lockedAngle;
             fighter.rotationSpeed = 0;
 
             // Rapid fire!
-            if (this.timer % this.fireRate === 0) {
+            if (Math.floor(this.timer) % this.fireRate < (context.timeScale || 1)) {
                 this.fireFist(fighter, context);
             }
 
             // Recoil pushback
-            fighter.dx -= Math.cos(this.lockedAngle) * 0.3;
-            fighter.dy -= Math.sin(this.lockedAngle) * 0.3;
+            fighter.dx -= Math.cos(this.lockedAngle) * 0.3 * (context.timeScale || 1);
+            fighter.dy -= Math.sin(this.lockedAngle) * 0.3 * (context.timeScale || 1);
 
             if (this.timer <= 0) {
                 this.state = 'IDLE';
@@ -247,7 +247,7 @@ export class BalloonAbility extends Ability {
         }
 
         if (this.active) {
-            this.timer--;
+            this.timer -= (context.timeScale || 1);
 
             // Animate inflation
             if (this.inflateProgress < 1) {
@@ -258,7 +258,7 @@ export class BalloonAbility extends Ability {
             }
 
             // Bouncy wobble effect - particles around body (Reduced frequency)
-            if (this.timer % 15 === 0) {
+            if (Math.floor(this.timer) % 15 < (context.timeScale || 1)) {
                 const wobbleAngle = Math.random() * Math.PI * 2;
                 context.game.particles.particles.push({
                     x: fighter.x + Math.cos(wobbleAngle) * fighter.radius,
@@ -271,7 +271,7 @@ export class BalloonAbility extends Ability {
             }
 
             // Deflation warning
-            if (this.timer < 20 && this.timer % 5 === 0) {
+            if (this.timer < 20 && Math.floor(this.timer) % 5 < (context.timeScale || 1)) {
                 context.game.particles.spawn(fighter.x, fighter.y, '#cccccc', 3);
             }
 

@@ -47,12 +47,18 @@ export class Game {
         this.timeScale = 1.0;
         this.finishTimer = 0;
         this.isMatchOver = false;
+        this.battleFrameCounter = 0;
+        this.MAX_TIMESCALE = 5.0;
 
         // FPS standardization
         this.targetFPS = CONSTANTS.TARGET_FPS || 60;
         this.frameTime = 1000 / this.targetFPS;
         this.lastFrameTime = 0;
         this.frameAccumulator = 0;
+
+        // Tournament mode
+        this.isHeadlessMode = false;
+        this.tournamentRunner = null;
     }
 
     init() {
@@ -212,6 +218,7 @@ export class Game {
     }
 
     startMatch() {
+        this.isHeadlessMode = false;
         audioEngine.init();
         logger.clear();
         logger.log(`MATCH START: ${this.gameMode} - Team 1 vs Team 2`, 'system');
@@ -233,7 +240,8 @@ export class Game {
         };
 
         this.arenaTimer = 0;
-        this.noHitTimer = 0; // Frames since last damage between fighters
+        this.noHitTimer = 0;
+        this.noHitShrinkCount = 0;
         this.timeScale = 1.0;
         this.finishTimer = 0;
         this.isMatchOver = false;
@@ -293,10 +301,135 @@ export class Game {
         this.running = true;
         this.lastFrameTime = performance.now();
         this.frameAccumulator = 0;
+        this.battleFrameCounter = 0;
 
         battleLogger.startBattle(this.entities);
 
         requestAnimationFrame(this.loop.bind(this));
+    }
+
+    /**
+     * Start match in headless mode (no rendering, for tournaments)
+     */
+    startMatchHeadless(timeScale = 10.0) {
+        this.isHeadlessMode = true;
+        this.timeScale = Math.min(timeScale, this.MAX_TIMESCALE);
+
+        logger.clear();
+        logger.log(`HEADLESS MATCH: ${this.gameMode} - Team 1 vs Team 2`, 'system');
+
+        // Arena size for 1v1
+        const [w, h] = [550, 550];
+        this.width = w;
+        this.height = h;
+
+        // Reset Arena Bounds
+        this.arenaBounds = {
+            x: 0,
+            y: 0,
+            width: this.width,
+            height: this.height
+        };
+
+        this.arenaTimer = 0;
+        this.noHitTimer = 0;
+        this.noHitShrinkCount = 0;
+        this.finishTimer = 0;
+        this.isMatchOver = false;
+        this.battleFrameCounter = 0;
+
+        this.entities = [];
+        this.projectiles = [];
+        this.blackholes = [];
+        this.particles = new ParticleSystem();
+        this.combatText = new CombatTextHelper(this.particles);
+
+        // Spawn Team 1 fighters (left side)
+        const teamSize = this.p1Team.length;
+        const p1StartX = 120;
+        const p1StartY = this.height / 2;
+
+        this.p1Team.forEach((type, idx) => {
+            const fighter = new Fighter(
+                1,
+                p1StartX,
+                p1StartY,
+                type,
+                FIGHTER_TYPES,
+                this
+            );
+            fighter.angle = Math.PI / 2 + Math.random() * Math.PI;
+            this.entities.push(fighter);
+        });
+
+        // Spawn Team 2 fighters (right side)
+        const p2StartX = this.width - 120;
+        const p2StartY = this.height / 2;
+
+        this.p2Team.forEach((type, idx) => {
+            const fighter = new Fighter(
+                2,
+                p2StartX,
+                p2StartY,
+                type,
+                FIGHTER_TYPES,
+                this
+            );
+            fighter.angle = (Math.random() - 0.5) * Math.PI;
+            this.entities.push(fighter);
+        });
+
+        this.running = true;
+        this.lastFrameTime = performance.now();
+        this.frameAccumulator = 0;
+
+        battleLogger.startBattle(this.entities);
+
+        this.loopHeadless();
+    }
+
+    /**
+     * Headless loop (no rendering, runs entire battle synchronously)
+     */
+    loopHeadless() {
+        const MAX_FRAMES = 60 * 60 * 5; // Safety: max 5 minutes at 60fps
+        let frame = 0;
+        const substeps = Math.max(1, Math.ceil(this.timeScale));
+        const substepScale = this.timeScale / substeps; // always <= 1.0
+
+        while (this.running && frame < MAX_FRAMES) {
+            for (let s = 0; s < substeps; s++) {
+                if (!this.isMatchOver) {
+                    this.handleArenaShrink();
+                }
+
+                this.entities.forEach(ent => ent.update(this.entities, substepScale));
+                this.resolveCollisions();
+                this.resolveTowerCollisions();
+                this.projectiles.forEach(p => p.update(substepScale));
+
+                updateBlackholes(this, substepScale);
+                this.checkWinCondition();
+                this.battleFrameCounter++;
+            }
+
+            battleLogger.recordInterval(this.entities);
+
+            frame++;
+        }
+
+        // Force end if hit max frames
+        if (this.running) {
+            this.running = false;
+            battleLogger.endBattle('Draw', this.entities);
+        }
+    }
+
+    /**
+     * Get fighter display name from type key
+     */
+    getFighterName(typeKey) {
+        return FIGHTER_TYPES[typeKey]?.name || typeKey;
     }
 
     updateCanvasSize() {
@@ -315,12 +448,14 @@ export class Game {
             this.shrinkArena();
         }
 
-        // No-hit shrink: if no damage dealt for 5 seconds (300 frames), force shrink
+        // No-hit shrink: progressively longer intervals (5s, 6s, 7s, ...)
         this.noHitTimer++;
-        if (this.noHitTimer >= 300) {
+        const noHitThreshold = 300 + (this.noHitShrinkCount || 0) * 60;
+        if (this.noHitTimer >= noHitThreshold) {
             this.noHitTimer = 0;
+            this.noHitShrinkCount = (this.noHitShrinkCount || 0) + 1;
             this.shrinkArena();
-            logger.log('No hits detected — arena shrinks to force engagement!', 'warn');
+            logger.log(`No hits detected — arena shrinks to force engagement! (next in ${((noHitThreshold + 60) / 60).toFixed(0)}s)`, 'warn');
         }
     }
 
@@ -659,37 +794,44 @@ export class Game {
     checkWinCondition() {
         if (this.isMatchOver) {
             this.finishTimer++;
-            // Wait 120 frames (approx 2s at 60fps, but effectively longer due to timescale)
-            if (this.finishTimer > 150) {
+
+            // In headless mode, end immediately after match is over
+            const finishThreshold = this.isHeadlessMode ? 10 : 150;
+
+            if (this.finishTimer > finishThreshold) {
                 this.running = false;
                 const team1Alive = this.entities.filter(e => !e.isDead && e.id === 1);
                 const team2Alive = this.entities.filter(e => !e.isDead && e.id === 2);
-                const overlay = document.getElementById('end-screen');
-                const msg = document.getElementById('win-msg');
 
                 // Finalize battle logging
                 const winLabel = (team1Alive.length === 0 && team2Alive.length === 0) ? 'Draw'
                     : team1Alive.length > 0 ? 'Team 1' : 'Team 2';
                 battleLogger.endBattle(winLabel, this.entities);
 
-                // Update export badge
-                const badge = document.getElementById('battle-count-badge');
-                if (badge) badge.textContent = `${battleLogger.getBattleCount()} battle(s) recorded`;
+                // Only update UI if not in headless mode
+                if (!this.isHeadlessMode) {
+                    const overlay = document.getElementById('end-screen');
+                    const msg = document.getElementById('win-msg');
 
-                overlay.style.display = 'flex';
+                    // Update export badge
+                    const badge = document.getElementById('battle-count-badge');
+                    if (badge) badge.textContent = `${battleLogger.getBattleCount()} battle(s) recorded`;
 
-                if (team1Alive.length === 0 && team2Alive.length === 0) {
-                    msg.innerText = "DRAW";
-                    msg.style.color = "white";
-                    logger.log("MATCH END: DRAW", 'system');
-                } else if (team1Alive.length > 0) {
-                    msg.innerText = `TEAM 1 WINS!`;
-                    msg.style.color = '#4fc3f7';
-                    logger.log(`MATCH END: TEAM 1 WINS! (${team1Alive.length} survivors)`, 'system');
-                } else {
-                    msg.innerText = `TEAM 2 WINS!`;
-                    msg.style.color = '#ff6b6b';
-                    logger.log(`MATCH END: TEAM 2 WINS! (${team2Alive.length} survivors)`, 'system');
+                    overlay.style.display = 'flex';
+
+                    if (team1Alive.length === 0 && team2Alive.length === 0) {
+                        msg.innerText = "DRAW";
+                        msg.style.color = "white";
+                        logger.log("MATCH END: DRAW", 'system');
+                    } else if (team1Alive.length > 0) {
+                        msg.innerText = `TEAM 1 WINS!`;
+                        msg.style.color = '#4fc3f7';
+                        logger.log(`MATCH END: TEAM 1 WINS! (${team1Alive.length} survivors)`, 'system');
+                    } else {
+                        msg.innerText = `TEAM 2 WINS!`;
+                        msg.style.color = '#ff6b6b';
+                        logger.log(`MATCH END: TEAM 2 WINS! (${team2Alive.length} survivors)`, 'system');
+                    }
                 }
             }
             return;
@@ -701,8 +843,12 @@ export class Game {
 
         if (team1Alive.length === 0 || team2Alive.length === 0) {
             this.isMatchOver = true;
-            this.timeScale = 0.2; // SLOW MOTION
-            audioEngine.playWin();
+
+            // In headless mode, don't slow down or play sounds
+            if (!this.isHeadlessMode) {
+                this.timeScale = 0.2; // SLOW MOTION
+                audioEngine.playWin();
+            }
         }
     }
 
@@ -721,31 +867,27 @@ export class Game {
             this.frameAccumulator = this.frameTime;
         }
 
-        // Fixed time step updates
+        // Fixed time step updates (with physics substeps for high timeScale)
         while (this.frameAccumulator >= this.frameTime) {
-            // Only shrink arena if match is not over
-            if (!this.isMatchOver) {
-                this.handleArenaShrink();
+            const substeps = Math.max(1, Math.ceil(this.timeScale));
+            const substepScale = this.timeScale / substeps;
+
+            for (let s = 0; s < substeps; s++) {
+                if (!this.isMatchOver) {
+                    this.handleArenaShrink();
+                }
+
+                this.entities.forEach(ent => ent.update(this.entities, substepScale));
+                this.resolveCollisions();
+                this.resolveTowerCollisions();
+                this.projectiles.forEach(p => p.update(substepScale));
+                updateBlackholes(this, substepScale);
+                this.checkWinCondition();
+                this.battleFrameCounter++;
             }
-
-            // Performance profiling (check console for stutter sources)
-            // console.time('entities');
-            this.entities.forEach(ent => ent.update(this.entities, this.timeScale));
-            // console.timeEnd('entities');
-
-            // console.time('collisions');
-            this.resolveCollisions();
-            this.resolveTowerCollisions();
-            // console.timeEnd('collisions');
-
-            this.projectiles.forEach(p => p.update(this.timeScale));
-
-            // Update blackholes (Frieren ULT)
-            updateBlackholes(this, this.timeScale);
 
             battleLogger.recordInterval(this.entities);
             this.updateUI();
-            this.checkWinCondition();
 
             this.frameAccumulator -= this.frameTime;
         }
@@ -757,6 +899,19 @@ export class Game {
         this.ctx.strokeStyle = '#333';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(this.arenaBounds.x, this.arenaBounds.y, this.arenaBounds.width, this.arenaBounds.height);
+
+        // Draw battle timer (top center, behind entities)
+        const gameSeconds = Math.floor(this.battleFrameCounter / 60);
+        const mins = Math.floor(gameSeconds / 60);
+        const secs = gameSeconds % 60;
+        const timerText = `${mins}:${secs.toString().padStart(2, '0')}`;
+        this.ctx.save();
+        this.ctx.font = 'bold 14px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'top';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        this.ctx.fillText(timerText, this.width / 2, 6);
+        this.ctx.restore();
 
         // Draw Danger Zone
         if (this.arenaBounds.width < this.width) {

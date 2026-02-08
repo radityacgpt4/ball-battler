@@ -187,6 +187,7 @@ export class LaserAbility extends Ability {
         this.coreWidth = config.coreWidth || 8;
         this.tickRate = config.tickRate || 3;
         this.slowDuration = config.slowDuration || 45;
+        this.slowStrength = config.slowStrength; // movement multiplier on hit (lower = more slow)
 
         this.state = 'IDLE';
         this.timer = 0;
@@ -197,8 +198,6 @@ export class LaserAbility extends Ability {
     execute(fighter, context) {
         this.state = 'CHARGING';
         this.timer = this.chargeTime;
-
-        fighter.cooldowns.atk = 0;
 
         this.originalRotation = fighter.rotationSpeed;
 
@@ -212,19 +211,19 @@ export class LaserAbility extends Ability {
             fighter.rotationSpeed = this.originalRotation;
             fighter.laserSpeedMult = 1.0;
             this.hitBuffer.clear();
-            fighter.cooldowns.atk = 1;
+            fighter.cooldowns.atk = this.chargeTime;
             return;
         }
 
         if (this.state === 'CHARGING') {
-            this.timer--;
+            this.timer -= (context.timeScale || 1);
 
             const chargeRatio = 1 - (this.timer / this.chargeTime);
             fighter.laserState = 'CHARGING';
             fighter.laserChargeRatio = chargeRatio;
 
             const { game } = context;
-            if (this.timer % 10 === 0) {
+            if (Math.floor(this.timer) % 10 < (context.timeScale || 1)) {
                 game.particles.particles.push({
                     x: fighter.x + (Math.random() - 0.5) * 40,
                     y: fighter.y + (Math.random() - 0.5) * 40,
@@ -253,11 +252,11 @@ export class LaserAbility extends Ability {
 
         } else if (this.state === 'FIRING') {
             fighter.laserState = 'FIRING';
-            this.timer--;
+            this.timer -= (context.timeScale || 1);
 
             this.scanBeam(fighter, context);
 
-            if (this.timer % this.tickRate === 0) {
+            if (Math.floor(this.timer) % this.tickRate < (context.timeScale || 1)) {
                 this.applyBufferedDamage(fighter, context);
             }
 
@@ -268,7 +267,7 @@ export class LaserAbility extends Ability {
                 fighter.rotationSpeed = this.originalRotation;
                 fighter.laserSpeedMult = 1.0;
                 this.hitBuffer.clear();
-                fighter.cooldowns.atk = 1;
+                fighter.cooldowns.atk = this.chargeTime;
             }
         } else if (this.canUse(fighter, context)) {
             this.execute(fighter, context);
@@ -365,7 +364,7 @@ export class LaserAbility extends Ability {
         }
 
         if (closest.type === 'enemy') {
-            closest.data.applyStatus('SLOW', this.slowDuration);
+            closest.data.applyStatus('SLOW', this.slowDuration, null, this.slowStrength);
             this.hitBuffer.add(closest.data);
             this.lastHitPos = { x: hitX, y: hitY };
         } else if (closest.type === 'shield') {

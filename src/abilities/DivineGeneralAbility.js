@@ -34,7 +34,7 @@ export class DivineGeneralAtkAbility extends Ability {
 
         // Reset bonus damage if idle for too long
         if (this.currentBonus > 0) {
-            this.lastHitTime++;
+            this.lastHitTime += (context.timeScale || 1);
             if (this.lastHitTime > this.resetTime) {
                 this.currentBonus = 0;
                 logger.log(`${fighter.name} Eightfold Strike reset`, 'info');
@@ -175,7 +175,7 @@ export class DivineGeneralDefAbility extends Ability {
 
     update(fighter, context) {
         if (this.storedDamage > 0) {
-            this.healDelayTimer++;
+            this.healDelayTimer += (context.timeScale || 1);
 
             // Sync with UI cooldown system
             fighter.cooldowns.def = this.healDelay - this.healDelayTimer;

@@ -844,6 +844,26 @@ canvas {
         letter-spacing: 1px;
     }
 
+    .bestof-selector {
+        gap: 4px;
+        margin: 4px 0;
+    }
+
+    .bestof-btn {
+        padding: 4px 10px;
+        font-size: 0.65rem;
+    }
+
+    .bestof-label {
+        font-size: 0.6rem;
+    }
+
+    /* Tournament UI needs scrolling on mobile (screen-overlay sets overflow:hidden for char-select) */
+    #tournament-ui.screen-overlay {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     /* Canvas scales down */
     canvas {
         width: 100%;
@@ -1084,6 +1104,53 @@ canvas {
 /* Tournament UI Styles  */
 /* ===================== */
 
+/* Best-of Selector */
+.bestof-selector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+}
+
+.bestof-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-right: 4px;
+}
+
+.bestof-btn {
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 3px;
+}
+
+.bestof-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-blue);
+    color: var(--text-main);
+}
+
+.bestof-btn.active {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: #000;
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+}
+
+.tournament-info-text {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+
 /* Tournament header */
 .tournament-header {
     display: flex;
@@ -1252,6 +1319,19 @@ canvas {
     text-align: right;
     flex-shrink: 0;
     color: var(--accent-gold);
+}
+
+.hp-col {
+    width: 40px;
+    text-align: right;
+    flex-shrink: 0;
+    color: #4ade80;
+}
+
+.matrix-hp-sub {
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 400;
 }
 
 /* Matchup Matrix */

@@ -200,7 +200,7 @@ export class KunaiAbility extends Ability {
         // Decrease zap immunity
         for (const enemy of enemies) {
             if (enemy.kunaiZapImmune > 0) {
-                enemy.kunaiZapImmune--;
+                enemy.kunaiZapImmune -= (context.timeScale || 1);
             }
         }
 
@@ -213,7 +213,7 @@ export class KunaiAbility extends Ability {
         const game = fighter.game;
 
         if (fighter.chainDashQueue.length > 1) {
-            if (Math.floor(fighter.dashTimer) % 4 === 0) {
+            if (Math.floor(fighter.dashTimer) % 4 < timeScale) {
                 const current = fighter.chainDashQueue.shift();
                 const next = fighter.chainDashQueue[0];
 

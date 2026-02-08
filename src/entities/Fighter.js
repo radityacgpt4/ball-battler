@@ -96,7 +96,9 @@ export class Fighter {
 
         // Use AbilityRegistry for dynamic ability creation
         abilities.atk = skills.atk ? AbilityRegistry.create(skills.atk.type, skills.atk, 'atk') : null;
-        abilities.def = skills.def ? AbilityRegistry.create(skills.def.type, skills.def, 'def') : null;
+        abilities.def = skills.def ? AbilityRegistry.create(skills.def.type, skills.def, 'def', {
+            ultConfig: skills.ult
+        }) : null;
         abilities.ult = skills.ult ? AbilityRegistry.create(skills.ult.type, skills.ult, 'ult', {
             atkConfig: skills.atk,
             ProjectileClass: Projectile
@@ -195,12 +197,12 @@ export class Fighter {
 
     handleMovement(timeScale) {
         let speedMult = this.laserSpeedMult || 1.0;
-        if (this.status.slow > 0) speedMult *= 0.3; // 70% slow (Cumulative)
+        if (this.status.slow > 0) speedMult *= (this.status.slowStrength ?? 0.3);
 
         // Domain slow (20% reduction)
         if (this.status.domainSlow > 0) {
-            speedMult *= 0.8;
-            this.status.domainSlow--;
+            speedMult *= (1 - (this.status.domainSlowAmount || 0.2));
+            this.status.domainSlow -= timeScale;
         }
 
         this.x += this.dx * speedMult * timeScale;
@@ -219,7 +221,7 @@ export class Fighter {
         // WALL SLAM Logic (Shieldbearer Ult)
         if (bounced && this.pendingWallSlam) {
             const attacker = this.pendingWallSlam.owner;
-            const damage = attacker.skills.ult.damage;
+            const damage = attacker.skills.ult.wallBonusDamage ?? attacker.skills.ult.damage;
 
             this.takeDamage(damage, false, false, attacker);
             audioEngine.playHeavyImpact();
@@ -289,7 +291,7 @@ export class Fighter {
             } else if (speed > 0) {
                 // Normal movement driving
                 let mod = 1.0;
-                if (this.status.slow > 0) mod *= 0.75; // 25% slow
+                if (this.status.slow > 0) mod *= Math.max(0.5, (this.status.slowStrength ?? 0.3) + 0.45); // rotation slow (softer than movement)
 
                 // Burn Slow (10% per stack)
                 if (this.status.burn > 0) {
@@ -340,8 +342,8 @@ export class Fighter {
             this.dashHandler.updateDash(this, timeScale);
         } else {
             // Generic Dash Movement (Soldier Retreat, etc.)
-            this.x += this.dx;
-            this.y += this.dy;
+            this.x += this.dx * timeScale;
+            this.y += this.dy * timeScale;
 
             // Simple visual trail
             if (this.typeKey === 'SWORD_MASTER') {
@@ -456,7 +458,7 @@ export class Fighter {
 
         // Handle active ultimate effects
         if (this.activeEffects.ultActive) {
-            this.activeEffects.ultTimer--;
+            this.activeEffects.ultTimer -= timeScale;
             if (this.activeEffects.ultTimer <= 0) {
                 this.activeEffects.ultActive = false;
                 // OCP Compliant: Call stop on the ultimate ability to reset unique flags
@@ -525,7 +527,7 @@ export class Fighter {
         return amount; // Return final damage dealt
     }
 
-    applyStatus(type, duration = null, applier = null) {
+    applyStatus(type, duration = null, applier = null, strength = undefined) {
         this.battleStats.statusesReceived[type] = (this.battleStats.statusesReceived[type] || 0) + 1;
         logger.log(`${this.name} applied status: ${type}`, 'info');
         if (type === 'BLEED') {
@@ -538,6 +540,7 @@ export class Fighter {
                 this.game.particles.spawn(this.x, this.y, '#cccccc', 5);
             }
             this.status.slow = duration || 30;
+            if (strength !== undefined) this.status.slowStrength = strength;
         }
         if (type === 'BURN') {
             this.status.burn = duration || 180;

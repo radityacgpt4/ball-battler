@@ -105,7 +105,7 @@ export class DivineBrawlerAtkAbility extends Ability {
         // Knockback for Black Flash - FIXED LOGIC
         if (isBlackFlash) {
             const angle = Math.atan2(enemy.y - fighter.y, enemy.x - fighter.x);
-            const forceVal = 12; // Standardized Force
+            const forceVal = this.baseKnockback;
             const speed = forceVal / enemy.mass;
             enemy.dx += Math.cos(angle) * speed;
             enemy.dy += Math.sin(angle) * speed;
@@ -182,7 +182,7 @@ export class DivineBrawlerDefAbility extends Ability {
 
         // Priority 2: Fallback swap
         if (!fighter._fallbackSwapTimer) fighter._fallbackSwapTimer = 0;
-        fighter._fallbackSwapTimer++;
+        fighter._fallbackSwapTimer += (context.timeScale || 1);
 
         if (fighter._fallbackSwapTimer >= this.fallbackCooldown) {
             this.execute(fighter, { enemy, game: context.game, triggeredByProjectile: false });

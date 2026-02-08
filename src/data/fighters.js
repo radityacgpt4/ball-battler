@@ -307,7 +307,7 @@ export const FIGHTER_TYPES = {
     AXEMAN: {
         name: "Axeman",
         color: "#800000",
-        hp: 100, mass: 1.2, speed: 4.6, rotationSpeed: 0.16,
+        hp: 100, mass: 1.2, speed: 5, rotationSpeed: 0.2,
         skills: {
             atk: {
                 name: "Heavy Swing",
@@ -330,8 +330,8 @@ export const FIGHTER_TYPES = {
                 isPassive: true,
                 // Configurable properties
                 stackThreshold: 0.1,
-                speedBonusPerStack: 0.15,
-                rotBonusPerStack: 0.2
+                speedBonusPerStack: 0.2,
+                rotBonusPerStack: 0.25
             },
             ult: {
                 name: "Execution",
@@ -341,8 +341,8 @@ export const FIGHTER_TYPES = {
                 // Configurable properties
                 cooldown: 60,
                 executeRange: 80,
-                executeThreshold: 30,
-                stunDuration: 45,
+                executeThreshold: 35,
+                stunDuration: 30,
                 stunDamage: 5,
                 comboRequired: 2,
                 lifestealPercent: 1

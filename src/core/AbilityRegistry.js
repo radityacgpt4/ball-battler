@@ -24,6 +24,7 @@ import { SwordShredAbility, ODMDefAbility, GodspeedODMAbility } from '../abiliti
 import { MechaAtkAbility, MechaDefAbility, MechaUltAbility } from '../abilities/MechaAbility.js';
 import { IchigoAtkAbility, IchigoDefAbility, IchigoUltAbility } from '../abilities/IchigoAbility.js';
 import { GojoRedAbility, GojoBlueAbility, GojoUltAbility } from '../abilities/GojoAbility.js';
+import { SuperSoldierAtkAbility, SuperSoldierUltAbility } from '../abilities/SuperSoldierAbility.js';
 
 class AbilityRegistryClass {
     constructor() {
@@ -159,6 +160,10 @@ class AbilityRegistryClass {
         this.register('GOJO_RED', GojoRedAbility);
         this.register('GOJO_BLUE', GojoBlueAbility);
         this.register('INFINITY_VOID', GojoUltAbility);
+
+        // Super Soldier abilities (DEF reuses generic SHIELD_DEFLECT)
+        this.register('SHIELD_THROW', SuperSoldierAtkAbility);
+        this.register('MJOLNIR_THROW', SuperSoldierUltAbility);
     }
 }
 

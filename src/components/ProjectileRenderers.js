@@ -1089,3 +1089,70 @@ export class RedOrbRenderer {
         ctx.restore();
     }
 }
+
+// =============================================================================
+// SUPER SOLDIER RENDERERS
+// =============================================================================
+export class ShieldRenderer {
+    draw(ctx, p) {
+        const r = p.radius || 9;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.spin || 0);
+
+        // Concentric rings (red / white / red / blue center)
+        const rings = ['#c0392b', '#f5f5f5', '#c0392b', '#2e5cb8'];
+        for (let i = 0; i < rings.length; i++) {
+            ctx.beginPath();
+            ctx.arc(0, 0, r * (1 - i * 0.22), 0, Math.PI * 2);
+            ctx.fillStyle = rings[i];
+            ctx.fill();
+        }
+
+        // White star
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const a = -Math.PI / 2 + i * 2 * Math.PI / 5;
+            const outer = r * 0.34, inner = r * 0.16;
+            ctx.lineTo(Math.cos(a) * outer, Math.sin(a) * outer);
+            const a2 = a + Math.PI / 5;
+            ctx.lineTo(Math.cos(a2) * inner, Math.sin(a2) * inner);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+export class MjolnirRenderer {
+    draw(ctx, p) {
+        const r = p.radius || 10;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.spin || 0);
+
+        // Handle
+        ctx.strokeStyle = '#8a5a2b';
+        ctx.lineWidth = Math.max(2, r * 0.28);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, r * 1.7);
+        ctx.stroke();
+
+        // Head
+        ctx.fillStyle = '#9aa4b2';
+        ctx.fillRect(-r * 0.95, -r * 0.7, r * 1.9, r * 1.0);
+        ctx.strokeStyle = '#5b6470';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-r * 0.95, -r * 0.7, r * 1.9, r * 1.0);
+
+        // Enchanted glow band
+        ctx.fillStyle = 'rgba(125,184,255,0.55)';
+        ctx.fillRect(-r * 0.95, -r * 0.7, r * 1.9, r * 0.22);
+
+        ctx.restore();
+    }
+}

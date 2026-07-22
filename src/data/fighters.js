@@ -163,6 +163,55 @@ export const FIGHTER_TYPES = {
             }
         }
     },
+    SUPER_SOLDIER: {
+        name: "Super Soldier",
+        color: "#2e5cb8",
+        hp: 105, mass: 1.3, speed: 5, rotationSpeed: 0.14,
+        skills: {
+            atk: {
+                name: "Shield Throw",
+                desc: "Ricocheting shield; damage ramps per bounce, then returns to hand.",
+                type: "SHIELD_THROW",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 90,            // recovery buffer AFTER the shield returns (frames)
+                baseDamage: 8,
+                rampPerBounce: 0.4,      // +40% damage per bounce
+                maxBounces: 4,           // ramp/ricochet cap -> triggers the return
+                damageCeiling: 30,       // hard damage clamp (safety net)
+                ballBounceMultiplier: 0.5, // ball bounces ramp at half weight
+                speed: 11,
+                radius: 9,
+                knockback: 4,
+                maxAirTime: 240          // safety: force return if it never comes back
+            },
+            def: {
+                name: "Vibranium Guard",
+                desc: "Wide front arc that blocks and reflects projectiles back.",
+                type: "SHIELD_DEFLECT",
+                isPassive: true,
+                // Configurable properties
+                arcAngle: Math.PI * 0.7,
+                shieldRadius: 9
+            },
+            ult: {
+                name: "Mjolnir Throw",
+                desc: "Hurls Mjolnir along the shield's path; striking the airborne shield unleashes a stunning shockwave.",
+                type: "MJOLNIR_THROW",
+                isPassive: false,
+                // Configurable properties
+                cooldown: 180,
+                directDamage: 28,        // heavy on a direct opponent hit
+                shockwaveRadius: 55,
+                shockwaveDamage: 12,     // light radiating damage
+                stunDuration: 50,
+                speed: 13,
+                radius: 10,
+                coneSpread: 0.45,        // radians of random spread around shield heading
+                maxAirTime: 150
+            }
+        }
+    },
     NINJA: {
         name: "Yellow Flash",
         color: "#ffd700",

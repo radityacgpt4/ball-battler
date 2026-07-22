@@ -736,6 +736,275 @@ export class WorldSlashBehavior {
     }
 }
 
+// =============================================================================
+// SUPER SOLDIER - Shield Throw (ricochet + per-bounce damage ramp + return)
+// =============================================================================
+export class ShieldThrowBehavior {
+    constructor(config = {}) {
+        this.base = config.baseDamage || 8;
+        this.rampPerBounce = config.rampPerBounce || 0.4;
+        this.maxBounces = config.maxBounces || 4;
+        this.ceiling = config.damageCeiling || 30;
+        this.ballRampMult = config.ballBounceMultiplier || 0.5;
+        this.maxAirTime = config.maxAirTime || 240;
+        this.recovery = config.cooldown || 90;
+    }
+
+    // Ramped damage, hard-capped by the ceiling
+    getDamage(p) {
+        return Math.min(this.base * (1 + (p.rampTier || 0) * this.rampPerBounce), this.ceiling);
+    }
+
+    update(p, timeScale) {
+        p.handlesOwnCollision = true;
+        p.ignoreBounds = true;
+        if (p.isFrozenByInfinity) return;
+
+        // Lazy-init state
+        if (p.rampTier === undefined) p.rampTier = 0;
+        if (p.bounceCount === undefined) p.bounceCount = 0;
+        if (p.recentHits === undefined) p.recentHits = {};
+        p.airTime = (p.airTime || 0) + timeScale;
+        p.spin = (p.spin || 0) + 0.6 * timeScale;
+
+        const owner = p.owner;
+
+        // Force the return if it has been out too long or the owner is gone
+        if (!p.returning && (p.airTime > this.maxAirTime || !owner || owner.isDead)) {
+            p.returning = true;
+        }
+
+        // Move
+        p.x += p.dx * timeScale;
+        p.y += p.dy * timeScale;
+
+        // Motion trail
+        if (Math.random() < 0.5) {
+            p.game.particles.particles.push({
+                x: p.x, y: p.y, vx: 0, vy: 0,
+                life: 0.25, decay: 0.12, size: 3, color: '#3d5a9e', type: 'dot'
+            });
+        }
+
+        if (p.returning) {
+            this.handleReturn(p);
+        } else {
+            this.handleWallBounce(p);
+        }
+
+        // Entity contact: damage + reduced-ramp ricochet (runs outbound AND on the
+        // "hot" return trip, so the shield keeps its accumulated ramp coming back)
+        this.handleEntities(p);
+
+        // Decay per-entity hit immunity
+        for (const k in p.recentHits) {
+            p.recentHits[k] -= timeScale;
+            if (p.recentHits[k] <= 0) delete p.recentHits[k];
+        }
+    }
+
+    handleWallBounce(p) {
+        const b = p.game.arenaBounds;
+        let bounced = false;
+        if (p.x < b.x + p.radius) { p.x = b.x + p.radius; p.dx = Math.abs(p.dx); bounced = true; }
+        else if (p.x > b.x + b.width - p.radius) { p.x = b.x + b.width - p.radius; p.dx = -Math.abs(p.dx); bounced = true; }
+        if (p.y < b.y + p.radius) { p.y = b.y + p.radius; p.dy = Math.abs(p.dy); bounced = true; }
+        else if (p.y > b.y + b.height - p.radius) { p.y = b.y + b.height - p.radius; p.dy = -Math.abs(p.dy); bounced = true; }
+
+        if (bounced) {
+            p.angle = Math.atan2(p.dy, p.dx);
+            this.registerBounce(p, 1.0); // walls = full ramp
+            audioEngine.playBounce();
+            p.game.particles.spawn(p.x, p.y, '#aeb8d0', 4);
+        }
+    }
+
+    registerBounce(p, weight) {
+        if (p.returning) return; // ramp only accumulates outbound
+        p.bounceCount += 1;
+        p.rampTier += weight;
+        if (p.bounceCount >= this.maxBounces) {
+            p.returning = true; // hit the bounce cap -> come home hot
+            p.game.particles.spawn(p.x, p.y, '#ffd700', 6);
+        }
+    }
+
+    handleEntities(p) {
+        const owner = p.owner;
+        const enemies = p.game.entities.filter(e => e !== owner && !e.isDead && (!owner || e.id !== owner.id));
+        for (const e of enemies) {
+            const d = Physics.dist(p.x, p.y, e.x, e.y);
+            if (d < e.radius + p.radius && !p.recentHits[e.id]) {
+                const dmg = Math.ceil(this.getDamage(p));
+                e.takeDamage(dmg, false, false, owner);
+                if (p.knockbackForce) {
+                    const ka = Math.atan2(e.y - p.y, e.x - p.x);
+                    e.dx += Math.cos(ka) * p.knockbackForce;
+                    e.dy += Math.sin(ka) * p.knockbackForce;
+                }
+                p.recentHits[e.id] = 12; // ~0.2s re-hit immunity
+                p.game.particles.spawn(e.x, e.y, '#e8ecf5', 6);
+                audioEngine.playHit();
+
+                // Ricochet off the ball (reduced ramp)
+                const ra = Math.atan2(p.y - e.y, p.x - e.x);
+                const sp = Math.hypot(p.dx, p.dy);
+                p.dx = Math.cos(ra) * sp;
+                p.dy = Math.sin(ra) * sp;
+                p.angle = ra;
+                this.registerBounce(p, this.ballRampMult);
+            }
+        }
+    }
+
+    handleReturn(p) {
+        const owner = p.owner;
+        if (!owner || owner.isDead) { this.deactivate(p); return; }
+
+        const a = Math.atan2(owner.y - p.y, owner.x - p.x);
+        const sp = Math.hypot(p.dx, p.dy) || 11;
+        p.dx = Math.cos(a) * sp;
+        p.dy = Math.sin(a) * sp;
+        p.angle = a;
+
+        if (Physics.dist(p.x, p.y, owner.x, owner.y) < owner.radius + p.radius) {
+            // Caught -> start the recovery cooldown before it can be thrown again
+            owner.cooldowns.atk = this.recovery;
+            owner.maxCooldowns.atk = this.recovery;
+            p.game.particles.spawn(owner.x, owner.y, '#e8ecf5', 5);
+            this.deactivate(p);
+        }
+    }
+
+    deactivate(p) {
+        p.active = false;
+        if (p.owner) {
+            p.owner.shieldOut = false;
+            if (p.owner.activeShieldProjectile === p) p.owner.activeShieldProjectile = null;
+        }
+    }
+}
+
+// =============================================================================
+// SUPER SOLDIER - Mjolnir Throw (cone throw, direct hit, shield-combo shockwave)
+// =============================================================================
+export class MjolnirBehavior {
+    constructor(config = {}) {
+        this.directDamage = config.directDamage || 28;
+        this.shockRadius = config.shockwaveRadius || 55;
+        this.shockDamage = config.shockwaveDamage || 12;
+        this.stun = config.stunDuration || 50;
+        this.maxAirTime = config.maxAirTime || 150;
+    }
+
+    update(p, timeScale) {
+        p.handlesOwnCollision = true;
+        p.ignoreBounds = true;
+        if (p.isFrozenByInfinity) return;
+
+        p.airTime = (p.airTime || 0) + timeScale;
+        p.spin = (p.spin || 0) + 0.8 * timeScale;
+
+        const owner = p.owner;
+
+        // Lightning trail
+        if (Math.random() < 0.6) {
+            p.game.particles.particles.push({
+                x: p.x, y: p.y,
+                vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2,
+                life: 0.3, decay: 0.1, size: 2 + Math.random() * 2,
+                color: Math.random() < 0.5 ? '#cfe8ff' : '#7db8ff', type: 'square'
+            });
+        }
+
+        // Move
+        p.x += p.dx * timeScale;
+        p.y += p.dy * timeScale;
+
+        if (!p.returning && (p.airTime > this.maxAirTime || !owner || owner.isDead)) {
+            p.returning = true;
+        }
+
+        // NO wall interaction — clamp inside the arena and turn back instead
+        const b = p.game.arenaBounds;
+        if (p.x < b.x || p.x > b.x + b.width || p.y < b.y || p.y > b.y + b.height) {
+            p.x = Math.max(b.x, Math.min(b.x + b.width, p.x));
+            p.y = Math.max(b.y, Math.min(b.y + b.height, p.y));
+            p.returning = true;
+        }
+
+        // 1. Mid-air shield combo — the ONLY source of the shockwave
+        if (!p.comboDone && owner && owner.activeShieldProjectile && owner.activeShieldProjectile.active) {
+            const s = owner.activeShieldProjectile;
+            if (Physics.dist(p.x, p.y, s.x, s.y) < p.radius + s.radius + 6) {
+                this.triggerShockwave(p, s.x, s.y);
+                p.comboDone = true;
+                p.returning = true;
+            }
+        }
+
+        // 2. Direct hit on an opponent — heavy single-target damage
+        if (!p.returning) {
+            const enemies = p.game.entities.filter(e => e !== owner && !e.isDead && (!owner || e.id !== owner.id));
+            for (const e of enemies) {
+                if (Physics.dist(p.x, p.y, e.x, e.y) < e.radius + p.radius) {
+                    e.takeDamage(Math.ceil(this.directDamage), false, false, owner);
+                    const a = Math.atan2(e.y - p.y, e.x - p.x);
+                    e.dx += Math.cos(a) * 10;
+                    e.dy += Math.sin(a) * 10;
+                    e.applyStatus('STUN', Math.floor(this.stun * 0.5));
+                    p.game.particles.spawnExplosion(e.x, e.y);
+                    audioEngine.playHeavyImpact();
+                    p.returning = true;
+                    break;
+                }
+            }
+        }
+
+        // Return to hand
+        if (p.returning) {
+            if (!owner || owner.isDead) { p.active = false; return; }
+            const a = Math.atan2(owner.y - p.y, owner.x - p.x);
+            const sp = Math.hypot(p.dx, p.dy) || 13;
+            p.dx = Math.cos(a) * sp;
+            p.dy = Math.sin(a) * sp;
+            p.angle = a;
+            if (Physics.dist(p.x, p.y, owner.x, owner.y) < owner.radius + p.radius) {
+                p.active = false;
+                p.game.particles.spawn(owner.x, owner.y, '#cfe8ff', 5);
+            }
+        }
+    }
+
+    triggerShockwave(p, x, y) {
+        const game = p.game;
+        game.particles.spawnShockwave(x, y, '#aee0ff', this.shockRadius * 2, 1.0);
+        game.particles.spawnShockwave(x, y, '#ffffff', this.shockRadius * 1.4, 0.7);
+        for (let i = 0; i < 20; i++) {
+            const ang = (Math.PI * 2 / 20) * i;
+            const sp = 5 + Math.random() * 4;
+            game.particles.particles.push({
+                x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+                life: 0.5, decay: 0.06, size: 4,
+                color: i % 2 ? '#7db8ff' : '#ffffff', type: 'dot'
+            });
+        }
+        if (game.combatText) game.combatText.text(x, y - 40, 'SHOCKWAVE!', '#aee0ff');
+        audioEngine.play('explosion');
+
+        const enemies = game.entities.filter(e => e !== p.owner && !e.isDead && (!p.owner || e.id !== p.owner.id));
+        for (const e of enemies) {
+            if (Physics.dist(x, y, e.x, e.y) < this.shockRadius + e.radius) {
+                e.takeDamage(Math.ceil(this.shockDamage), false, false, p.owner); // light radiating damage
+                e.applyStatus('STUN', this.stun);
+                const a = Math.atan2(e.y - y, e.x - x);
+                e.dx += Math.cos(a) * 8;
+                e.dy += Math.sin(a) * 8;
+            }
+        }
+    }
+}
+
 export class MechaBeamBehavior {
     update(p, timeScale) {
         // Move projectile

@@ -89,13 +89,8 @@ export class SuperSoldierUltAbility extends Ability {
         this.coneSpread = config.coneSpread || 0.45; // radians
     }
 
-    // Fires on cooldown (not gated behind the default <50% HP rule) so it can
-    // regularly line up the airborne-shield combo.
-    canUse(fighter, context) {
-        if (fighter.status.stun > 0) return false;
-        if (fighter.cooldowns.ult > 0) return false;
-        return context.enemies.some(e => e !== fighter && !e.isDead);
-    }
+    // Uses the base Ability.canUse ult rule: only triggers once HP drops below
+    // the 50% threshold (and off cooldown / not stunned).
 
     execute(fighter, context) {
         const { game, enemies } = context;
